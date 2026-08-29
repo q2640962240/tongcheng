@@ -8,8 +8,9 @@ FROM node:20-slim
 ENV TZ=Asia/Shanghai NODE_ENV=production PORT=3000 HOST=0.0.0.0
 WORKDIR /app
 RUN apt-get update \
-  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends wget curl ca-certificates procps net-tools iproute2 timeout 2>/dev/null \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends wget curl ca-certificates procps net-tools iproute2 \
   && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# 注：timeout 命令由 coreutils(essential) 自带，Debian 无名为 timeout 的 apt 包，切勿加入安装列表（会导致 apt 退出码 100 构建失败）
 COPY --from=builder /app/node_modules ./node_modules
 COPY . .
 RUN mkdir -p /app/logs /app/uploads /app/data \

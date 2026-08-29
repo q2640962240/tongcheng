@@ -45,6 +45,8 @@ app.use(helmet({ crossOriginResourcePolicy: false }))
   const allowOrigin = (origin, cb) => {
     // 非浏览器请求（cURL / 后端互调 / Socket.IO 握手）origin 为空 → 放行
     if (!origin) return cb(null, true)
+    // 显式配置裸 * = 允许所有来源（IP 直连/未配域名阶段使用；域名确定后应收紧为白名单）
+    if (origins.has('*')) return cb(null, true)
     if (origins.has(origin)) return cb(null, true)
     if (wildcardList.length) {
       try {
