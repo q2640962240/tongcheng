@@ -48,7 +48,6 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          known_hosts: ${{ secrets.SERVER_KNOWN_HOSTS }}
           command_timeout: 720m
           proxy_timeout: 30s
           script_stop: true
@@ -94,10 +93,19 @@ jobs:
             PASS=$((PASS+1))
             if [ "$PASS" -lt 4 ]; then echo "FAIL GOLDEN PASS=$PASS (need 4/4)"; exit 2; fi
             echo "PASS=$PASS/4" | tee -a "$LOG"
-            echo "[3/8] cleanup" | tee -a "$LOG"
+            echo "[3/8] cleanup + swap 4G (2C2G guard)" | tee -a "$LOG"
             docker compose down -v --remove-orphans 2>&1 | tee -a "$LOG" | tail -5
             docker rmi -f baiye-server baiye-admin baiye-h5 2>/dev/null || true
             docker system prune -af 2>&1 | tee -a "$LOG" | tail -2
+            # 首次部署前确保有 4G swap（2C2G npm install + vite build 防 OOM）
+            if ! swapon --show 2>/dev/null | grep -q .; then
+              fallocate -l 4G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=4096 2>/dev/null
+              chmod 600 /swapfile
+              mkswap /swapfile
+              swapon /swapfile
+              echo "/swapfile none swap defaults 0 0" >> /etc/fstab
+              echo "swap enabled:" | tee -a "$LOG"; free -h | tee -a "$LOG" | head -2
+            fi
             free -h 2>/dev/null | head -2 | tee -a "$LOG"
             df -h / | tail -1 | tee -a "$LOG"
             echo "[4/8] build server" | tee -a "$LOG"
