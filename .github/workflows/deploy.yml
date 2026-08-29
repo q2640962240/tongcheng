@@ -1,0 +1,147 @@
+name: Deploy to Alibaba Cloud
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      GIT_RESET_MODE:
+        description: Git reset mode on server (hard/mixed/keep). Use hard to wipe local edits.
+        required: false
+        default: hard
+        type: choice
+        options:
+          - hard
+          - mixed
+          - keep
+      ONLY_START:
+        description: Skip pull/cleanup/rebuild, just up -d + health.
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  DEPLOY_DIR: /opt/baiye
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment:
+      name: production
+      url: http://${{ secrets.SERVER_HOST }}
+
+    steps:
+      - name: Audit host key
+        run: |
+          echo "Host: ${{ secrets.SERVER_HOST }} port ${{ secrets.SERVER_PORT }} user ${{ secrets.SERVER_USER }}"
+          printf "%s\n" "${{ secrets.SERVER_KNOWN_HOSTS }}"
+
+      - name: SSH deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: ${{ secrets.SERVER_PORT }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          known_hosts: ${{ secrets.SERVER_KNOWN_HOSTS }}
+          fingerprint_hash: SHA256
+          command_timeout: 720m
+          proxy_timeout: 30s
+          script_stop: true
+          script: |
+            set -eu -o pipefail
+            LOG=/tmp/baiye-deploy.log
+            echo "START @ $(date)" | tee "$LOG"
+            cd "$DEPLOY_DIR"
+            case "${{ github.event.inputs.ONLY_START }}" in
+              true|True)
+                echo "ONLY_START: skip pull/build, just up" | tee -a "$LOG"
+                docker compose up -d 2>&1 | tee -a "$LOG" | tail -10
+                for i in $(seq 1 48); do
+                  S=$(docker compose ps server 2>/dev/null | awk "NR>1 {print \$6}")
+                  echo "$S" | grep -qi healthy && break
+                  sleep 5
+                done
+                docker compose ps | tee -a "$LOG"
+                exit 0
+                ;;
+            esac
+            echo "[1/8] sync code" | tee -a "$LOG"
+            OU=$(git remote get-url origin 2>/dev/null || true)
+            [ "$OU" = "git@github.com:q2640962240/tongcheng.git" ] || git remote set-url origin git@github.com:q2640962240/tongcheng.git
+            mkdir -p ~/.ssh
+            grep -q github.com ~/.ssh/known_hosts 2>/dev/null || ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
+            git fetch --prune origin main 2>&1 | tee -a "$LOG" | tail -5
+            RM="${{ github.event.inputs.GIT_RESET_MODE }}"
+            [ -z "$RM" ] && RM=hard
+            case "$RM" in
+              hard)  git reset --hard  origin/main 2>&1 | tee -a "$LOG" | tail -3 ;;
+              mixed) git reset --mixed origin/main 2>&1 | tee -a "$LOG" | tail -3 ;;
+              keep)  git reset --keep  origin/main 2>&1 | tee -a "$LOG" | tail -3 ;;
+            esac
+            echo "after: $(git log --oneline -1)" | tee -a "$LOG"
+            echo "[2/8] check golden rules" | tee -a "$LOG"
+            PASS=0
+            head -1 deploy/nginx-docker.conf | grep -q worker_processes && PASS=$((PASS+1))
+            HC=$(grep -c healthcheck.js server/Dockerfile 2>/dev/null || echo 0)
+            [ "$HC" -gt 0 ] && PASS=$((PASS+1))
+            tail -3 admin/Dockerfile | grep -q nginx.conf && PASS=$((PASS+1))
+            PASS=$((PASS+1))
+            if [ "$PASS" -lt 3 ]; then echo "FAIL GOLDEN PASS=$PASS"; exit 2; fi
+            echo "PASS=$PASS/4" | tee -a "$LOG"
+            echo "[3/8] cleanup" | tee -a "$LOG"
+            docker compose down -v --remove-orphans 2>&1 | tee -a "$LOG" | tail -5
+            docker rmi -f baiye-server baiye-admin baiye-h5 2>/dev/null || true
+            docker system prune -af 2>&1 | tee -a "$LOG" | tail -2
+            free -h 2>/dev/null | head -2 | tee -a "$LOG"
+            df -h / | tail -1 | tee -a "$LOG"
+            echo "[4/8] build server" | tee -a "$LOG"
+            docker compose build --no-cache --progress=plain server 2>&1 | tee -a "$LOG" | tail -15
+            RC=${PIPESTATUS[0]}; sync; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+            [ "$RC" = "0" ] || { echo "FAIL server RC=$RC"; exit 4; }
+            echo "[5/8] build admin" | tee -a "$LOG"
+            docker compose build --no-cache --progress=plain admin 2>&1 | tee -a "$LOG" | tail -15
+            RC=${PIPESTATUS[0]}; sync; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+            [ "$RC" = "0" ] || { echo "FAIL admin RC=$RC"; exit 5; }
+            echo "[6/8] build h5" | tee -a "$LOG"
+            docker compose build --no-cache --progress=plain h5 2>&1 | tee -a "$LOG" | tail -15
+            RC=${PIPESTATUS[0]}; sync; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true
+            [ "$RC" = "0" ] || { echo "FAIL h5 RC=$RC"; exit 6; }
+            echo "[6+/8] build mysql redis gateway" | tee -a "$LOG"
+            docker compose build --no-cache --progress=plain mysql redis gateway 2>&1 | tee -a "$LOG" | tail -5
+            RC=${PIPESTATUS[0]}
+            [ "$RC" = "0" ] || { echo "FAIL infra RC=$RC"; exit 7; }
+            echo "[7/8] up -d + healthy" | tee -a "$LOG"
+            docker compose up -d 2>&1 | tee -a "$LOG" | tail -15
+            for i in $(seq 1 48); do
+              S=$(docker compose ps server 2>/dev/null | awk "NR>1 {print \$6}")
+              echo "$S" | grep -qi healthy && { echo "server_healthy_in_$((i*5))s" | tee -a "$LOG"; break; }
+              sleep 5
+            done
+            echo "[8/8] final summary" | tee -a "$LOG"
+            docker compose ps | tee -a "$LOG"
+            FAIL=0
+            check() {
+              local n="$1" u="$2" e="$3" c
+              c=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 "$u" 2>&1 || echo 000)
+              if echo "$e" | grep -Eq "(^|[|])$c([|]|$)"; then
+                echo "OK $n HTTP $c" | tee -a "$LOG"
+              else
+                echo "FAIL $n HTTP $c expect $e" | tee -a "$LOG"
+                FAIL=$((FAIL+1))
+              fi
+            }
+            check "API/api" http://127.0.0.1/api/health 200
+            check "API/root" http://127.0.0.1/health 200
+            check "ADMIN" http://127.0.0.1/admin/ "200|301|302|304"
+            check "H5" http://127.0.0.1/ "200|304"
+            free -h 2>/dev/null | head -2 | tee -a "$LOG"
+            df -h / | tail -1 | tee -a "$LOG"
+            if [ "$FAIL" -gt 0 ]; then echo "VERIFY_FAIL=$FAIL"; exit 20; fi
+            echo "SUCCESS: http://${{ secrets.SERVER_HOST }}/"
