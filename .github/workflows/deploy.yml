@@ -24,9 +24,6 @@ concurrency:
   group: deploy-production
   cancel-in-progress: false
 
-env:
-  DEPLOY_DIR: /opt/baiye
-
 jobs:
   deploy:
     name: Deploy
@@ -39,7 +36,6 @@ jobs:
       - name: Audit host key
         run: |
           echo "Host: ${{ secrets.SERVER_HOST }} port ${{ secrets.SERVER_PORT }} user ${{ secrets.SERVER_USER }}"
-          printf "%s\n" "${{ secrets.SERVER_KNOWN_HOSTS }}"
 
       - name: SSH deploy
         uses: appleboy/ssh-action@master
@@ -50,12 +46,11 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           command_timeout: 720m
           proxy_timeout: 30s
-          script_stop: true
           script: |
             set -eu -o pipefail
             LOG=/tmp/baiye-deploy.log
             echo "START @ $(date)" | tee "$LOG"
-            cd "$DEPLOY_DIR"
+            cd /opt/baiye
             case "${{ github.event.inputs.ONLY_START }}" in
               true|True)
                 echo "ONLY_START: skip pull/build, just up" | tee -a "$LOG"
