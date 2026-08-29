@@ -1,0 +1,70 @@
+{
+  "name": "companion-play-server",
+  "version": "1.0.0",
+  "description": "白夜 App 后端 API",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "seed": "node src/seed.js",
+    "db:migrate": "sequelize-cli db:migrate",
+    "db:seed": "sequelize-cli db:seed:all",
+    "test": "cross-env NODE_ENV=test jest --runInBand --forceExit --detectOpenHandles",
+    "test:watch": "cross-env NODE_ENV=test jest --watch",
+    "test:coverage": "cross-env NODE_ENV=test jest --coverage --forceExit --detectOpenHandles",
+    "bench": "node test/bench.js"
+  },
+  "dependencies": {
+    "@alicloud/dysmsapi20170525": "^2.0.24",
+    "@alicloud/openapi-client": "^0.4.15",
+    "ali-oss": "^6.23.0",
+    "alipay-sdk": "^4.14.0",
+    "axios": "^1.20.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.2.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.24.2",
+    "pinyin-pro": "^3.29.3",
+    "pngjs": "^7.0.0",
+    "sequelize": "^6.37.8",
+    "socket.io": "^4.7.5",
+    "tencentcloud-sdk-nodejs-sms": "^4.1.240",
+    "validator": "^13.12.0"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "jest": "^30.4.2",
+    "nodemon": "^3.1.0",
+    "sequelize-cli": "^6.6.2",
+    "supertest": "^7.2.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFiles": [
+      "<rootDir>/test/setup.js"
+    ],
+    "testMatch": [
+      "**/test/**/*.test.js"
+    ],
+    "testPathIgnorePatterns": [
+      "e2e\\.test\\.js$",
+      "bench\\.js$"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/seed.js",
+      "!src/app.js"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "text",
+      "lcov"
+    ]
+  }
+}

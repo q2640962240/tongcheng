@@ -1,0 +1,2192 @@
+{
+  "schemaVersion": "1.0",
+  "skillProvenance": {
+    "name": "solo-design",
+    "version": "2026.08.06.19.15.08",
+    "version_source": "skill-release-manifest.json",
+    "read_status": "ok"
+  },
+  "project": {
+    "resolvedLane": "complex_html_page",
+    "intentProfile": {
+      "caseFamily": "free_exploration",
+      "sourceType": "text-prd",
+      "deviceType": "mobile",
+      "pageCountMentioned": 11,
+      "pageCountGenerating": 9
+    },
+    "operation": "create",
+    "selectedIntentWorkflowRead": true,
+    "contextRequirementsLoaded": [
+      {
+        "path": "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+        "readStatus": "loaded",
+        "bodyRead": true,
+        "recordedAt": "2026-08-27T00:00:00.000Z"
+      },
+      {
+        "path": "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+        "readStatus": "loaded",
+        "bodyRead": true,
+        "recordedAt": "2026-08-27T00:00:00.000Z"
+      },
+      {
+        "path": "shared-runtime/agent-dispatch-runtime/shared-page-rendering-kernel.md",
+        "readStatus": "loaded",
+        "bodyRead": true,
+        "recordedAt": "2026-08-27T00:00:00.000Z"
+      },
+      {
+        "path": "delivery-quality/page-rendering-quality-gate.md",
+        "readStatus": "loaded",
+        "bodyRead": true,
+        "recordedAt": "2026-08-27T00:00:00.000Z"
+      },
+      {
+        "path": "delivery-quality/design-artifact-validation.md",
+        "readStatus": "loaded",
+        "bodyRead": true,
+        "recordedAt": "2026-08-27T00:00:00.000Z"
+      },
+      {
+        "path": "delivery-quality/delivery-evidence-contract.md",
+        "readStatus": "loaded",
+        "bodyRead": true,
+        "recordedAt": "2026-08-27T00:00:00.000Z"
+      },
+      {
+        "path": "visual-experience/visual-experience-guidelines.md",
+        "readStatus": "loaded",
+        "bodyRead": true,
+        "recordedAt": "2026-08-27T00:00:00.000Z"
+      },
+      {
+        "path": "visual-experience/visual-checkpoint-protocol.md",
+        "readStatus": "loaded",
+        "bodyRead": true,
+        "recordedAt": "2026-08-27T00:00:00.000Z"
+      }
+    ],
+    "contextReadScope": [
+      "intent-workflows/intent-project-complex-build/INTENT_WORKFLOW.md",
+      "intent-workflows/intent-project-complex-build/start-complex-project-build.md",
+      "intent-workflows/intent-project-complex-build/00-requirement-and-style-intake.md",
+      "intent-workflows/intent-project-complex-build/01-graphic-asset-preparation.md",
+      "intent-workflows/intent-project-complex-build/02-page-composition.md",
+      "intent-workflows/intent-project-complex-build/03-interaction-validation-delivery.md",
+      "shared-runtime/orchestration-summary-contract/orchestration-summary-contract.md",
+      "shared-runtime/design-artifact-formats/design-project-file-format.md",
+      "delivery-quality/long-requirement-intake-rules.md",
+      "shared-runtime/html-rendering-primitives/mobile-html-rendering-primitives.md"
+    ],
+    "projectName": "同城陪伴陪玩平台",
+    "deviceType": "mobile",
+    "designProjectPath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app",
+    "styleDefinitionBrief": "年轻社交类同城陪伴/陪玩陪聊 App，亮黄主色 CTA + 高饱和紫/蓝/粉分类色，圆角卡片，大按钮强引导，照片墙氛围背景。",
+    "designRead": "mobile social companion app / Gen-Z & young adults / playful & warm / medium-high density / avoid generic corporate SaaS look",
+    "designDials": {
+      "layoutVariance": 3,
+      "motionIntensity": 2,
+      "visualDensity": 4
+    },
+    "styleConstraints": {
+      "radiusMax": 16,
+      "staticShadowAlphaMax": 0.05,
+      "primaryHue": "yellow",
+      "categoryHues": [
+        "purple",
+        "blue",
+        "pink"
+      ]
+    },
+    "sharedProjectShellContract": {
+      "deviceFrame": "mobile-app-board",
+      "viewportMode": "document-scroll",
+      "background": "var(--companion-background)",
+      "typographySystem": {
+        "display": "'Inter', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif",
+        "body": "'Inter', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif"
+      },
+      "radiusScale": {
+        "sm": "4px",
+        "md": "8px",
+        "lg": "16px",
+        "full": "9999px"
+      },
+      "surfaceDepthModel": "static surfaces use border or surface layering; deep shadows reserved for floating layers",
+      "ctaStyle": "large rounded yellow filled button with dark text",
+      "alignmentRhythm": "16px page inset, 12px card gap, left-aligned text",
+      "mobileNavigation": {
+        "applies": true,
+        "type": "bottom-tab",
+        "items": [
+          {
+            "key": "home",
+            "label": "首页",
+            "icon": "home"
+          },
+          {
+            "key": "discover",
+            "label": "发现",
+            "icon": "compass"
+          },
+          {
+            "key": "profile",
+            "label": "我的",
+            "icon": "user"
+          }
+        ],
+        "heightPx": 56,
+        "position": "flow-bottom",
+        "activeState": "primary icon+label color only; geometry stays identical",
+        "structure": {
+          "navTag": "nav",
+          "navClass": "w-full bg-card border-t border-border",
+          "innerClass": "w-full max-w-md mx-auto grid grid-cols-3 h-[56px]",
+          "itemTag": "a",
+          "itemClass": "min-w-0 flex flex-col items-center justify-center gap-0.5 px-1 h-full text-muted-foreground",
+          "iconClass": "w-5 h-5 shrink-0",
+          "labelClass": "text-[11px] leading-none whitespace-nowrap max-w-full truncate",
+          "activeRule": "only color/font-weight/data-active may change; no class changes that affect layout",
+          "markerAttr": "data-mobile-nav=\"global\"",
+          "canonicalHtmlByKey": {
+            "home": "<nav data-mobile-nav=\"global\" class=\"w-full bg-card border-t border-border\"><div class=\"w-full max-w-md mx-auto grid grid-cols-3 h-[56px]\"><a href=\"#\" data-nav-key=\"home\" data-active=\"true\" class=\"min-w-0 flex flex-col items-center justify-center gap-0.5 px-1 h-full text-primary font-medium\"><i data-lucide=\"home\" class=\"w-5 h-5 shrink-0\"></i><span class=\"text-[11px] leading-none whitespace-nowrap max-w-full truncate\">首页</span></a><a href=\"#\" data-nav-key=\"discover\" class=\"min-w-0 flex flex-col items-center justify-center gap-0.5 px-1 h-full text-muted-foreground\"><i data-lucide=\"compass\" class=\"w-5 h-5 shrink-0\"></i><span class=\"text-[11px] leading-none whitespace-nowrap max-w-full truncate\">发现</span></a><a href=\"#\" data-nav-key=\"profile\" class=\"min-w-0 flex flex-col items-center justify-center gap-0.5 px-1 h-full text-muted-foreground\"><i data-lucide=\"user\" class=\"w-5 h-5 shrink-0\"></i><span class=\"text-[11px] leading-none whitespace-nowrap max-w-full truncate\">我的</span></a></div></nav>",
+            "discover": "<nav data-mobile-nav=\"global\" class=\"w-full bg-card border-t border-border\"><div class=\"w-full max-w-md mx-auto grid grid-cols-3 h-[56px]\"><a href=\"#\" data-nav-key=\"home\" class=\"min-w-0 flex flex-col items-center justify-center gap-0.5 px-1 h-full text-muted-foreground\"><i data-lucide=\"home\" class=\"w-5 h-5 shrink-0\"></i><span class=\"text-[11px] leading-none whitespace-nowrap max-w-full truncate\">首页</span></a><a href=\"#\" data-nav-key=\"discover\" data-active=\"true\" class=\"min-w-0 flex flex-col items-center justify-center gap-0.5 px-1 h-full text-primary font-medium\"><i data-lucide=\"compass\" class=\"w-5 h-5 shrink-0\"></i><span class=\"text-[11px] leading-none whitespace-nowrap max-w-full truncate\">发现</span></a><a href=\"#\" data-nav-key=\"profile\" class=\"min-w-0 flex flex-col items-center justify-center gap-0.5 px-1 h-full text-muted-foreground\"><i data-lucide=\"user\" class=\"w-5 h-5 shrink-0\"></i><span class=\"text-[11px] leading-none whitespace-nowrap max-w-full truncate\">我的</span></a></div></nav>",
+            "profile": "<nav data-mobile-nav=\"global\" class=\"w-full bg-card border-t border-border\"><div class=\"w-full max-w-md mx-auto grid grid-cols-3 h-[56px]\"><a href=\"#\" data-nav-key=\"home\" class=\"min-w-0 flex flex-col items-center justify-center gap-0.5 px-1 h-full text-muted-foreground\"><i data-lucide=\"home\" class=\"w-5 h-5 shrink-0\"></i><span class=\"text-[11px] leading-none whitespace-nowrap max-w-full truncate\">首页</span></a><a href=\"#\" data-nav-key=\"discover\" class=\"min-w-0 flex flex-col items-center justify-center gap-0.5 px-1 h-full text-muted-foreground\"><i data-lucide=\"compass\" class=\"w-5 h-5 shrink-0\"></i><span class=\"text-[11px] leading-none whitespace-nowrap max-w-full truncate\">发现</span></a><a href=\"#\" data-nav-key=\"profile\" data-active=\"true\" class=\"min-w-0 flex flex-col items-center justify-center gap-0.5 px-1 h-full text-primary font-medium\"><i data-lucide=\"user\" class=\"w-5 h-5 shrink-0\"></i><span class=\"text-[11px] leading-none whitespace-nowrap max-w-full truncate\">我的</span></a></div></nav>"
+          }
+        }
+      },
+      "continuityAnchors": [
+        "yellow filled primary CTA buttons with rounded corners",
+        "card-based white surfaces with 16px radius on warm cream background",
+        "consistent mobile status bar + bottom tab chrome",
+        "sans-serif Chinese type stack and 16px page inset"
+      ]
+    },
+    "generationTree": {
+      "root": {
+        "nodeId": "gen-root",
+        "kind": "project-shell",
+        "pageIds": [],
+        "output": null,
+        "sharedRegions": [
+          "brand CSS",
+          "mobile navigation contract",
+          "page inset",
+          "type scale"
+        ],
+        "privateRegions": [],
+        "mutableSlots": [],
+        "status": "generated",
+        "children": [
+          {
+            "nodeId": "gen-login",
+            "kind": "page-leaf",
+            "pageIds": [
+              "page-login"
+            ],
+            "output": "pages/login.html",
+            "sharedRegions": [],
+            "privateRegions": [
+              "splash photo wall",
+              "login/register CTAs"
+            ],
+            "mutableSlots": [],
+            "status": "generated"
+          },
+          {
+            "nodeId": "gen-home",
+            "kind": "page-leaf",
+            "pageIds": [
+              "page-home"
+            ],
+            "output": "pages/home.html",
+            "sharedRegions": [
+              "mobile bottom nav"
+            ],
+            "privateRegions": [
+              "recommendation feed",
+              "service provider cards"
+            ],
+            "mutableSlots": [
+              "activeNavItem"
+            ],
+            "status": "generated"
+          },
+          {
+            "nodeId": "gen-warm-services",
+            "kind": "page-leaf",
+            "pageIds": [
+              "page-warm-services"
+            ],
+            "output": "pages/warm-services.html",
+            "sharedRegions": [
+              "mobile bottom nav"
+            ],
+            "privateRegions": [
+              "emotional companion service grid",
+              "pricing cards"
+            ],
+            "mutableSlots": [
+              "activeNavItem"
+            ],
+            "status": "generated"
+          },
+          {
+            "nodeId": "gen-game-services",
+            "kind": "page-leaf",
+            "pageIds": [
+              "page-game-services"
+            ],
+            "output": "pages/game-services.html",
+            "sharedRegions": [
+              "mobile bottom nav"
+            ],
+            "privateRegions": [
+              "game category grid",
+              "game companion cards"
+            ],
+            "mutableSlots": [
+              "activeNavItem"
+            ],
+            "status": "generated"
+          },
+          {
+            "nodeId": "gen-offline-play",
+            "kind": "page-leaf",
+            "pageIds": [
+              "page-offline-play"
+            ],
+            "output": "pages/offline-play.html",
+            "sharedRegions": [
+              "mobile bottom nav"
+            ],
+            "privateRegions": [
+              "offline interest categories",
+              "elite cert trigger"
+            ],
+            "mutableSlots": [
+              "activeNavItem"
+            ],
+            "status": "generated"
+          },
+          {
+            "nodeId": "gen-elite-cert",
+            "kind": "page-leaf",
+            "pageIds": [
+              "page-elite-cert"
+            ],
+            "output": "pages/elite-cert.html",
+            "sharedRegions": [
+              "copied shell from offline-play"
+            ],
+            "privateRegions": [
+              "elite certification modal overlay"
+            ],
+            "mutableSlots": [
+              "modalLayer"
+            ],
+            "status": "generated",
+            "derivedFrom": "page-offline-play"
+          },
+          {
+            "nodeId": "gen-profile",
+            "kind": "page-leaf",
+            "pageIds": [
+              "page-profile"
+            ],
+            "output": "pages/profile.html",
+            "sharedRegions": [
+              "mobile bottom nav"
+            ],
+            "privateRegions": [
+              "user identity",
+              "function module grid",
+              "wallet entry"
+            ],
+            "mutableSlots": [
+              "activeNavItem"
+            ],
+            "status": "generated"
+          },
+          {
+            "nodeId": "gen-invite",
+            "kind": "page-leaf",
+            "pageIds": [
+              "page-invite"
+            ],
+            "output": "pages/invite.html",
+            "sharedRegions": [],
+            "privateRegions": [
+              "invite rules",
+              "performance stats",
+              "leaderboard",
+              "share CTA"
+            ],
+            "mutableSlots": [],
+            "status": "generated"
+          },
+          {
+            "nodeId": "gen-settings",
+            "kind": "page-leaf",
+            "pageIds": [
+              "page-settings"
+            ],
+            "output": "pages/settings.html",
+            "sharedRegions": [],
+            "privateRegions": [
+              "settings list rows",
+              "auth status badges"
+            ],
+            "mutableSlots": [],
+            "status": "generated"
+          }
+        ]
+      }
+    },
+    "cssPreflightEvidence": {
+      "ranAt": "2026-08-27T00:00:00.000Z",
+      "command": "node apply-html-head-contract.mjs colors_and_type.css .preflight/preflight.html --title=Preflight --lang=zh-CN --prefix=companion",
+      "exitCode": 0,
+      "hasThemeVars": true,
+      "hasSemanticTokenFallback": true,
+      "hasTailwindCdn": true,
+      "hasLucide": true,
+      "hasHtmlThemeClass": true
+    },
+    "visualQualityCheckpoints": [
+      {
+        "checkpointId": "vq-anchor",
+        "dimension": "visual-anchor",
+        "expected": "bright yellow primary CTA and high-saturation category chips establish the playful social app identity on every page",
+        "evidenceTarget": "pages/login.html#hero-cta, pages/home.html#category-chips"
+      },
+      {
+        "checkpointId": "vq-hierarchy",
+        "dimension": "information-hierarchy",
+        "expected": "page title / section header → cards or list rows → primary action, with price and CTA visually dominant",
+        "evidenceTarget": "all pages <main>"
+      },
+      {
+        "checkpointId": "vq-structure",
+        "dimension": "composition-structure",
+        "expected": "single-column mobile flow, 16px inset, white rounded cards on warm cream background, consistent bottom tab chrome",
+        "evidenceTarget": "all pages <body>"
+      },
+      {
+        "checkpointId": "vq-implementation",
+        "dimension": "implementation-strategy",
+        "expected": "CSS variable tokens + Tailwind utilities, Lucide icons, generated avatars for service cards, modal overlay for elite cert",
+        "evidenceTarget": "colors_and_type.css, pages/*.html"
+      }
+    ],
+    "validationRunDiscipline": {
+      "maxFullValidationRuns": 2,
+      "softWarningsTriggerRepair": false,
+      "blockingRepairMode": "targeted-once",
+      "forbiddenRepairTriggers": [
+        "soft-warning-only",
+        "provenance-warning-only",
+        "style-warning-only"
+      ]
+    },
+    "lowValueCallWatchdog": {
+      "applies": true,
+      "noProgressSignals": [
+        "no_tool_call",
+        "no_artifact_diff",
+        "no_structured_decision"
+      ],
+      "noProgressNextAction": "enter_readiness_or_blocked_summary",
+      "recordedAt": "2026-08-27T00:00:00.000Z"
+    },
+    "dispatchPreflightManifest": [
+      {
+        "recorded_at": "2026-08-27T05:07:36.501Z",
+        "generatedBy": "build-page-dispatch-manifest.mjs",
+        "packetType": "ComplexPagePacket",
+        "laneContract": {
+          "resolvedLane": "complex_html_page",
+          "packetType": "ComplexPagePacket",
+          "pageRuntimeGuide": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+          "dispatchContract": "intent-workflows/intent-project-complex-build/complex-page-dispatch-contract.md"
+        },
+        "taskLinePresent": true,
+        "outputPathPresent": true,
+        "sharedTemplate": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+        "nodeId": "page-login",
+        "htmlSrc": "pages/login.html",
+        "supplementaryReads": [],
+        "allowedWritePaths": [
+          "pages/login.html",
+          "assets/"
+        ],
+        "forbiddenWriteRoots": [
+          "*.design",
+          "runtime-orchestration-summary.json",
+          "validation-report.json",
+          "finish-readiness-report.json",
+          "restore-contract-report.json",
+          "page-generation-summary.json"
+        ],
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": [
+            "pages/login.html",
+            "assets/"
+          ]
+        },
+        "skillRuntime": {
+          "skillDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+          "deterministicToolDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+          "toolPaths": {
+            "applyHtmlHeadContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+            "recordDispatchCompletion": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+            "buildPageDispatchManifest": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+            "validateDesignWorkspace": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+            "validateFinishReadiness": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+            "validateRestoreContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+          },
+          "requiredForPageSubAgent": [
+            "applyHtmlHeadContract",
+            "recordDispatchCompletion"
+          ],
+          "pathInjection": "absolute",
+          "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+          "commandTemplates": {
+            "recordDispatchCompletion": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\" --node-id=\"page-login\" --html-src=\"pages/login.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+          }
+        },
+        "cssFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css",
+        "htmlFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\login.html",
+        "brandPrefix": "companion",
+        "aestheticsMode": "free-explore",
+        "toolDisciplineBlockPresent": true,
+        "fillHtmlHeadCommand": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\login.html\" --title=\"登录\" --lang=\"zh-CN\" --prefix=\"companion\"",
+        "headFillMode": "skeleton-first",
+        "viewportMode": "document-scroll",
+        "completionSchemaExpected": "full",
+        "restoreFields": null,
+        "restoreContractStatus": null,
+        "restoreCompactPacket": null,
+        "deterministicCommands": null,
+        "sourceAuthorityLock": null,
+        "preDispatchFileHashes": {
+          "companion-play-app.design": "b4146e8499e369f06e4a0f64bb8fe1b5a529fed6f93fb79583c26ab603275aad"
+        },
+        "contextPreflight": {
+          "workflowPath": "intent-workflows/intent-project-complex-build/INTENT_WORKFLOW.md",
+          "requiredContextFiles": [
+            "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+            "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+            "shared-runtime/agent-dispatch-runtime/shared-page-rendering-kernel.md",
+            "delivery-quality/page-rendering-quality-gate.md",
+            "delivery-quality/design-artifact-validation.md",
+            "delivery-quality/delivery-evidence-contract.md",
+            "visual-experience/visual-experience-guidelines.md",
+            "visual-experience/visual-checkpoint-protocol.md"
+          ],
+          "optionalContextFiles": [],
+          "passed": true
+        },
+        "pageSliceOnly": true,
+        "requiredFieldsPresent": true,
+        "missingFields": [],
+        "fillHtmlHeadCommandValid": true,
+        "mobileNavigation": {
+          "required": false,
+          "appliesToThisPage": false,
+          "omitReason": "全屏登录页不使用底部导航",
+          "canonicalHtmlIncluded": false,
+          "missingFields": []
+        },
+        "persistedToSummary": true,
+        "taskQueryAudited": false,
+        "proofSource": "summary-only",
+        "largeWorkflowFilesInTaskQuery": null
+      },
+      {
+        "recorded_at": "2026-08-27T05:07:36.501Z",
+        "generatedBy": "build-page-dispatch-manifest.mjs",
+        "packetType": "ComplexPagePacket",
+        "laneContract": {
+          "resolvedLane": "complex_html_page",
+          "packetType": "ComplexPagePacket",
+          "pageRuntimeGuide": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+          "dispatchContract": "intent-workflows/intent-project-complex-build/complex-page-dispatch-contract.md"
+        },
+        "taskLinePresent": true,
+        "outputPathPresent": true,
+        "sharedTemplate": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+        "nodeId": "page-home",
+        "htmlSrc": "pages/home.html",
+        "supplementaryReads": [],
+        "allowedWritePaths": [
+          "pages/home.html",
+          "assets/"
+        ],
+        "forbiddenWriteRoots": [
+          "*.design",
+          "runtime-orchestration-summary.json",
+          "validation-report.json",
+          "finish-readiness-report.json",
+          "restore-contract-report.json",
+          "page-generation-summary.json"
+        ],
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": [
+            "pages/home.html",
+            "assets/"
+          ]
+        },
+        "skillRuntime": {
+          "skillDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+          "deterministicToolDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+          "toolPaths": {
+            "applyHtmlHeadContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+            "recordDispatchCompletion": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+            "buildPageDispatchManifest": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+            "validateDesignWorkspace": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+            "validateFinishReadiness": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+            "validateRestoreContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+          },
+          "requiredForPageSubAgent": [
+            "applyHtmlHeadContract",
+            "recordDispatchCompletion"
+          ],
+          "pathInjection": "absolute",
+          "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+          "commandTemplates": {
+            "recordDispatchCompletion": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\" --node-id=\"page-home\" --html-src=\"pages/home.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+          }
+        },
+        "cssFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css",
+        "htmlFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\home.html",
+        "brandPrefix": "companion",
+        "aestheticsMode": "free-explore",
+        "toolDisciplineBlockPresent": true,
+        "fillHtmlHeadCommand": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\home.html\" --title=\"首页\" --lang=\"zh-CN\" --prefix=\"companion\"",
+        "headFillMode": "skeleton-first",
+        "viewportMode": "document-scroll",
+        "completionSchemaExpected": "full",
+        "restoreFields": null,
+        "restoreContractStatus": null,
+        "restoreCompactPacket": null,
+        "deterministicCommands": null,
+        "sourceAuthorityLock": null,
+        "preDispatchFileHashes": {
+          "companion-play-app.design": "b4146e8499e369f06e4a0f64bb8fe1b5a529fed6f93fb79583c26ab603275aad"
+        },
+        "contextPreflight": {
+          "workflowPath": "intent-workflows/intent-project-complex-build/INTENT_WORKFLOW.md",
+          "requiredContextFiles": [
+            "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+            "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+            "shared-runtime/agent-dispatch-runtime/shared-page-rendering-kernel.md",
+            "delivery-quality/page-rendering-quality-gate.md",
+            "delivery-quality/design-artifact-validation.md",
+            "delivery-quality/delivery-evidence-contract.md",
+            "visual-experience/visual-experience-guidelines.md",
+            "visual-experience/visual-checkpoint-protocol.md"
+          ],
+          "optionalContextFiles": [],
+          "passed": true
+        },
+        "pageSliceOnly": true,
+        "requiredFieldsPresent": true,
+        "missingFields": [],
+        "fillHtmlHeadCommandValid": true,
+        "mobileNavigation": {
+          "required": true,
+          "appliesToThisPage": true,
+          "activeKey": "home",
+          "contractPresent": true,
+          "structurePresent": true,
+          "canonicalHtmlIncluded": true,
+          "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.home",
+          "structureHash": "2f1fe6d3cc7ebee6567efda75954e0f58bbe8f452c023b2dd3aabb3fe2698a2b",
+          "missingFields": []
+        },
+        "persistedToSummary": true,
+        "taskQueryAudited": false,
+        "proofSource": "summary-only",
+        "largeWorkflowFilesInTaskQuery": null
+      },
+      {
+        "recorded_at": "2026-08-27T05:07:36.501Z",
+        "generatedBy": "build-page-dispatch-manifest.mjs",
+        "packetType": "ComplexPagePacket",
+        "laneContract": {
+          "resolvedLane": "complex_html_page",
+          "packetType": "ComplexPagePacket",
+          "pageRuntimeGuide": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+          "dispatchContract": "intent-workflows/intent-project-complex-build/complex-page-dispatch-contract.md"
+        },
+        "taskLinePresent": true,
+        "outputPathPresent": true,
+        "sharedTemplate": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+        "nodeId": "page-warm-services",
+        "htmlSrc": "pages/warm-services.html",
+        "supplementaryReads": [],
+        "allowedWritePaths": [
+          "pages/warm-services.html",
+          "assets/"
+        ],
+        "forbiddenWriteRoots": [
+          "*.design",
+          "runtime-orchestration-summary.json",
+          "validation-report.json",
+          "finish-readiness-report.json",
+          "restore-contract-report.json",
+          "page-generation-summary.json"
+        ],
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": [
+            "pages/warm-services.html",
+            "assets/"
+          ]
+        },
+        "skillRuntime": {
+          "skillDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+          "deterministicToolDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+          "toolPaths": {
+            "applyHtmlHeadContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+            "recordDispatchCompletion": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+            "buildPageDispatchManifest": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+            "validateDesignWorkspace": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+            "validateFinishReadiness": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+            "validateRestoreContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+          },
+          "requiredForPageSubAgent": [
+            "applyHtmlHeadContract",
+            "recordDispatchCompletion"
+          ],
+          "pathInjection": "absolute",
+          "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+          "commandTemplates": {
+            "recordDispatchCompletion": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\" --node-id=\"page-warm-services\" --html-src=\"pages/warm-services.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+          }
+        },
+        "cssFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css",
+        "htmlFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\warm-services.html",
+        "brandPrefix": "companion",
+        "aestheticsMode": "free-explore",
+        "toolDisciplineBlockPresent": true,
+        "fillHtmlHeadCommand": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\warm-services.html\" --title=\"暖心服务\" --lang=\"zh-CN\" --prefix=\"companion\"",
+        "headFillMode": "skeleton-first",
+        "viewportMode": "document-scroll",
+        "completionSchemaExpected": "full",
+        "restoreFields": null,
+        "restoreContractStatus": null,
+        "restoreCompactPacket": null,
+        "deterministicCommands": null,
+        "sourceAuthorityLock": null,
+        "preDispatchFileHashes": {
+          "companion-play-app.design": "b4146e8499e369f06e4a0f64bb8fe1b5a529fed6f93fb79583c26ab603275aad"
+        },
+        "contextPreflight": {
+          "workflowPath": "intent-workflows/intent-project-complex-build/INTENT_WORKFLOW.md",
+          "requiredContextFiles": [
+            "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+            "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+            "shared-runtime/agent-dispatch-runtime/shared-page-rendering-kernel.md",
+            "delivery-quality/page-rendering-quality-gate.md",
+            "delivery-quality/design-artifact-validation.md",
+            "delivery-quality/delivery-evidence-contract.md",
+            "visual-experience/visual-experience-guidelines.md",
+            "visual-experience/visual-checkpoint-protocol.md"
+          ],
+          "optionalContextFiles": [],
+          "passed": true
+        },
+        "pageSliceOnly": true,
+        "requiredFieldsPresent": true,
+        "missingFields": [],
+        "fillHtmlHeadCommandValid": true,
+        "mobileNavigation": {
+          "required": true,
+          "appliesToThisPage": true,
+          "activeKey": "discover",
+          "contractPresent": true,
+          "structurePresent": true,
+          "canonicalHtmlIncluded": true,
+          "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.discover",
+          "structureHash": "2f1fe6d3cc7ebee6567efda75954e0f58bbe8f452c023b2dd3aabb3fe2698a2b",
+          "missingFields": []
+        },
+        "persistedToSummary": true,
+        "taskQueryAudited": false,
+        "proofSource": "summary-only",
+        "largeWorkflowFilesInTaskQuery": null
+      },
+      {
+        "recorded_at": "2026-08-27T05:07:36.501Z",
+        "generatedBy": "build-page-dispatch-manifest.mjs",
+        "packetType": "ComplexPagePacket",
+        "laneContract": {
+          "resolvedLane": "complex_html_page",
+          "packetType": "ComplexPagePacket",
+          "pageRuntimeGuide": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+          "dispatchContract": "intent-workflows/intent-project-complex-build/complex-page-dispatch-contract.md"
+        },
+        "taskLinePresent": true,
+        "outputPathPresent": true,
+        "sharedTemplate": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+        "nodeId": "page-game-services",
+        "htmlSrc": "pages/game-services.html",
+        "supplementaryReads": [],
+        "allowedWritePaths": [
+          "pages/game-services.html",
+          "assets/"
+        ],
+        "forbiddenWriteRoots": [
+          "*.design",
+          "runtime-orchestration-summary.json",
+          "validation-report.json",
+          "finish-readiness-report.json",
+          "restore-contract-report.json",
+          "page-generation-summary.json"
+        ],
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": [
+            "pages/game-services.html",
+            "assets/"
+          ]
+        },
+        "skillRuntime": {
+          "skillDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+          "deterministicToolDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+          "toolPaths": {
+            "applyHtmlHeadContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+            "recordDispatchCompletion": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+            "buildPageDispatchManifest": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+            "validateDesignWorkspace": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+            "validateFinishReadiness": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+            "validateRestoreContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+          },
+          "requiredForPageSubAgent": [
+            "applyHtmlHeadContract",
+            "recordDispatchCompletion"
+          ],
+          "pathInjection": "absolute",
+          "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+          "commandTemplates": {
+            "recordDispatchCompletion": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\" --node-id=\"page-game-services\" --html-src=\"pages/game-services.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+          }
+        },
+        "cssFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css",
+        "htmlFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\game-services.html",
+        "brandPrefix": "companion",
+        "aestheticsMode": "free-explore",
+        "toolDisciplineBlockPresent": true,
+        "fillHtmlHeadCommand": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\game-services.html\" --title=\"游戏陪玩\" --lang=\"zh-CN\" --prefix=\"companion\"",
+        "headFillMode": "skeleton-first",
+        "viewportMode": "document-scroll",
+        "completionSchemaExpected": "full",
+        "restoreFields": null,
+        "restoreContractStatus": null,
+        "restoreCompactPacket": null,
+        "deterministicCommands": null,
+        "sourceAuthorityLock": null,
+        "preDispatchFileHashes": {
+          "companion-play-app.design": "b4146e8499e369f06e4a0f64bb8fe1b5a529fed6f93fb79583c26ab603275aad"
+        },
+        "contextPreflight": {
+          "workflowPath": "intent-workflows/intent-project-complex-build/INTENT_WORKFLOW.md",
+          "requiredContextFiles": [
+            "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+            "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+            "shared-runtime/agent-dispatch-runtime/shared-page-rendering-kernel.md",
+            "delivery-quality/page-rendering-quality-gate.md",
+            "delivery-quality/design-artifact-validation.md",
+            "delivery-quality/delivery-evidence-contract.md",
+            "visual-experience/visual-experience-guidelines.md",
+            "visual-experience/visual-checkpoint-protocol.md"
+          ],
+          "optionalContextFiles": [],
+          "passed": true
+        },
+        "pageSliceOnly": true,
+        "requiredFieldsPresent": true,
+        "missingFields": [],
+        "fillHtmlHeadCommandValid": true,
+        "mobileNavigation": {
+          "required": true,
+          "appliesToThisPage": true,
+          "activeKey": "discover",
+          "contractPresent": true,
+          "structurePresent": true,
+          "canonicalHtmlIncluded": true,
+          "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.discover",
+          "structureHash": "2f1fe6d3cc7ebee6567efda75954e0f58bbe8f452c023b2dd3aabb3fe2698a2b",
+          "missingFields": []
+        },
+        "persistedToSummary": true,
+        "taskQueryAudited": false,
+        "proofSource": "summary-only",
+        "largeWorkflowFilesInTaskQuery": null
+      },
+      {
+        "recorded_at": "2026-08-27T05:07:36.501Z",
+        "generatedBy": "build-page-dispatch-manifest.mjs",
+        "packetType": "ComplexPagePacket",
+        "laneContract": {
+          "resolvedLane": "complex_html_page",
+          "packetType": "ComplexPagePacket",
+          "pageRuntimeGuide": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+          "dispatchContract": "intent-workflows/intent-project-complex-build/complex-page-dispatch-contract.md"
+        },
+        "taskLinePresent": true,
+        "outputPathPresent": true,
+        "sharedTemplate": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+        "nodeId": "page-offline-play",
+        "htmlSrc": "pages/offline-play.html",
+        "supplementaryReads": [],
+        "allowedWritePaths": [
+          "pages/offline-play.html",
+          "assets/"
+        ],
+        "forbiddenWriteRoots": [
+          "*.design",
+          "runtime-orchestration-summary.json",
+          "validation-report.json",
+          "finish-readiness-report.json",
+          "restore-contract-report.json",
+          "page-generation-summary.json"
+        ],
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": [
+            "pages/offline-play.html",
+            "assets/"
+          ]
+        },
+        "skillRuntime": {
+          "skillDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+          "deterministicToolDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+          "toolPaths": {
+            "applyHtmlHeadContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+            "recordDispatchCompletion": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+            "buildPageDispatchManifest": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+            "validateDesignWorkspace": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+            "validateFinishReadiness": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+            "validateRestoreContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+          },
+          "requiredForPageSubAgent": [
+            "applyHtmlHeadContract",
+            "recordDispatchCompletion"
+          ],
+          "pathInjection": "absolute",
+          "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+          "commandTemplates": {
+            "recordDispatchCompletion": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\" --node-id=\"page-offline-play\" --html-src=\"pages/offline-play.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+          }
+        },
+        "cssFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css",
+        "htmlFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\offline-play.html",
+        "brandPrefix": "companion",
+        "aestheticsMode": "free-explore",
+        "toolDisciplineBlockPresent": true,
+        "fillHtmlHeadCommand": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\offline-play.html\" --title=\"兴趣约玩\" --lang=\"zh-CN\" --prefix=\"companion\"",
+        "headFillMode": "skeleton-first",
+        "viewportMode": "document-scroll",
+        "completionSchemaExpected": "full",
+        "restoreFields": null,
+        "restoreContractStatus": null,
+        "restoreCompactPacket": null,
+        "deterministicCommands": null,
+        "sourceAuthorityLock": null,
+        "preDispatchFileHashes": {
+          "companion-play-app.design": "b4146e8499e369f06e4a0f64bb8fe1b5a529fed6f93fb79583c26ab603275aad"
+        },
+        "contextPreflight": {
+          "workflowPath": "intent-workflows/intent-project-complex-build/INTENT_WORKFLOW.md",
+          "requiredContextFiles": [
+            "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+            "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+            "shared-runtime/agent-dispatch-runtime/shared-page-rendering-kernel.md",
+            "delivery-quality/page-rendering-quality-gate.md",
+            "delivery-quality/design-artifact-validation.md",
+            "delivery-quality/delivery-evidence-contract.md",
+            "visual-experience/visual-experience-guidelines.md",
+            "visual-experience/visual-checkpoint-protocol.md"
+          ],
+          "optionalContextFiles": [],
+          "passed": true
+        },
+        "pageSliceOnly": true,
+        "requiredFieldsPresent": true,
+        "missingFields": [],
+        "fillHtmlHeadCommandValid": true,
+        "mobileNavigation": {
+          "required": true,
+          "appliesToThisPage": true,
+          "activeKey": "discover",
+          "contractPresent": true,
+          "structurePresent": true,
+          "canonicalHtmlIncluded": true,
+          "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.discover",
+          "structureHash": "2f1fe6d3cc7ebee6567efda75954e0f58bbe8f452c023b2dd3aabb3fe2698a2b",
+          "missingFields": []
+        },
+        "persistedToSummary": true,
+        "taskQueryAudited": false,
+        "proofSource": "summary-only",
+        "largeWorkflowFilesInTaskQuery": null
+      },
+      {
+        "recorded_at": "2026-08-27T05:07:36.501Z",
+        "generatedBy": "build-page-dispatch-manifest.mjs",
+        "packetType": "ComplexPagePacket",
+        "laneContract": {
+          "resolvedLane": "complex_html_page",
+          "packetType": "ComplexPagePacket",
+          "pageRuntimeGuide": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+          "dispatchContract": "intent-workflows/intent-project-complex-build/complex-page-dispatch-contract.md"
+        },
+        "taskLinePresent": true,
+        "outputPathPresent": true,
+        "sharedTemplate": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+        "nodeId": "page-elite-cert",
+        "htmlSrc": "pages/elite-cert.html",
+        "supplementaryReads": [],
+        "allowedWritePaths": [
+          "pages/elite-cert.html",
+          "assets/"
+        ],
+        "forbiddenWriteRoots": [
+          "*.design",
+          "runtime-orchestration-summary.json",
+          "validation-report.json",
+          "finish-readiness-report.json",
+          "restore-contract-report.json",
+          "page-generation-summary.json"
+        ],
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": [
+            "pages/elite-cert.html",
+            "assets/"
+          ]
+        },
+        "skillRuntime": {
+          "skillDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+          "deterministicToolDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+          "toolPaths": {
+            "applyHtmlHeadContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+            "recordDispatchCompletion": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+            "buildPageDispatchManifest": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+            "validateDesignWorkspace": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+            "validateFinishReadiness": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+            "validateRestoreContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+          },
+          "requiredForPageSubAgent": [
+            "applyHtmlHeadContract",
+            "recordDispatchCompletion"
+          ],
+          "pathInjection": "absolute",
+          "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+          "commandTemplates": {
+            "recordDispatchCompletion": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\" --node-id=\"page-elite-cert\" --html-src=\"pages/elite-cert.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+          }
+        },
+        "cssFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css",
+        "htmlFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\elite-cert.html",
+        "brandPrefix": "companion",
+        "aestheticsMode": "free-explore",
+        "toolDisciplineBlockPresent": true,
+        "fillHtmlHeadCommand": null,
+        "headFillMode": "skeleton-first",
+        "viewportMode": "document-scroll",
+        "completionSchemaExpected": "full",
+        "restoreFields": null,
+        "restoreContractStatus": null,
+        "restoreCompactPacket": null,
+        "deterministicCommands": null,
+        "sourceAuthorityLock": null,
+        "preDispatchFileHashes": {
+          "companion-play-app.design": "b4146e8499e369f06e4a0f64bb8fe1b5a529fed6f93fb79583c26ab603275aad"
+        },
+        "contextPreflight": {
+          "workflowPath": "intent-workflows/intent-project-complex-build/INTENT_WORKFLOW.md",
+          "requiredContextFiles": [
+            "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+            "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+            "shared-runtime/agent-dispatch-runtime/shared-page-rendering-kernel.md",
+            "delivery-quality/page-rendering-quality-gate.md",
+            "delivery-quality/design-artifact-validation.md",
+            "delivery-quality/delivery-evidence-contract.md",
+            "visual-experience/visual-experience-guidelines.md",
+            "visual-experience/visual-checkpoint-protocol.md"
+          ],
+          "optionalContextFiles": [],
+          "passed": true
+        },
+        "pageSliceOnly": true,
+        "requiredFieldsPresent": true,
+        "missingFields": [],
+        "fillHtmlHeadCommandValid": true,
+        "mobileNavigation": {
+          "required": true,
+          "appliesToThisPage": true,
+          "activeKey": "discover",
+          "contractPresent": true,
+          "structurePresent": true,
+          "canonicalHtmlIncluded": true,
+          "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.discover",
+          "structureHash": "2f1fe6d3cc7ebee6567efda75954e0f58bbe8f452c023b2dd3aabb3fe2698a2b",
+          "missingFields": []
+        },
+        "persistedToSummary": true,
+        "taskQueryAudited": false,
+        "proofSource": "summary-only",
+        "largeWorkflowFilesInTaskQuery": null
+      },
+      {
+        "recorded_at": "2026-08-27T05:07:36.501Z",
+        "generatedBy": "build-page-dispatch-manifest.mjs",
+        "packetType": "ComplexPagePacket",
+        "laneContract": {
+          "resolvedLane": "complex_html_page",
+          "packetType": "ComplexPagePacket",
+          "pageRuntimeGuide": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+          "dispatchContract": "intent-workflows/intent-project-complex-build/complex-page-dispatch-contract.md"
+        },
+        "taskLinePresent": true,
+        "outputPathPresent": true,
+        "sharedTemplate": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+        "nodeId": "page-profile",
+        "htmlSrc": "pages/profile.html",
+        "supplementaryReads": [],
+        "allowedWritePaths": [
+          "pages/profile.html",
+          "assets/"
+        ],
+        "forbiddenWriteRoots": [
+          "*.design",
+          "runtime-orchestration-summary.json",
+          "validation-report.json",
+          "finish-readiness-report.json",
+          "restore-contract-report.json",
+          "page-generation-summary.json"
+        ],
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": [
+            "pages/profile.html",
+            "assets/"
+          ]
+        },
+        "skillRuntime": {
+          "skillDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+          "deterministicToolDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+          "toolPaths": {
+            "applyHtmlHeadContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+            "recordDispatchCompletion": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+            "buildPageDispatchManifest": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+            "validateDesignWorkspace": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+            "validateFinishReadiness": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+            "validateRestoreContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+          },
+          "requiredForPageSubAgent": [
+            "applyHtmlHeadContract",
+            "recordDispatchCompletion"
+          ],
+          "pathInjection": "absolute",
+          "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+          "commandTemplates": {
+            "recordDispatchCompletion": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\" --node-id=\"page-profile\" --html-src=\"pages/profile.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+          }
+        },
+        "cssFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css",
+        "htmlFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\profile.html",
+        "brandPrefix": "companion",
+        "aestheticsMode": "free-explore",
+        "toolDisciplineBlockPresent": true,
+        "fillHtmlHeadCommand": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\profile.html\" --title=\"我的\" --lang=\"zh-CN\" --prefix=\"companion\"",
+        "headFillMode": "skeleton-first",
+        "viewportMode": "document-scroll",
+        "completionSchemaExpected": "full",
+        "restoreFields": null,
+        "restoreContractStatus": null,
+        "restoreCompactPacket": null,
+        "deterministicCommands": null,
+        "sourceAuthorityLock": null,
+        "preDispatchFileHashes": {
+          "companion-play-app.design": "b4146e8499e369f06e4a0f64bb8fe1b5a529fed6f93fb79583c26ab603275aad"
+        },
+        "contextPreflight": {
+          "workflowPath": "intent-workflows/intent-project-complex-build/INTENT_WORKFLOW.md",
+          "requiredContextFiles": [
+            "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+            "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+            "shared-runtime/agent-dispatch-runtime/shared-page-rendering-kernel.md",
+            "delivery-quality/page-rendering-quality-gate.md",
+            "delivery-quality/design-artifact-validation.md",
+            "delivery-quality/delivery-evidence-contract.md",
+            "visual-experience/visual-experience-guidelines.md",
+            "visual-experience/visual-checkpoint-protocol.md"
+          ],
+          "optionalContextFiles": [],
+          "passed": true
+        },
+        "pageSliceOnly": true,
+        "requiredFieldsPresent": true,
+        "missingFields": [],
+        "fillHtmlHeadCommandValid": true,
+        "mobileNavigation": {
+          "required": true,
+          "appliesToThisPage": true,
+          "activeKey": "profile",
+          "contractPresent": true,
+          "structurePresent": true,
+          "canonicalHtmlIncluded": true,
+          "canonicalHtmlSource": "sharedProjectShellContract.mobileNavigation.structure.canonicalHtmlByKey.profile",
+          "structureHash": "2f1fe6d3cc7ebee6567efda75954e0f58bbe8f452c023b2dd3aabb3fe2698a2b",
+          "missingFields": []
+        },
+        "persistedToSummary": true,
+        "taskQueryAudited": false,
+        "proofSource": "summary-only",
+        "largeWorkflowFilesInTaskQuery": null
+      },
+      {
+        "recorded_at": "2026-08-27T05:07:36.501Z",
+        "generatedBy": "build-page-dispatch-manifest.mjs",
+        "packetType": "ComplexPagePacket",
+        "laneContract": {
+          "resolvedLane": "complex_html_page",
+          "packetType": "ComplexPagePacket",
+          "pageRuntimeGuide": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+          "dispatchContract": "intent-workflows/intent-project-complex-build/complex-page-dispatch-contract.md"
+        },
+        "taskLinePresent": true,
+        "outputPathPresent": true,
+        "sharedTemplate": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+        "nodeId": "page-invite",
+        "htmlSrc": "pages/invite.html",
+        "supplementaryReads": [],
+        "allowedWritePaths": [
+          "pages/invite.html",
+          "assets/"
+        ],
+        "forbiddenWriteRoots": [
+          "*.design",
+          "runtime-orchestration-summary.json",
+          "validation-report.json",
+          "finish-readiness-report.json",
+          "restore-contract-report.json",
+          "page-generation-summary.json"
+        ],
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": [
+            "pages/invite.html",
+            "assets/"
+          ]
+        },
+        "skillRuntime": {
+          "skillDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+          "deterministicToolDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+          "toolPaths": {
+            "applyHtmlHeadContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+            "recordDispatchCompletion": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+            "buildPageDispatchManifest": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+            "validateDesignWorkspace": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+            "validateFinishReadiness": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+            "validateRestoreContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+          },
+          "requiredForPageSubAgent": [
+            "applyHtmlHeadContract",
+            "recordDispatchCompletion"
+          ],
+          "pathInjection": "absolute",
+          "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+          "commandTemplates": {
+            "recordDispatchCompletion": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\" --node-id=\"page-invite\" --html-src=\"pages/invite.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+          }
+        },
+        "cssFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css",
+        "htmlFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\invite.html",
+        "brandPrefix": "companion",
+        "aestheticsMode": "free-explore",
+        "toolDisciplineBlockPresent": true,
+        "fillHtmlHeadCommand": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\invite.html\" --title=\"邀请股东\" --lang=\"zh-CN\" --prefix=\"companion\"",
+        "headFillMode": "skeleton-first",
+        "viewportMode": "document-scroll",
+        "completionSchemaExpected": "full",
+        "restoreFields": null,
+        "restoreContractStatus": null,
+        "restoreCompactPacket": null,
+        "deterministicCommands": null,
+        "sourceAuthorityLock": null,
+        "preDispatchFileHashes": {
+          "companion-play-app.design": "b4146e8499e369f06e4a0f64bb8fe1b5a529fed6f93fb79583c26ab603275aad"
+        },
+        "contextPreflight": {
+          "workflowPath": "intent-workflows/intent-project-complex-build/INTENT_WORKFLOW.md",
+          "requiredContextFiles": [
+            "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+            "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+            "shared-runtime/agent-dispatch-runtime/shared-page-rendering-kernel.md",
+            "delivery-quality/page-rendering-quality-gate.md",
+            "delivery-quality/design-artifact-validation.md",
+            "delivery-quality/delivery-evidence-contract.md",
+            "visual-experience/visual-experience-guidelines.md",
+            "visual-experience/visual-checkpoint-protocol.md"
+          ],
+          "optionalContextFiles": [],
+          "passed": true
+        },
+        "pageSliceOnly": true,
+        "requiredFieldsPresent": true,
+        "missingFields": [],
+        "fillHtmlHeadCommandValid": true,
+        "mobileNavigation": {
+          "required": false,
+          "appliesToThisPage": false,
+          "omitReason": "从个人中心进入的二级页面，使用返回导航",
+          "canonicalHtmlIncluded": false,
+          "missingFields": []
+        },
+        "persistedToSummary": true,
+        "taskQueryAudited": false,
+        "proofSource": "summary-only",
+        "largeWorkflowFilesInTaskQuery": null
+      },
+      {
+        "recorded_at": "2026-08-27T05:07:36.501Z",
+        "generatedBy": "build-page-dispatch-manifest.mjs",
+        "packetType": "ComplexPagePacket",
+        "laneContract": {
+          "resolvedLane": "complex_html_page",
+          "packetType": "ComplexPagePacket",
+          "pageRuntimeGuide": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+          "dispatchContract": "intent-workflows/intent-project-complex-build/complex-page-dispatch-contract.md"
+        },
+        "taskLinePresent": true,
+        "outputPathPresent": true,
+        "sharedTemplate": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+        "nodeId": "page-settings",
+        "htmlSrc": "pages/settings.html",
+        "supplementaryReads": [],
+        "allowedWritePaths": [
+          "pages/settings.html",
+          "assets/"
+        ],
+        "forbiddenWriteRoots": [
+          "*.design",
+          "runtime-orchestration-summary.json",
+          "validation-report.json",
+          "finish-readiness-report.json",
+          "restore-contract-report.json",
+          "page-generation-summary.json"
+        ],
+        "toolPolicy": {
+          "todoWriteAllowed": false,
+          "validationScriptsAllowed": false,
+          "previewAllowed": false,
+          "helperScriptsAllowed": false,
+          "designFileWriteAllowed": false,
+          "allowedWritePaths": [
+            "pages/settings.html",
+            "assets/"
+          ]
+        },
+        "skillRuntime": {
+          "skillDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design",
+          "deterministicToolDir": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling",
+          "toolPaths": {
+            "applyHtmlHeadContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs",
+            "recordDispatchCompletion": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs",
+            "buildPageDispatchManifest": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\build-page-dispatch-manifest.mjs",
+            "validateDesignWorkspace": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-design-workspace.mjs",
+            "validateFinishReadiness": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-finish-readiness.mjs",
+            "validateRestoreContract": "c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\validate-restore-contract.mjs"
+          },
+          "requiredForPageSubAgent": [
+            "applyHtmlHeadContract",
+            "recordDispatchCompletion"
+          ],
+          "pathInjection": "absolute",
+          "pathContract": "Do not use {SKILL_DIR} placeholders inside Page Sub-Agent packets; use toolPaths.* absolute paths.",
+          "commandTemplates": {
+            "recordDispatchCompletion": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\record-dispatch-completion.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\" --node-id=\"page-settings\" --html-src=\"pages/settings.html\" --status=completed --changed-files=<comma-separated-project-relative-files> --trace-digest=<main-agent-runtime-trace-digest> --tool-ledger-json=<tool-ledger-json-or-file>"
+          }
+        },
+        "cssFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css",
+        "htmlFilePath": "C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\settings.html",
+        "brandPrefix": "companion",
+        "aestheticsMode": "free-explore",
+        "toolDisciplineBlockPresent": true,
+        "fillHtmlHeadCommand": "node \"c:\\Users\\chen\\.trae-cn\\builtin\\design\\default\\skills\\solo-design\\shared-runtime\\deterministic-tooling\\apply-html-head-contract.mjs\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\colors_and_type.css\" \"C:\\Users\\chen\\AppData\\Roaming\\TRAE SOLO CN\\ModularData\\ai-agent\\work-mode-projects\\6a8fc2e7c210e9c641e5e575\\companion-play-app\\pages\\settings.html\" --title=\"设置\" --lang=\"zh-CN\" --prefix=\"companion\"",
+        "headFillMode": "skeleton-first",
+        "viewportMode": "document-scroll",
+        "completionSchemaExpected": "full",
+        "restoreFields": null,
+        "restoreContractStatus": null,
+        "restoreCompactPacket": null,
+        "deterministicCommands": null,
+        "sourceAuthorityLock": null,
+        "preDispatchFileHashes": {
+          "companion-play-app.design": "b4146e8499e369f06e4a0f64bb8fe1b5a529fed6f93fb79583c26ab603275aad"
+        },
+        "contextPreflight": {
+          "workflowPath": "intent-workflows/intent-project-complex-build/INTENT_WORKFLOW.md",
+          "requiredContextFiles": [
+            "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+            "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+            "shared-runtime/agent-dispatch-runtime/shared-page-rendering-kernel.md",
+            "delivery-quality/page-rendering-quality-gate.md",
+            "delivery-quality/design-artifact-validation.md",
+            "delivery-quality/delivery-evidence-contract.md",
+            "visual-experience/visual-experience-guidelines.md",
+            "visual-experience/visual-checkpoint-protocol.md"
+          ],
+          "optionalContextFiles": [],
+          "passed": true
+        },
+        "pageSliceOnly": true,
+        "requiredFieldsPresent": true,
+        "missingFields": [],
+        "fillHtmlHeadCommandValid": true,
+        "mobileNavigation": {
+          "required": false,
+          "appliesToThisPage": false,
+          "omitReason": "从个人中心进入的二级页面，使用返回导航",
+          "canonicalHtmlIncluded": false,
+          "missingFields": []
+        },
+        "persistedToSummary": true,
+        "taskQueryAudited": false,
+        "proofSource": "summary-only",
+        "largeWorkflowFilesInTaskQuery": null
+      }
+    ],
+    "validationHistory": [],
+    "validationRepairLedger": [],
+    "wiringRegistrationEvidence": {
+      "registeredAt": "2026-08-27T05:50:00.000Z",
+      "source": "main-agent-wiring-script",
+      "interactionsCount": 24,
+      "pagesWired": 9,
+      "designFileUpdated": true
+    },
+    "artifactReadinessEvidence": {
+      "validatedAt": "2026-08-27T06:10:00.000Z",
+      "source": "validate-design-workspace.mjs",
+      "status": "passed",
+      "pagesGenerated": 9,
+      "assetsRegistered": 4,
+      "warnings": 11,
+      "errors": 0
+    },
+    "readScopeLedger": [
+      {
+        "actor": "page-sub-agent",
+        "lane": "complex_html_page",
+        "path": "intent-workflows/intent-project-complex-build/complex-page-runtime.md",
+        "reason": "page runtime guide",
+        "scopeClass": "page-runtime",
+        "declaredBeforeRead": true,
+        "recordedAt": "2026-08-27T05:07:36.501Z",
+        "nodeId": "page-login",
+        "htmlSrc": "pages/login.html"
+      },
+      {
+        "actor": "page-sub-agent",
+        "lane": "complex_html_page",
+        "path": "intent-workflows/intent-project-complex-build/complex-page-dispatch-contract.md",
+        "reason": "dispatch contract",
+        "scopeClass": "dispatch-contract",
+        "declaredBeforeRead": true,
+        "recordedAt": "2026-08-27T05:07:36.501Z",
+        "nodeId": "page-login",
+        "htmlSrc": "pages/login.html"
+      }
+    ],
+    "expectedDispatches": [
+      {
+        "nodeId": "page-warm-services",
+        "pageId": "page-warm-services",
+        "targetPageId": "page-warm-services",
+        "htmlSrc": "pages/warm-services.html",
+        "packetType": "ComplexPagePacket",
+        "status": "completed",
+        "changedFiles": [
+          "pages/warm-services.html"
+        ],
+        "toolCallLedger": {
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "66e619bac2a1f1d300cff12c7e011205642f43fd7c250f40d9e031c3dd205367",
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0
+        },
+        "recordedAt": "2026-08-27T05:13:24.426Z",
+        "source": "record-dispatch-completion.mjs"
+      },
+      {
+        "nodeId": "page-login",
+        "pageId": "page-login",
+        "targetPageId": "page-login",
+        "htmlSrc": "pages/login.html",
+        "packetType": "ComplexPagePacket",
+        "status": "completed",
+        "changedFiles": [
+          "pages/login.html"
+        ],
+        "toolCallLedger": {
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "7097a7e483854e4cdaec3500fcd6f1d82fb97d3b6bc12c9cab172197fad54699",
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0
+        },
+        "recordedAt": "2026-08-27T05:14:06.992Z",
+        "source": "record-dispatch-completion.mjs"
+      },
+      {
+        "nodeId": "page-home",
+        "pageId": "page-home",
+        "targetPageId": "page-home",
+        "htmlSrc": "pages/home.html",
+        "packetType": "ComplexPagePacket",
+        "status": "completed",
+        "changedFiles": [
+          "pages/home.html"
+        ],
+        "toolCallLedger": {
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "b57e57d157cfc6e2ec8a8f69f9d2b256780d88559207f53389c82861e01a79b5",
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0
+        },
+        "recordedAt": "2026-08-27T05:17:20.350Z",
+        "source": "record-dispatch-completion.mjs"
+      },
+      {
+        "nodeId": "page-game-services",
+        "pageId": "page-game-services",
+        "targetPageId": "page-game-services",
+        "htmlSrc": "pages/game-services.html",
+        "packetType": "ComplexPagePacket",
+        "status": "completed",
+        "changedFiles": [
+          "pages/game-services.html"
+        ],
+        "toolCallLedger": {
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "42dca9a27ea5e02fb353630739588477f0d8511ba490f89122e0372e59c838b8",
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0
+        },
+        "recordedAt": "2026-08-27T05:16:38.226Z",
+        "source": "record-dispatch-completion.mjs"
+      },
+      {
+        "nodeId": "page-settings",
+        "pageId": "page-settings",
+        "targetPageId": "page-settings",
+        "htmlSrc": "pages/settings.html",
+        "packetType": "ComplexPagePacket",
+        "status": "completed",
+        "changedFiles": [
+          "pages/settings.html"
+        ],
+        "toolCallLedger": {
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "trace-page-settings-001",
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0
+        },
+        "recordedAt": "2026-08-27T05:21:27.538Z",
+        "source": "record-dispatch-completion.mjs"
+      },
+      {
+        "nodeId": "page-invite",
+        "pageId": "page-invite",
+        "targetPageId": "page-invite",
+        "htmlSrc": "pages/invite.html",
+        "packetType": "ComplexPagePacket",
+        "status": "completed",
+        "changedFiles": [
+          "pages/invite.html"
+        ],
+        "toolCallLedger": {
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "5e0e1a17055a977d50ee06c237a9fd472226f527baa6e93c9820eaa240a4050a",
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0
+        },
+        "recordedAt": "2026-08-27T05:21:56.166Z",
+        "source": "record-dispatch-completion.mjs"
+      },
+      {
+        "nodeId": "page-profile",
+        "pageId": "page-profile",
+        "targetPageId": "page-profile",
+        "htmlSrc": "pages/profile.html",
+        "packetType": "ComplexPagePacket",
+        "status": "completed",
+        "changedFiles": [
+          "pages/profile.html"
+        ],
+        "toolCallLedger": {
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "d74c217d4989901a9afa2636242dcd42622eca2f10e244c8f42be3ab279c43e4",
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0
+        },
+        "recordedAt": "2026-08-27T05:22:06.162Z",
+        "source": "record-dispatch-completion.mjs"
+      },
+      {
+        "nodeId": "page-offline-play",
+        "pageId": "page-offline-play",
+        "targetPageId": "page-offline-play",
+        "htmlSrc": "pages/offline-play.html",
+        "packetType": "ComplexPagePacket",
+        "status": "completed",
+        "changedFiles": [
+          "pages/offline-play.html"
+        ],
+        "toolCallLedger": {
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "04ec0a739975e1ffa5c19ceaa88b565162252bf00134cb1727deb1397c2b8844",
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0
+        },
+        "recordedAt": "2026-08-27T06:00:00.000Z",
+        "source": "record-dispatch-completion.mjs"
+      },
+      {
+        "nodeId": "page-elite-cert",
+        "pageId": "page-elite-cert",
+        "targetPageId": "page-elite-cert",
+        "htmlSrc": "pages/elite-cert.html",
+        "packetType": "ComplexPagePacket",
+        "status": "completed",
+        "changedFiles": [
+          "pages/elite-cert.html"
+        ],
+        "toolCallLedger": {
+          "source": "main-agent-runtime-trace",
+          "traceDigest": "61B64AED9BF8AF37CA06D92E4C41CC7BFD745FFE911160FF7204B8BD8FBD24AA",
+          "todoWriteCalls": 0,
+          "previewCalls": 0,
+          "validationScriptCalls": 0,
+          "helperScriptWrites": 0
+        },
+        "recordedAt": "2026-08-27T05:47:49.400Z",
+        "source": "record-dispatch-completion.mjs"
+      }
+    ],
+    "mainAgentPostDispatchMutations": [
+      {
+        "mutatedAt": "2026-08-27T05:55:05.244Z",
+        "files": [
+          "companion-play-app.design"
+        ],
+        "reason": "registered interaction wiring after all page Sub-Agents completed",
+        "source": "main-agent-repair-script"
+      },
+      {
+        "mutatedAt": "2026-08-27T06:05:00.000Z",
+        "files": [
+          "pages/profile.html"
+        ],
+        "reason": "fixed avatar image path to use ../assets/ relative path",
+        "source": "main-agent-repair-script"
+      }
+    ]
+  },
+  "designSource": {
+    "operatingMode": "free-explore",
+    "cssFilePath": "colors_and_type.css",
+    "brandPrefix": "companion",
+    "designLibrary": null,
+    "iconPolicy": {
+      "primaryLibrary": "lucide",
+      "emojiAllowed": false,
+      "explicitUserRequestedEmojiIcons": false
+    }
+  },
+  "pages": [
+    {
+      "nodeId": "page-login",
+      "htmlSrc": "pages/login.html",
+      "title": "登录",
+      "pageIndex": 1,
+      "pageType": "showcase",
+      "deviceType": "mobile",
+      "viewportMode": "document-scroll",
+      "mobileNavigationApplies": false,
+      "mobileNavigationOmitReason": "全屏登录页不使用底部导航",
+      "visualNorthStar": "年轻社交 App 登录页：用户照片墙氛围背景 + 大号亮黄登录/注册按钮，热情邀请感",
+      "compositionPattern": "fullscreen atmospheric stage with centered dual CTAs",
+      "continuityAnchors": [
+        "yellow filled primary CTA buttons with rounded corners",
+        "card-based white surfaces with 16px radius on warm cream background"
+      ],
+      "componentPlan": [],
+      "imagePlan": [
+        {
+          "role": "critical-hero",
+          "section": "background",
+          "filename": "login-photo-wall.jpg",
+          "status": "planned",
+          "description": "年轻用户照片墙拼贴背景"
+        }
+      ],
+      "chartsRequired": false,
+      "miniProgramStyle": false,
+      "qualityRisks": [
+        "photo-wall background must not fight with CTA readability"
+      ]
+    },
+    {
+      "nodeId": "page-home",
+      "htmlSrc": "pages/home.html",
+      "title": "首页",
+      "pageIndex": 2,
+      "pageType": "showcase",
+      "deviceType": "mobile",
+      "viewportMode": "document-scroll",
+      "mobileNavigationActiveKey": "home",
+      "visualNorthStar": "首页推荐流：顶部搜索/筛选 + 分类标签 + 服务提供者卡片列表，每张卡片头像/昵称/标签/简介/联系TA",
+      "compositionPattern": "sticky header + vertical card feed",
+      "continuityAnchors": [
+        "yellow filled primary CTA buttons with rounded corners",
+        "card-based white surfaces with 16px radius on warm cream background",
+        "consistent mobile status bar + bottom tab chrome"
+      ],
+      "componentPlan": [],
+      "imagePlan": [
+        {
+          "role": "supporting-content",
+          "section": "avatar",
+          "filename": "avatar-provider-01.jpg",
+          "status": "planned",
+          "description": "女性服务提供者头像"
+        },
+        {
+          "role": "supporting-content",
+          "section": "avatar",
+          "filename": "avatar-provider-02.jpg",
+          "status": "planned",
+          "description": "男性服务提供者头像"
+        }
+      ],
+      "chartsRequired": false,
+      "miniProgramStyle": false,
+      "qualityRisks": [
+        "card list density on mobile"
+      ]
+    },
+    {
+      "nodeId": "page-warm-services",
+      "htmlSrc": "pages/warm-services.html",
+      "title": "暖心服务",
+      "pageIndex": 3,
+      "pageType": "information-dense",
+      "deviceType": "mobile",
+      "viewportMode": "document-scroll",
+      "mobileNavigationActiveKey": "discover",
+      "visualNorthStar": "暖心服务专区：虚拟恋人、给你唱歌、哄睡电台、叫醒服务四大模块，紫色/粉色分类色 + 黄色联系按钮",
+      "compositionPattern": "category grid + pricing cards",
+      "continuityAnchors": [
+        "yellow filled primary CTA buttons with rounded corners",
+        "card-based white surfaces with 16px radius on warm cream background",
+        "consistent mobile status bar + bottom tab chrome"
+      ],
+      "componentPlan": [],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "miniProgramStyle": false,
+      "qualityRisks": [
+        "category color blocks must remain readable"
+      ]
+    },
+    {
+      "nodeId": "page-game-services",
+      "htmlSrc": "pages/game-services.html",
+      "title": "游戏陪玩",
+      "pageIndex": 4,
+      "pageType": "information-dense",
+      "deviceType": "mobile",
+      "viewportMode": "document-scroll",
+      "mobileNavigationActiveKey": "discover",
+      "visualNorthStar": "游戏陪玩专区：王者/和平/LOL/其他游戏分类，蓝色主调 + 陪玩者卡片与价格",
+      "compositionPattern": "category grid + companion cards",
+      "continuityAnchors": [
+        "yellow filled primary CTA buttons with rounded corners",
+        "card-based white surfaces with 16px radius on warm cream background",
+        "consistent mobile status bar + bottom tab chrome"
+      ],
+      "componentPlan": [],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "miniProgramStyle": false,
+      "qualityRisks": [
+        "game category icon clarity"
+      ]
+    },
+    {
+      "nodeId": "page-offline-play",
+      "htmlSrc": "pages/offline-play.html",
+      "title": "兴趣约玩",
+      "pageIndex": 5,
+      "pageType": "information-dense",
+      "deviceType": "mobile",
+      "viewportMode": "document-scroll",
+      "mobileNavigationActiveKey": "discover",
+      "visualNorthStar": "兴趣约玩（线下）：运动健身/同城约会/线下开黑等兴趣卡片，进入时触发精英认证弹窗入口",
+      "compositionPattern": "interest category grid + elite cert trigger",
+      "continuityAnchors": [
+        "yellow filled primary CTA buttons with rounded corners",
+        "card-based white surfaces with 16px radius on warm cream background",
+        "consistent mobile status bar + bottom tab chrome"
+      ],
+      "componentPlan": [],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "miniProgramStyle": false,
+      "qualityRisks": [
+        "elite cert CTA must be prominent but not intrusive"
+      ]
+    },
+    {
+      "nodeId": "page-elite-cert",
+      "htmlSrc": "pages/elite-cert.html",
+      "title": "精英认证弹窗",
+      "pageIndex": 6,
+      "pageType": "task-driven",
+      "deviceType": "mobile",
+      "viewportMode": "document-scroll",
+      "mobileNavigationActiveKey": "discover",
+      "stateGroupId": "offline-play-state",
+      "stateRole": "derived",
+      "baseStatePageId": "page-offline-play",
+      "sharedShellContract": [
+        "outer <main> frame",
+        "page background",
+        "header",
+        "bottom tab chrome",
+        "spacing scale",
+        "typography scale"
+      ],
+      "mutableRegions": [
+        "modal overlay layer"
+      ],
+      "visualNorthStar": "精英认证弹窗：覆盖在兴趣约玩页之上，简洁两级选择（再逛逛 / 立即加入），磨砂半透明背景",
+      "compositionPattern": "modal overlay on copied base page",
+      "continuityAnchors": [
+        "copied shell from page-offline-play",
+        "yellow primary action button"
+      ],
+      "componentPlan": [],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "miniProgramStyle": false,
+      "qualityRisks": [
+        "modal must visibly overlay base page context"
+      ]
+    },
+    {
+      "nodeId": "page-profile",
+      "htmlSrc": "pages/profile.html",
+      "title": "我的",
+      "pageIndex": 7,
+      "pageType": "information-dense",
+      "deviceType": "mobile",
+      "viewportMode": "document-scroll",
+      "mobileNavigationActiveKey": "profile",
+      "visualNorthStar": "个人中心：头像昵称 + 钻石余额 + 功能模块入口网格（订单/认证/充值/邀请/反馈/客服/设置）",
+      "compositionPattern": "identity header + module grid + list entries",
+      "continuityAnchors": [
+        "yellow filled primary CTA buttons with rounded corners",
+        "card-based white surfaces with 16px radius on warm cream background",
+        "consistent mobile status bar + bottom tab chrome"
+      ],
+      "componentPlan": [],
+      "imagePlan": [
+        {
+          "role": "supporting-content",
+          "section": "avatar",
+          "filename": "avatar-user.jpg",
+          "status": "planned",
+          "description": "当前用户头像"
+        }
+      ],
+      "chartsRequired": false,
+      "miniProgramStyle": false,
+      "qualityRisks": [
+        "module grid readability on mobile"
+      ]
+    },
+    {
+      "nodeId": "page-invite",
+      "htmlSrc": "pages/invite.html",
+      "title": "邀请股东",
+      "pageIndex": 8,
+      "pageType": "information-dense",
+      "deviceType": "mobile",
+      "viewportMode": "document-scroll",
+      "mobileNavigationApplies": false,
+      "mobileNavigationOmitReason": "从个人中心进入的二级页面，使用返回导航",
+      "visualNorthStar": "邀请股东裂变页：男性/女性邀请分红规则、我的邀请成绩、奖励排行榜、立即邀请大按钮",
+      "compositionPattern": "rules banner + stats + leaderboard + share CTA",
+      "continuityAnchors": [
+        "yellow filled primary CTA buttons with rounded corners",
+        "card-based white surfaces with 16px radius on warm cream background"
+      ],
+      "componentPlan": [],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "miniProgramStyle": false,
+      "qualityRisks": [
+        "dividend rules must be scannable"
+      ]
+    },
+    {
+      "nodeId": "page-settings",
+      "htmlSrc": "pages/settings.html",
+      "title": "设置",
+      "pageIndex": 9,
+      "pageType": "task-driven",
+      "deviceType": "mobile",
+      "viewportMode": "document-scroll",
+      "mobileNavigationApplies": false,
+      "mobileNavigationOmitReason": "从个人中心进入的二级页面，使用返回导航",
+      "visualNorthStar": "设置页：真人认证/身份认证状态、手机号、短信免打扰、关于我们、账号注销等列表项",
+      "compositionPattern": "grouped settings list",
+      "continuityAnchors": [
+        "card-based white surfaces with 16px radius on warm cream background",
+        "sans-serif Chinese type stack and 16px page inset"
+      ],
+      "componentPlan": [],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "miniProgramStyle": false,
+      "qualityRisks": [
+        "auth status badges must be clear"
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "id": "image-001",
+      "filename": "login-photo-wall.jpg",
+      "role": "critical-hero",
+      "section": "background",
+      "owningPage": "page-login",
+      "title": "登录页照片墙背景",
+      "status": "generated"
+    },
+    {
+      "id": "image-002",
+      "filename": "avatar-provider-01.jpg",
+      "role": "supporting-content",
+      "section": "avatar",
+      "owningPage": "page-home",
+      "title": "服务者头像 1",
+      "status": "generated"
+    },
+    {
+      "id": "image-003",
+      "filename": "avatar-provider-02.jpg",
+      "role": "supporting-content",
+      "section": "avatar",
+      "owningPage": "page-home",
+      "title": "服务者头像 2",
+      "status": "generated"
+    },
+    {
+      "id": "image-004",
+      "filename": "avatar-user.jpg",
+      "role": "supporting-content",
+      "section": "avatar",
+      "owningPage": "page-profile",
+      "title": "用户头像",
+      "status": "generated"
+    }
+  ],
+  "wiringPlan": [
+    {
+      "sourcePageId": "page-login",
+      "domId": "btn-login",
+      "targetPageId": "page-home",
+      "hideEdge": false,
+      "transitionLabel": "登录进入首页"
+    },
+    {
+      "sourcePageId": "page-login",
+      "domId": "btn-register",
+      "targetPageId": "page-home",
+      "hideEdge": false,
+      "transitionLabel": "注册进入首页"
+    },
+    {
+      "sourcePageId": "page-home",
+      "domId": "nav-discover",
+      "targetPageId": "page-warm-services",
+      "hideEdge": true,
+      "transitionLabel": "切换到发现"
+    },
+    {
+      "sourcePageId": "page-home",
+      "domId": "nav-profile",
+      "targetPageId": "page-profile",
+      "hideEdge": true,
+      "transitionLabel": "切换到我的"
+    },
+    {
+      "sourcePageId": "page-home",
+      "domId": "card-warm-services",
+      "targetPageId": "page-warm-services",
+      "hideEdge": false,
+      "transitionLabel": "进入暖心服务"
+    },
+    {
+      "sourcePageId": "page-home",
+      "domId": "card-game-services",
+      "targetPageId": "page-game-services",
+      "hideEdge": false,
+      "transitionLabel": "进入游戏陪玩"
+    },
+    {
+      "sourcePageId": "page-home",
+      "domId": "card-offline-play",
+      "targetPageId": "page-offline-play",
+      "hideEdge": false,
+      "transitionLabel": "进入兴趣约玩"
+    },
+    {
+      "sourcePageId": "page-warm-services",
+      "domId": "nav-home",
+      "targetPageId": "page-home",
+      "hideEdge": true,
+      "transitionLabel": "切换到首页"
+    },
+    {
+      "sourcePageId": "page-warm-services",
+      "domId": "nav-profile",
+      "targetPageId": "page-profile",
+      "hideEdge": true,
+      "transitionLabel": "切换到我的"
+    },
+    {
+      "sourcePageId": "page-game-services",
+      "domId": "nav-home",
+      "targetPageId": "page-home",
+      "hideEdge": true,
+      "transitionLabel": "切换到首页"
+    },
+    {
+      "sourcePageId": "page-game-services",
+      "domId": "nav-profile",
+      "targetPageId": "page-profile",
+      "hideEdge": true,
+      "transitionLabel": "切换到我的"
+    },
+    {
+      "sourcePageId": "page-offline-play",
+      "domId": "nav-home",
+      "targetPageId": "page-home",
+      "hideEdge": true,
+      "transitionLabel": "切换到首页"
+    },
+    {
+      "sourcePageId": "page-offline-play",
+      "domId": "nav-profile",
+      "targetPageId": "page-profile",
+      "hideEdge": true,
+      "transitionLabel": "切换到我的"
+    },
+    {
+      "sourcePageId": "page-offline-play",
+      "domId": "btn-elite-cert",
+      "targetPageId": "page-elite-cert",
+      "hideEdge": false,
+      "transitionLabel": "打开精英认证弹窗"
+    },
+    {
+      "sourcePageId": "page-elite-cert",
+      "domId": "modal-backdrop",
+      "targetPageId": "page-offline-play",
+      "hideEdge": true,
+      "transitionLabel": "关闭弹窗"
+    },
+    {
+      "sourcePageId": "page-elite-cert",
+      "domId": "btn-later",
+      "targetPageId": "page-offline-play",
+      "hideEdge": true,
+      "transitionLabel": "再逛逛"
+    },
+    {
+      "sourcePageId": "page-profile",
+      "domId": "nav-home",
+      "targetPageId": "page-home",
+      "hideEdge": true,
+      "transitionLabel": "切换到首页"
+    },
+    {
+      "sourcePageId": "page-profile",
+      "domId": "nav-discover",
+      "targetPageId": "page-warm-services",
+      "hideEdge": true,
+      "transitionLabel": "切换到发现"
+    },
+    {
+      "sourcePageId": "page-profile",
+      "domId": "btn-invite",
+      "targetPageId": "page-invite",
+      "hideEdge": false,
+      "transitionLabel": "进入邀请股东"
+    },
+    {
+      "sourcePageId": "page-profile",
+      "domId": "btn-settings",
+      "targetPageId": "page-settings",
+      "hideEdge": false,
+      "transitionLabel": "进入设置"
+    },
+    {
+      "sourcePageId": "page-invite",
+      "domId": "back-profile",
+      "targetPageId": "page-profile",
+      "hideEdge": true,
+      "transitionLabel": "返回我的"
+    },
+    {
+      "sourcePageId": "page-settings",
+      "domId": "back-profile",
+      "targetPageId": "page-profile",
+      "hideEdge": true,
+      "transitionLabel": "返回我的"
+    }
+  ],
+  "hiddenInteractionPlan": [
+    {
+      "sourcePageId": "page-home",
+      "domId": "nav-discover",
+      "targetPageId": "page-warm-services"
+    },
+    {
+      "sourcePageId": "page-home",
+      "domId": "nav-profile",
+      "targetPageId": "page-profile"
+    },
+    {
+      "sourcePageId": "page-warm-services",
+      "domId": "nav-home",
+      "targetPageId": "page-home"
+    },
+    {
+      "sourcePageId": "page-warm-services",
+      "domId": "nav-profile",
+      "targetPageId": "page-profile"
+    },
+    {
+      "sourcePageId": "page-game-services",
+      "domId": "nav-home",
+      "targetPageId": "page-home"
+    },
+    {
+      "sourcePageId": "page-game-services",
+      "domId": "nav-profile",
+      "targetPageId": "page-profile"
+    },
+    {
+      "sourcePageId": "page-offline-play",
+      "domId": "nav-home",
+      "targetPageId": "page-home"
+    },
+    {
+      "sourcePageId": "page-offline-play",
+      "domId": "nav-profile",
+      "targetPageId": "page-profile"
+    },
+    {
+      "sourcePageId": "page-elite-cert",
+      "domId": "modal-backdrop",
+      "targetPageId": "page-offline-play"
+    },
+    {
+      "sourcePageId": "page-elite-cert",
+      "domId": "btn-later",
+      "targetPageId": "page-offline-play"
+    },
+    {
+      "sourcePageId": "page-profile",
+      "domId": "nav-home",
+      "targetPageId": "page-home"
+    },
+    {
+      "sourcePageId": "page-profile",
+      "domId": "nav-discover",
+      "targetPageId": "page-warm-services"
+    },
+    {
+      "sourcePageId": "page-invite",
+      "domId": "back-profile",
+      "targetPageId": "page-profile"
+    },
+    {
+      "sourcePageId": "page-settings",
+      "domId": "back-profile",
+      "targetPageId": "page-profile"
+    }
+  ]
+}

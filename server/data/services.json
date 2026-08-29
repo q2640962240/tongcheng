@@ -1,0 +1,23 @@
+[
+  {
+    "providerId": 2,
+    "title": "1",
+    "description": "1",
+    "category": "warm",
+    "subCategory": "virtual-lover",
+    "coverImage": "",
+    "price": 10,
+    "priceUnit": "次",
+    "duration": 10,
+    "tags": [],
+    "status": "online",
+    "sort": 0,
+    "viewCount": 0,
+    "orderCount": 0,
+    "ratingAvg": 5,
+    "id": 1,
+    "createdAt": "2026-08-29T00:10:02.379Z",
+    "updatedAt": "2026-08-29T02:24:25.368Z",
+    "rejectReason": null
+  }
+]

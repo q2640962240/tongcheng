@@ -1,0 +1,88 @@
+@use "sass:color";
+
+/**
+ * 白夜 (BaiYe) — 设计 token（午夜蓝 + 金色 + 紫极光渐变）
+ * 在 uni-app 中通过 scss 变量暴露给各页面；页面通过 uni.scss 已自动注入
+ * `$by-*` 变量，无需再次 @import 本文件。
+ */
+
+/* 夜间底色 */
+$by-bg:           #0B0F1A !default;  // 最深午夜
+$by-bg-soft:      #141A2D !default;  // 次深（卡片底部）
+$by-surface:      #1A2238 !default;  // 标准卡片
+$by-surface-2:    #242E4C !default;  // 悬浮/高亮卡片
+$by-elevated:     #2F3C63 !default;
+
+/* 金色（白夜核心色） */
+$by-gold:         #D4AF37 !default;  // 主按钮、强调
+$by-gold-soft:    #F5D583 !default;  // 文字
+$by-gold-deep:    #B8941F !default;  // 按下态
+$by-gold-gradient-a: #F7E7B2 !default; // 渐变 A
+$by-gold-gradient-b: #D4AF37 !default;  // 渐变 B
+$by-gold-gradient-c: #B8941F !default;  // 渐变 C
+
+/* 极光渐变（紫 → 靛 → 金，用于 Banner 背景/Logo/精英按钮） */
+$by-aurora-a:    #7B61FF !default;   // 紫
+$by-aurora-b:    #B57BFF !default;   // 粉紫
+$by-aurora-c:    #4FB8FF !default;   // 冰蓝
+$by-aurora-d:    #FFD36B !default;   // 金粉
+
+/* 语义 */
+$by-success:      #22C55E;
+$by-warning:      #F59E0B;
+$by-error:        #EF4444;
+$by-info:         #4FB8FF;
+
+/* 文本 */
+$by-text-1:       #F5F7FF;   // 主文本
+$by-text-2:       #B7BFDA;   // 次文本
+$by-text-3:       #7E88AA;   // 占位
+$by-text-mute:    #4A5476;
+
+/* 边框/分割线（使用 color.change 保持语义，替代已弃用的 rgba($hex, α) 两参数写法） */
+$by-border:       color.change(#FFFFFF, $alpha: 0.08);
+$by-border-strong:color.change(#FFFFFF, $alpha: 0.16);
+
+/* 圆角 */
+$by-radius-sm:    8rpx;
+$by-radius-md:    16rpx;
+$by-radius-lg:    24rpx;
+$by-radius-xl:    36rpx;
+$by-radius-pill:  9999rpx;
+
+/* 阴影（暗色专用）— #RRGGBBAA 四通道十六进制语法可直接用，无需废弃的 rgba() */
+$by-shadow-1:     0 4rpx 12rpx #00000059;
+$by-shadow-2:     0 12rpx 40rpx -10rpx #0000008C;
+$by-shadow-3:     0 40rpx 120rpx -20rpx #000000B3;
+$by-shadow-gold:  0 8rpx 30rpx color.change(#D4AF37, $alpha: 0.25);  // 金色按钮光晕
+
+/* 常用渐变 */
+$by-gradient-gold:   linear-gradient(135deg, $by-gold-gradient-a 0%, $by-gold-gradient-b 55%, $by-gold-gradient-c 100%) !default;
+$by-gradient-aurora: linear-gradient(135deg, $by-aurora-a 0%, $by-aurora-b 40%, $by-aurora-c 75%, $by-aurora-d 100%) !default;
+$by-gradient-night:  linear-gradient(180deg, $by-bg 0%, $by-bg-soft 50%, $by-surface 100%) !default;
+
+/* 尺寸 */
+$by-topbar-h:       88rpx;
+$by-tabbar-h:      120rpx;
+$by-safe-bottom:   34rpx;
+$by-page-pad-x:    32rpx;
+
+/* ===== 语义别名（与上面核心 token 对齐，避免页面写散：未定义 → Sass 500 导致整页模块加载失败）===== */
+// 卡片主色：App 中通用 `.card` 的背景主面（city / 服务详情等需要直接复用的场景）
+$by-card-bg:       $by-surface !default;
+// 柔和卡片：标签/次级容器底色，比 $by-surface 再浅一档
+$by-soft-card:     $by-surface-2 !default;
+// hero 深夜区底色（elite-pay 顶部）：偏深的主底
+$by-night-bg:      $by-bg !default;
+// 极光粉色（与 aurora-b 粉紫同系，用于 elite 英雄标题渐变末端）
+$by-aurora-pink:   $by-aurora-d !default;
+// 极光紫色（aurora-a 的别名，group 详情顶部渐变常用）
+$by-aurora-purple: $by-aurora-a !default;
+// 静音文本：$by-text-mute 的 muted 别名，保持命名一致
+$by-text-muted:    $by-text-mute !default;
+// 纯黑/阴影色：午夜蓝接近黑的品牌色，不直接用 #000 以免偏冷
+$by-black:         #0B0F1A !default;
+// warn 语义：warning 的简写别名，设置页 / 认证状态通用
+$by-warn:          $by-warning !default;
+// 分割线：通用列表分割色（略浅于 border）
+$by-divider:       color.change(#FFFFFF, $alpha: 0.06) !default;

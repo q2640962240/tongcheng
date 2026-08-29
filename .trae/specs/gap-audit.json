@@ -1,0 +1,116 @@
+{
+  "missingSdkPackages": [
+    "@alicloud/dysmsapi20170525",
+    "@alicloud/openapi-client",
+    "tencentcloud-sdk-nodejs-sms",
+    "axios",
+    "alipay-sdk",
+    "ali-oss"
+  ],
+  "apiGaps": [
+    {
+      "frontUrl": "/elite/dev/pay",
+      "method": "POST",
+      "description": "前端 eliteApi.devPay() 定义 POST /elite/dev/pay（开发环境免真实支付直接开通精英），但 server/src/routes/elite.js 中仅存在 /pay/order、/pay/notify/:channel、/rights、/user/unlock-wechat、/user/contact，未实现 /dev/pay 路由；调用直接 404。该方法在 docs/PROJECT.md #52 标为 ✅（精英付费流程 dev 直开），实际空壳。"
+    },
+    {
+      "frontUrl": "/settings/notify",
+      "method": "POST",
+      "description": "前端 settings 路由中（settings.js 第73行）真实注册了 POST /notify 用于动态/组局通知开关持久化（对应 PROJECT.md #57 ✅ 设置页通知开关），但 app/src/api/index.js 的 settingsApi 仅暴露 get/bindPhone/toggleSmsDnd/cancelAccount 共4法，未封装 notify；若前端 Vue 直接调用会走 request() 直请求，但 API 索引中无对应方法易引发集成漏测。"
+    },
+    {
+      "frontUrl": "/user/kefu",
+      "method": "GET",
+      "description": "后端 user.js 第181行公开注册 GET /user/kefu 返回客服微信号/二维码/公告（PROJECT.md #38 客服联系），但 app/src/api/index.js 的 userApi 未导出 kefu 方法封装；若聊天页/订单详情「联系客服」按钮直接写死 URL 未走 api 层，后续换路由会批量出错。"
+    },
+    {
+      "frontUrl": "/sign-in/daily",
+      "method": "POST",
+      "description": "PROJECT.md #53 ✅ 红包签到专区标注「本地/服务端双重去重+余额回写」功能完成，但 app/src/api/index.js 无任何 sign-in/red-packet/check-in 类方法；后端 18 个 routes 模块中均不存在签到路由（无 POST /wallet/sign-in 或 /red-packet/claim）。整个功能接口完全缺失。"
+    }
+  ],
+  "adminGaps": [
+    {
+      "path": "/admin/posts",
+      "reason": "管理后台路由表仅定义 /discover/posts（动态审核），但 admin/src/api/index.js 中未封装 getPosts/auditPost 接口；routes/admin.js 第822行存在 PUT /admin/posts/:id/audit，但缺少 GET /admin/posts 列表接口（banners 有 GET /admin/list，posts 没有），实际进入动态管理 Tab 会拉不到数据。"
+    },
+    {
+      "path": "/admin/groups",
+      "reason": "管理后台路由 /discover/groups 对应视图 discover/Groups.vue，但 admin/src/api/index.js 未封装 getGroups/deleteGroup 接口；routes/admin.js 第834行仅提供 DELETE /admin/groups/:id，缺少 GET /admin/groups 组局列表接口。"
+    },
+    {
+      "path": "/admin/banners/list",
+      "reason": "视图 operations/Banners.vue 需要 Banner 列表、新增、修改、删除 4 接口；但 admin/src/api/index.js 没有任何 banner 方法封装。routes/admin.js 第844-872行实现了 POST/PUT/DELETE /admin/banners(/:id) 写接口，读接口仅在 banners.js 第38行 GET /banners/admin/list（鉴权走 banners.js 内 adminAuth），URL 与 admin 其它子模块风格不一致，容易产生 401/404。"
+    },
+    {
+      "path": "/admin/elite/orders",
+      "reason": "路由 /finance/elite-orders 对应 views/finance/EliteOrders.vue，但 admin/src/api/index.js 没封装 getEliteOrders 接口；routes/admin.js 第876行实现了 GET /admin/elite/orders，存在但 admin 前端 axios 封装缺失，视图必须手写 URL。"
+    },
+    {
+      "path": "/admin/certifications",
+      "reason": "routes/admin.js 第444行注册 GET /admin/certifications 认证申请列表（PROJECT.md #18 ✅ 精英认证后台审核），但 admin 路由表没有独立的「认证管理」菜单项，视图文件 views/users/Users.vue 直接复用用户审核 Tab，导致认证申请入口不在菜单，需手工输入 URL 访问。"
+    }
+  ],
+  "unverifiedFeatures": [
+    {
+      "index": 22,
+      "name": "支付集成（微信/支付宝真实通道 + 回调 + 提现审核）",
+      "reason": "接口骨架（wallet.js wx-notify/alipay-notify、admin.js withdrawals）齐全，但 6 个生产 SDK 全部未列入 server/package.json dependencies：axios（wxpay/push HTTP 客户端）、alipay-sdk、ali-oss、@alicloud/dysmsapi20170525、@alicloud/openapi-client、tencentcloud-sdk-nodejs-sms。当前仅能走 config enabled=false 的降级分支，真实下单/回调/打款路径无法实证，功能仅为壳。"
+    },
+    {
+      "index": 23,
+      "name": "推送（叫醒/订单状态/IM离线）",
+      "reason": "routes/push.js 与 utils/push.js 存在，但 utils 内 loadAxios() 返回 null（axios 未安装），且 jpush/getui 两 Provider 均未声明 SDK 依赖；当前 checkConfigReady() 走到 axios 缺失分支即报错，所有 pushToUser/pushToAll 实际不会送达，仅 Socket.IO 在线部分可用。"
+    },
+    {
+      "index": 31,
+      "name": "配置中心（短信/支付/OSS/推送/应用密钥可视化管理）",
+      "reason": "admin 配置页面 + routes/config.js 存在，但 app.js 中 config 路由挂载于 /api/admin/config（第81行），同时 admin.js 第482-815行也实现了一套重复的 /admin/config/*（modules 列表/详情/保存/测试/重置）。实际管理后台 Settings.vue 调用 /admin/config/modules（admin/src/api index.js 第38行）命中 admin.js，两套实现并存但测试/重置路径不同，可能出现一侧改配置另一侧没清缓存的矛盾。"
+    },
+    {
+      "index": 32,
+      "name": "短信验证码（dev/aliyun/tencent 三模式 + 频控）",
+      "reason": "utils/sms.js 已删除 dev 回退，改为「未配置即报业务错误」（PROJECT.md 与代码描述一致），但阿里云/腾讯云两套 SDK npm 包均未在 dependencies 声明；频控 routes/auth.js 正确，真实发送短信环节缺包导致 sms.verifyCode/sendCode 走不到 provider。"
+    },
+    {
+      "index": 46,
+      "name": "发现页 4 Tab：寻人大厅 / 动态广场 / 同城组局 / 红包签到专区",
+      "reason": "pages/discover/discover.vue 存在并定义 4 Tab（PROJECT.md #46 ✅），但「红包签到专区」子 Tab 对应的后端签到接口没有任何路由（routes/ 无 sign-in、red-packet、check-in）；前端 walletApi 无 claimRedPacket/dailySignIn 方法；该 Tab 点击后仅能展示本地 UI，服务端双重去重与余额回写无法验证。"
+    },
+    {
+      "index": 52,
+      "name": "精英付费流程：下单接口 + dev 直开 + 7 天无理由退款条款 + isElite 持久化",
+      "reason": "eliteApi 定义 6 法（rights/order/devPay/notify/unlockWechat/contactQuota）；其中 devPay 前端调用 POST /elite/dev/pay，但 elite.js 路由未实现该路径（仅 /pay/order、/pay/notify/:channel），导致开发环境免支付直接开通的「dev 直开」100% 404 空壳。"
+    },
+    {
+      "index": 53,
+      "name": "红包签到专区：每日领取 💎 + 本地/服务端双重去重 + 余额回写",
+      "reason": "API 层与路由层 0 实证：app/src/api/index.js 无签到相关封装；18 条后端 routes（含 wallet/elite/settings 等）全部没有每日签到或领取红包的 handler；PROJECT.md 表格「App: ✅ / API: ✅」与代码完全不一致。功能未完成。"
+    },
+    {
+      "index": 54,
+      "name": "举报通道闭环：意见反馈 3 类举报 Tab（动态 / 组局 / 用户）+ 对应 ID 字段",
+      "reason": "routes/feedback.js 第25行 Feedback.create 仅解构 { type, content, images }，Feedback 模型缺少 postId/groupId/targetUserId/refType 等关联字段；反馈类型 FEEDBACK_TYPES 仅 4 项（bug/suggest/complaint/other），未定义 report_post/report_group/report_user 等细分类型及举报 ID 字段。后端数据模型无法区分 3 类举报，无法闭环。"
+    },
+    {
+      "index": 58,
+      "name": "Banner 运营位：2 张默认 + 后台 CRUD + 权重排序",
+      "reason": "banners.js 与 admin.js 写接口存在，但 admin API 文件（admin/src/api/index.js）没有任何 banners 封装；routes/admin.js 中的 POST/PUT/DELETE /admin/banners/:id（第844-872行）与 banners.js 第54-87行的 POST/PUT/DELETE /banners/:id（含 adminAuth）两套写接口重复，并且 admin.js 的写接口没有复用 banners.js 里启用状态/时间字段校验，存在功能漂移风险（两边字段子集不一致）。"
+    },
+    {
+      "index": 59,
+      "name": "管理后台 4 新 Tab：动态审核 / 组局管理 / Banner 管理 / 精英订单",
+      "reason": "路由文件 router/index.js 已定义 discover/posts、discover/groups、operations/banners、finance/elite-orders 4 条路径；但 admin/src/api/index.js 仅覆盖 login、dashboard、users、services、orders、feedback、finance、withdrawals、invite、config 共 10 模块，4 个新 Tab 的列表/写操作封装全部缺失，视图层只能绕过 API 层手写 http.get()，极易因鉴权头（x-admin-token）或路径变更出 500。"
+    },
+    {
+      "index": 60,
+      "name": "仪表盘 4 新增指标：动态数 / 组局数 / 精英付费人数 / 精英累计收入",
+      "reason": "routes/admin.js 第83-89行在 /dashboard 统计里正确返回 postCount、groupCount、bannerCount、elitePaidCount、eliteRevenueFen（v2 5 项），但 admin/api/index.js 仅 getDashboard() 封装存在，没有字段级的 mock/错误处理；同时 Project.md 表述为「4 新增指标」，代码实际返回 5 字段（多 bannerCount），文档与实现不一致需校正 Spec。"
+    },
+    {
+      "index": 33,
+      "name": "OSS 存储（local/aliyun 两模式切换）",
+      "reason": "utils/oss.js 实现完整，但 provider=aliyun 分支依赖 ali-oss npm 包未在 package.json dependencies 声明；loadOSS() 捕获异常后返回 null 并报「ali-oss 未安装，请执行 npm i ali-oss」。目前仅 local 模式可实证，aliyun 上传/删除/测试连通性均走不到 SDK，生产模式功能未完成。"
+    }
+  ]
+}

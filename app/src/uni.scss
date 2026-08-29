@@ -1,0 +1,99 @@
+// 注意：uni.scss 作为 uni-app 全局注入的 SCSS 文件，仅允许放【变量/混入声明】，
+// 不允许出现会被翻译成 CSS 的选择器输出（否则会被每个页面重复注入）。
+// uni.scss 会被构建系统原样"粘贴"到每一个 <style lang="scss"> 块的最前面。
+// 【核心规则】
+// 1) 本文件内部变量声明用到了 color.mix / color.change，所以必须在此写 @use "sass:color"
+//    → 这也意味着：color 命名空间会自动对所有页面可用！
+// 2) 所有页面文件、组件文件的 <style lang="scss"> 块中：
+//    ✅ 直接用 color.adjust / color.mix / color.change
+//    ✅ 直接用 $by-* 变量
+//    ❌ 【绝对不要】再写 @use "sass:color"（会冲突"There's already a module with namespace color"）
+//    ❌ 【绝对不要】再写 @import/@use "theme-baiye.scss"（下面已经 as * 导出了）
+// 3) theme-baiye.scss 引用必须用 vite 别名 @/，因为注入时 SCSS 的 CWD 是页面所在目录
+//    （相对路径会解析到 pages/xxx/theme-baiye.scss → 文件不存在）。
+@use "sass:color";
+@use "@/theme-baiye.scss" as *;
+
+/**
+ * 白夜 (BaiYe) App · 全局设计 token（对齐 theme-baiye.scss）
+ * 用法：
+ *   - SCSS 中使用 $by-* 变量；
+ *   - 通过 uni.scss 自动引入，页面 <style lang="scss"> 无需重复 @use。
+ */
+
+/* —— 兼容：旧 companion-* 变量别名（T1~T14 过渡期用，后续可删）—— */
+$companion-primary-50:   $by-bg-soft;
+$companion-primary-100:  $by-surface;
+$companion-primary-200:  $by-surface-2;
+$companion-primary-300:  $by-border-strong;
+$companion-primary-400:  $by-gold-soft;
+$companion-primary-500:  $by-gold;
+$companion-primary-600:  $by-gold-deep;
+$companion-primary-700:  $by-gold-deep;
+
+$companion-purple: $by-aurora-a;
+$companion-purple-soft: color.change($by-aurora-b, $alpha: 0.14);
+$companion-blue:   $by-info;
+$companion-blue-soft: color.change($by-info, $alpha: 0.14);
+$companion-pink:   $by-aurora-b;
+$companion-pink-soft: color.change($by-aurora-b, $alpha: 0.14);
+
+$companion-neutral-0: $by-text-1;
+// mix($by-bg, $by-text-1, 95%) 即 95% 的 $by-bg + 5% 的 $by-text-1，
+// 用 color.mix 的 weight 参数（第一色权重）表达一致。
+$companion-neutral-50: color.mix($by-bg, $by-text-1, 95%);
+$companion-neutral-100: $by-bg-soft;
+$companion-neutral-200: $by-border;
+$companion-neutral-300: $by-border-strong;
+$companion-neutral-400: $by-text-3;
+$companion-neutral-500: $by-text-2;
+$companion-neutral-600: $by-text-1;
+$companion-neutral-700: $by-text-1;
+$companion-neutral-800: $by-bg-soft;
+$companion-neutral-900: $by-bg;
+
+$companion-background: $by-bg;
+$companion-foreground: $by-text-1;
+$companion-card:       $by-surface;
+$companion-card-foreground: $by-text-1;
+$companion-primary:         $by-gold;
+$companion-primary-foreground: #101218;
+$companion-muted:           $by-bg-soft;
+$companion-muted-foreground: $by-text-2;
+$companion-border:          $by-border;
+$companion-input:           $by-surface-2;
+$companion-ring:            $by-gold;
+
+$companion-state-success: $by-success;
+$companion-state-warning: $by-warning;
+$companion-state-error:   $by-error;
+$companion-state-info:    $by-info;
+
+$companion-radius-small:  $by-radius-sm;
+$companion-radius-medium: $by-radius-md;
+$companion-radius-large:  $by-radius-lg;
+$companion-radius-full:   $by-radius-pill;
+
+$companion-shadow-1: $by-shadow-1;
+$companion-shadow-2: $by-shadow-2;
+$companion-shadow-3: $by-shadow-3;
+
+/* —— uni 内置变量覆盖（夜化）—— */
+$uni-color-primary:    $by-gold;
+$uni-color-success:    $by-success;
+$uni-color-warning:    $by-warning;
+$uni-color-error:      $by-error;
+$uni-text-color:       $by-text-1;
+$uni-text-color-inverse: #0B0F1A;
+$uni-text-color-grey:  $by-text-2;
+$uni-text-color-placeholder: $by-text-3;
+$uni-text-color-disable:     $by-text-mute;
+$uni-bg-color:         $by-bg;
+$uni-bg-color-grey:    $by-bg-soft;
+$uni-border-color:     $by-border;
+$uni-spacing-row-sm:   12rpx;
+$uni-spacing-row-base: 24rpx;
+$uni-spacing-col-base: 32rpx;
+$uni-border-radius-sm: $by-radius-sm;
+$uni-border-radius-base: $by-radius-md;
+$uni-border-radius-lg: $by-radius-lg;

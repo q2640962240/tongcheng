@@ -1,0 +1,430 @@
+{
+  "data": [
+    {
+      "id": "page-login",
+      "title": "登录",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1756800000000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-864d2c10",
+          "measuredAt": 1787810499231
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/login.html",
+        "interactions": [
+          {
+            "domId": "btn-login",
+            "targetPageId": "page-home",
+            "hideEdge": false,
+            "transitionLabel": "登录进入首页"
+          },
+          {
+            "domId": "btn-register",
+            "targetPageId": "page-home",
+            "hideEdge": false,
+            "transitionLabel": "注册进入首页"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-home",
+      "title": "首页",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1756800000000,
+      "canvasData": {
+        "x": 169,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 957,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-5793b526",
+          "measuredAt": 1787810499231
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/home.html",
+        "interactions": [
+          {
+            "domId": "nav-discover",
+            "targetPageId": "page-warm-services",
+            "hideEdge": true,
+            "transitionLabel": "切换到发现"
+          },
+          {
+            "domId": "nav-profile",
+            "targetPageId": "page-profile",
+            "hideEdge": true,
+            "transitionLabel": "切换到我的"
+          },
+          {
+            "domId": "card-warm-services",
+            "targetPageId": "page-warm-services",
+            "hideEdge": false,
+            "transitionLabel": "进入暖心服务"
+          },
+          {
+            "domId": "card-game-services",
+            "targetPageId": "page-game-services",
+            "hideEdge": false,
+            "transitionLabel": "进入游戏陪玩"
+          },
+          {
+            "domId": "card-offline-play",
+            "targetPageId": "page-offline-play",
+            "hideEdge": false,
+            "transitionLabel": "进入兴趣约玩"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-warm-services",
+      "title": "暖心服务",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1756800000000,
+      "canvasData": {
+        "x": 338,
+        "y": 0,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-bb4a888f",
+          "measuredAt": 1787810499231
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/warm-services.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home",
+            "hideEdge": true,
+            "transitionLabel": "切换到首页"
+          },
+          {
+            "domId": "nav-profile",
+            "targetPageId": "page-profile",
+            "hideEdge": true,
+            "transitionLabel": "切换到我的"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-game-services",
+      "title": "游戏陪玩",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1756800000000,
+      "canvasData": {
+        "x": 338,
+        "y": 346,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-813e172c",
+          "measuredAt": 1787810499231
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/game-services.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home",
+            "hideEdge": true,
+            "transitionLabel": "切换到首页"
+          },
+          {
+            "domId": "nav-profile",
+            "targetPageId": "page-profile",
+            "hideEdge": true,
+            "transitionLabel": "切换到我的"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-offline-play",
+      "title": "兴趣约玩",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1756800000000,
+      "canvasData": {
+        "x": 338,
+        "y": 692,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-0a88fa8c",
+          "measuredAt": 1787810499231
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/offline-play.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home",
+            "hideEdge": true,
+            "transitionLabel": "切换到首页"
+          },
+          {
+            "domId": "nav-profile",
+            "targetPageId": "page-profile",
+            "hideEdge": true,
+            "transitionLabel": "切换到我的"
+          },
+          {
+            "domId": "btn-elite-cert",
+            "targetPageId": "page-elite-cert",
+            "hideEdge": false,
+            "transitionLabel": "打开精英认证弹窗"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-elite-cert",
+      "title": "精英认证弹窗",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1756800000000,
+      "canvasData": {
+        "x": 507,
+        "y": 692,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-0dfdb22b",
+          "measuredAt": 1787810499231
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/elite-cert.html",
+        "interactions": [
+          {
+            "domId": "modal-backdrop",
+            "targetPageId": "page-offline-play",
+            "hideEdge": true,
+            "transitionLabel": "关闭弹窗"
+          },
+          {
+            "domId": "btn-later",
+            "targetPageId": "page-offline-play",
+            "hideEdge": true,
+            "transitionLabel": "再逛逛"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-profile",
+      "title": "我的",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1756800000000,
+      "canvasData": {
+        "x": 0,
+        "y": 1038,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-7f874248",
+          "measuredAt": 1787810499231
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/profile.html",
+        "interactions": [
+          {
+            "domId": "nav-home",
+            "targetPageId": "page-home",
+            "hideEdge": true,
+            "transitionLabel": "切换到首页"
+          },
+          {
+            "domId": "nav-discover",
+            "targetPageId": "page-warm-services",
+            "hideEdge": true,
+            "transitionLabel": "切换到发现"
+          },
+          {
+            "domId": "btn-invite",
+            "targetPageId": "page-invite",
+            "hideEdge": false,
+            "transitionLabel": "进入邀请股东"
+          },
+          {
+            "domId": "btn-settings",
+            "targetPageId": "page-settings",
+            "hideEdge": false,
+            "transitionLabel": "进入设置"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-invite",
+      "title": "邀请股东",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1756800000000,
+      "canvasData": {
+        "x": 169,
+        "y": 1038,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-41e31614",
+          "measuredAt": 1787810499231
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/invite.html",
+        "interactions": [
+          {
+            "domId": "back-profile",
+            "targetPageId": "page-profile",
+            "hideEdge": true,
+            "transitionLabel": "返回我的"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-settings",
+      "title": "设置",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1756800000000,
+      "canvasData": {
+        "x": 169,
+        "y": 1384,
+        "group": 0,
+        "layoutSnapshot": {
+          "version": 1,
+          "contentHeight": 900,
+          "viewportWidth": 375,
+          "sourceHash": "fnv1a-b343b7e5",
+          "measuredAt": 1787810499231
+        }
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/settings.html",
+        "interactions": [
+          {
+            "domId": "back-profile",
+            "targetPageId": "page-profile",
+            "hideEdge": true,
+            "transitionLabel": "返回我的"
+          }
+        ]
+      }
+    },
+    {
+      "id": "image-001",
+      "title": "登录页照片墙背景",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1756800000000,
+      "canvasData": {
+        "x": 0,
+        "y": 1730,
+        "naturalSize": {
+          "width": 2560,
+          "height": 1440
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/login-photo-wall.jpg"
+      }
+    },
+    {
+      "id": "image-002",
+      "title": "服务者头像 1",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1756800000000,
+      "canvasData": {
+        "x": 169,
+        "y": 1730,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1920
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/avatar-provider-01.jpg"
+      }
+    },
+    {
+      "id": "image-003",
+      "title": "服务者头像 2",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1756800000000,
+      "canvasData": {
+        "x": 338,
+        "y": 1730,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1920
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/avatar-provider-02.jpg"
+      }
+    },
+    {
+      "id": "image-004",
+      "title": "用户头像",
+      "type": "image",
+      "version": 1,
+      "createdAt": 1756800000000,
+      "canvasData": {
+        "x": 507,
+        "y": 1730,
+        "naturalSize": {
+          "width": 1920,
+          "height": 1920
+        }
+      },
+      "devMetadata": {
+        "imageSrc": "assets/avatar-user.jpg"
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": true,
+    "deviceType": "mobile",
+    "projectName": "同城陪伴陪玩平台",
+    "designLibrary": null
+  }
+}

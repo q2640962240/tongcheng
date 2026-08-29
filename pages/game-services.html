@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏陪玩</title>
+    <style id="theme-vars">
+/* companion-play-app design tokens */
+
+:root {
+  /* Primary brand: bright yellow */
+  --companion-primary-50: #fffde6;
+  --companion-primary-100: #fff9c4;
+  --companion-primary-200: #fff59d;
+  --companion-primary-300: #fff176;
+  --companion-primary-400: #ffee58;
+  --companion-primary-500: #ffe135;
+  --companion-primary-600: #ffd60a;
+  --companion-primary-700: #ffcc00;
+
+  /* Category accent colors (explicit user request for high-saturation multi-category palette) */
+  --companion-purple: #a855f7;
+  --companion-purple-soft: #f3e8ff;
+  --companion-blue: #0ea5e9;
+  --companion-blue-soft: #e0f2fe;
+  --companion-pink: #f472b6;
+  --companion-pink-soft: #fce7f3;
+
+  /* Neutral scale */
+  --companion-neutral-0: #ffffff;
+  --companion-neutral-50: #fafafa;
+  --companion-neutral-100: #f5f5f5;
+  --companion-neutral-200: #e5e5e5;
+  --companion-neutral-300: #d4d4d4;
+  --companion-neutral-400: #a3a3a3;
+  --companion-neutral-500: #737373;
+  --companion-neutral-600: #525252;
+  --companion-neutral-700: #404040;
+  --companion-neutral-800: #262626;
+  --companion-neutral-900: #171717;
+
+  /* Semantic tokens */
+  --companion-background: #fffbeb;
+  --companion-foreground: #171717;
+  --companion-card: #ffffff;
+  --companion-card-foreground: #171717;
+  --companion-popover: #ffffff;
+  --companion-popover-foreground: #171717;
+  --companion-primary: #ffd60a;
+  --companion-primary-foreground: #171717;
+  --companion-muted: #f5f5f5;
+  --companion-muted-foreground: #737373;
+  --companion-border: #e5e5e5;
+  --companion-input: #e5e5e5;
+  --companion-ring: #ffd60a;
+
+  /* State colors */
+  --companion-state-success: #22c55e;
+  --companion-state-warning: #f59e0b;
+  --companion-state-error: #ef4444;
+  --companion-state-info: #0ea5e9;
+
+  /* Radius scale */
+  --companion-radius-small: 4px;
+  --companion-radius-medium: 8px;
+  --companion-radius-large: 16px;
+  --companion-radius-full: 9999px;
+
+  /* Shadows */
+  --companion-shadow-1: 0 1px 2px rgba(23, 23, 23, 0.05), 0 1px 1px rgba(23, 23, 23, 0.03);
+  --companion-shadow-2: 0 8px 24px -8px rgba(23, 23, 23, 0.18);
+  --companion-shadow-3: 0 24px 60px -20px rgba(23, 23, 23, 0.30);
+
+  /* Typography */
+  --companion-font-display: 'Inter', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --companion-font-body: 'Inter', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+}
+
+/* Light theme class */
+.light {
+  --companion-background: #fffbeb;
+  --companion-foreground: #171717;
+  --companion-card: #ffffff;
+  --companion-card-foreground: #171717;
+  --companion-popover: #ffffff;
+  --companion-popover-foreground: #171717;
+  --companion-primary: #ffd60a;
+  --companion-primary-foreground: #171717;
+  --companion-muted: #f5f5f5;
+  --companion-muted-foreground: #737373;
+  --companion-border: #e5e5e5;
+  --companion-input: #e5e5e5;
+  --companion-ring: #ffd60a;
+}
+
+/* Dark theme class */
+.dark {
+  --companion-background: #0f0f12;
+  --companion-foreground: #f5f5f5;
+  --companion-card: #1c1c21;
+  --companion-card-foreground: #f5f5f5;
+  --companion-popover: #1c1c21;
+  --companion-popover-foreground: #f5f5f5;
+  --companion-primary: #ffd60a;
+  --companion-primary-foreground: #171717;
+  --companion-muted: #262626;
+  --companion-muted-foreground: #a3a3a3;
+  --companion-border: #2e2e33;
+  --companion-input: #2e2e33;
+  --companion-ring: #ffd60a;
+}
+
+/* Typography utilities */
+.font-display {
+  font-family: var(--companion-font-display);
+}
+.font-body {
+  font-family: var(--companion-font-body);
+}
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--companion-background);
+    --color-foreground: var(--companion-foreground);
+    --color-card: var(--companion-card);
+    --color-card-foreground: var(--companion-card-foreground);
+    --color-popover: var(--companion-popover);
+    --color-popover-foreground: var(--companion-popover-foreground);
+    --color-primary: var(--companion-primary);
+    --color-primary-foreground: var(--companion-primary-foreground);
+    --color-muted: var(--companion-muted);
+    --color-muted-foreground: var(--companion-muted-foreground);
+    --color-border: var(--companion-border);
+    --color-input: var(--companion-input);
+    --color-ring: var(--companion-ring);
+    --radius-sm: var(--companion-radius-small);
+    --radius-md: var(--companion-radius-medium);
+    --radius-lg: var(--companion-radius-large);
+  }
+  @layer base {
+    body { background: var(--companion-background); color: var(--companion-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--companion-background); }
+      .text-background { color: var(--companion-background); }
+      .border-background { border-color: var(--companion-background); }
+      .ring-background { --tw-ring-color: var(--companion-background); }
+      .bg-foreground { background-color: var(--companion-foreground); }
+      .text-foreground { color: var(--companion-foreground); }
+      .border-foreground { border-color: var(--companion-foreground); }
+      .ring-foreground { --tw-ring-color: var(--companion-foreground); }
+      .bg-card { background-color: var(--companion-card); }
+      .text-card { color: var(--companion-card); }
+      .border-card { border-color: var(--companion-card); }
+      .ring-card { --tw-ring-color: var(--companion-card); }
+      .bg-card-foreground { background-color: var(--companion-card-foreground); }
+      .text-card-foreground { color: var(--companion-card-foreground); }
+      .border-card-foreground { border-color: var(--companion-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--companion-card-foreground); }
+      .bg-popover { background-color: var(--companion-popover); }
+      .text-popover { color: var(--companion-popover); }
+      .border-popover { border-color: var(--companion-popover); }
+      .ring-popover { --tw-ring-color: var(--companion-popover); }
+      .bg-popover-foreground { background-color: var(--companion-popover-foreground); }
+      .text-popover-foreground { color: var(--companion-popover-foreground); }
+      .border-popover-foreground { border-color: var(--companion-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--companion-popover-foreground); }
+      .bg-primary { background-color: var(--companion-primary); }
+      .text-primary { color: var(--companion-primary); }
+      .border-primary { border-color: var(--companion-primary); }
+      .ring-primary { --tw-ring-color: var(--companion-primary); }
+      .bg-primary-foreground { background-color: var(--companion-primary-foreground); }
+      .text-primary-foreground { color: var(--companion-primary-foreground); }
+      .border-primary-foreground { border-color: var(--companion-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--companion-primary-foreground); }
+      .bg-muted { background-color: var(--companion-muted); }
+      .text-muted { color: var(--companion-muted); }
+      .border-muted { border-color: var(--companion-muted); }
+      .ring-muted { --tw-ring-color: var(--companion-muted); }
+      .bg-muted-foreground { background-color: var(--companion-muted-foreground); }
+      .text-muted-foreground { color: var(--companion-muted-foreground); }
+      .border-muted-foreground { border-color: var(--companion-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--companion-muted-foreground); }
+      .bg-border { background-color: var(--companion-border); }
+      .text-border { color: var(--companion-border); }
+      .border-border { border-color: var(--companion-border); }
+      .ring-border { --tw-ring-color: var(--companion-border); }
+      .bg-input { background-color: var(--companion-input); }
+      .text-input { color: var(--companion-input); }
+      .border-input { border-color: var(--companion-input); }
+      .ring-input { --tw-ring-color: var(--companion-input); }
+      .bg-ring { background-color: var(--companion-ring); }
+      .text-ring { color: var(--companion-ring); }
+      .border-ring { border-color: var(--companion-ring); }
+      .ring-ring { --tw-ring-color: var(--companion-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main class="pb-20">
+      <!-- Header -->
+      <header class="sticky top-0 z-10 flex items-center justify-between gap-3 px-4 py-3 bg-card border-b border-border">
+        <button type="button" class="flex items-center justify-center w-9 h-9 -ml-1 rounded-full hover:bg-muted transition-colors" aria-label="返回">
+          <i data-lucide="chevron-left" class="w-6 h-6 text-foreground"></i>
+        </button>
+        <h1 class="text-lg font-semibold text-foreground">游戏陪玩</h1>
+        <div class="w-9 h-9"></div>
+      </header>
+
+      <!-- Game category grid -->
+      <section class="px-4 pt-4 pb-2">
+        <div class="grid grid-cols-4 gap-3">
+          <a href="#" class="flex flex-col items-center gap-2 p-3 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
+            <div class="w-11 h-11 rounded-full flex items-center justify-center" style="background-color: var(--companion-blue-soft); color: var(--companion-blue);">
+              <i data-lucide="sword" class="w-6 h-6"></i>
+            </div>
+            <span class="text-xs font-medium text-foreground">王者荣耀</span>
+          </a>
+          <a href="#" class="flex flex-col items-center gap-2 p-3 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
+            <div class="w-11 h-11 rounded-full flex items-center justify-center" style="background-color: var(--companion-blue-soft); color: var(--companion-blue);">
+              <i data-lucide="target" class="w-6 h-6"></i>
+            </div>
+            <span class="text-xs font-medium text-foreground">和平精英</span>
+          </a>
+          <a href="#" class="flex flex-col items-center gap-2 p-3 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
+            <div class="w-11 h-11 rounded-full flex items-center justify-center" style="background-color: var(--companion-blue-soft); color: var(--companion-blue);">
+              <i data-lucide="shield" class="w-6 h-6"></i>
+            </div>
+            <span class="text-xs font-medium text-foreground">英雄联盟</span>
+          </a>
+          <a href="#" class="flex flex-col items-center gap-2 p-3 rounded-xl bg-card border border-border shadow-sm hover:shadow-md transition-shadow">
+            <div class="w-11 h-11 rounded-full flex items-center justify-center" style="background-color: var(--companion-blue-soft); color: var(--companion-blue);">
+              <i data-lucide="gamepad-2" class="w-6 h-6"></i>
+            </div>
+            <span class="text-xs font-medium text-foreground">其他游戏</span>
+          </a>
+        </div>
+        <p class="mt-2 text-[11px] text-muted-foreground text-center">五子棋、桌球等更多游戏正在接入中</p>
+      </section>
+
+      <!-- Companion cards -->
+      <section class="px-4 py-3 space-y-3">
+        <h2 class="text-sm font-semibold text-foreground">热门游戏陪玩</h2>
+
+        <!-- Card 1 -->
+        <article class="flex items-center gap-3 p-3 rounded-xl bg-card border border-border shadow-sm">
+          <img src="../assets/avatar-provider-01.jpg" alt="小蓝头像" class="w-14 h-14 rounded-full object-cover border border-border">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm font-semibold text-foreground truncate">小蓝</h3>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background-color: var(--companion-blue-soft); color: var(--companion-blue);">王者段位</span>
+            </div>
+            <p class="mt-0.5 text-xs text-muted-foreground truncate">王者荣耀 · 擅长打野/射手</p>
+            <p class="mt-1 text-xs font-semibold" style="color: var(--companion-blue);">10星币/游戏连麦</p>
+          </div>
+          <button type="button" class="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground hover:brightness-95 transition-[filter]">联系TA</button>
+        </article>
+
+        <!-- Card 2 -->
+        <article class="flex items-center gap-3 p-3 rounded-xl bg-card border border-border shadow-sm">
+          <img src="../assets/avatar-provider-02.jpg" alt="阿杰头像" class="w-14 h-14 rounded-full object-cover border border-border">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm font-semibold text-foreground truncate">阿杰</h3>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background-color: var(--companion-blue-soft); color: var(--companion-blue);">王牌战神</span>
+            </div>
+            <p class="mt-0.5 text-xs text-muted-foreground truncate">和平精英 · 刚枪不怂</p>
+            <p class="mt-1 text-xs font-semibold" style="color: var(--companion-blue);">10星币/游戏连麦</p>
+          </div>
+          <button type="button" class="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground hover:brightness-95 transition-[filter]">联系TA</button>
+        </article>
+
+        <!-- Card 3 -->
+        <article class="flex items-center gap-3 p-3 rounded-xl bg-card border border-border shadow-sm">
+          <img src="../assets/avatar-user.jpg" alt="小鹿头像" class="w-14 h-14 rounded-full object-cover border border-border">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm font-semibold text-foreground truncate">小鹿</h3>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background-color: var(--companion-blue-soft); color: var(--companion-blue);">钻石辅助</span>
+            </div>
+            <p class="mt-0.5 text-xs text-muted-foreground truncate">英雄联盟 · 软辅硬辅都会</p>
+            <p class="mt-1 text-xs font-semibold" style="color: var(--companion-blue);">10星币/游戏连麦</p>
+          </div>
+          <button type="button" class="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground hover:brightness-95 transition-[filter]">联系TA</button>
+        </article>
+
+        <!-- Card 4 -->
+        <article class="flex items-center gap-3 p-3 rounded-xl bg-card border border-border shadow-sm">
+          <img src="../assets/avatar-provider-01.jpg" alt="橙子头像" class="w-14 h-14 rounded-full object-cover border border-border">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <h3 class="text-sm font-semibold text-foreground truncate">橙子</h3>
+              <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium" style="background-color: var(--companion-blue-soft); color: var(--companion-blue);">桌球高手</span>
+            </div>
+            <p class="mt-0.5 text-xs text-muted-foreground truncate">桌球 · 一杆清台</p>
+            <p class="mt-1 text-xs font-semibold" style="color: var(--companion-blue);">10星币/游戏连麦</p>
+          </div>
+          <button type="button" class="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary text-primary-foreground hover:brightness-95 transition-[filter]">联系TA</button>
+        </article>
+      </section>
+    </main>
+
+    <!-- Mobile bottom navigation -->
+    <div class="fixed bottom-0 left-0 right-0 z-50">
+      <nav data-mobile-nav="global" class="w-full bg-card border-t border-border"><div class="w-full max-w-md mx-auto grid grid-cols-3 h-[56px]"><a id="nav-home" data-dom-id="nav-home" href="#" data-nav-key="home" class="min-w-0 flex flex-col items-center justify-center gap-0.5 px-1 h-full text-muted-foreground" data-dom-id="nav-home"><i data-lucide="home" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">首页</span></a><a href="#" data-nav-key="discover" data-active="true" class="min-w-0 flex flex-col items-center justify-center gap-0.5 px-1 h-full text-primary font-medium" data-dom-id="nav-discover"><i data-lucide="compass" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">发现</span></a><a id="nav-profile" data-dom-id="nav-profile" href="#" data-nav-key="profile" class="min-w-0 flex flex-col items-center justify-center gap-0.5 px-1 h-full text-muted-foreground" data-dom-id="nav-profile"><i data-lucide="user" class="w-5 h-5 shrink-0"></i><span class="text-[11px] leading-none whitespace-nowrap max-w-full truncate">我的</span></a></div></nav>
+    </div>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

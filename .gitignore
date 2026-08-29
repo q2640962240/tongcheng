@@ -1,0 +1,74 @@
+﻿# =============================================================
+# 白夜陪玩 · 三端 monorepo (server + admin + app/uni-app)
+# 生成目的：避免把依赖/构建产物/日志/密钥等 1GB+ 内容传到 Git 仓库
+# 作用域：仓库根目录 + 所有子目录
+# =============================================================
+
+# ---------- 依赖目录（最关键，3 个子目录都会各自生成） ----------
+**/node_modules/
+
+# ---------- 构建产物（前端/H5/小程序/管理后台 各端构建输出） ----------
+**/dist/
+**/build/
+**/.output/
+**/.nuxt/
+**/.next/
+**/coverage/
+# uni-app 原生打包临时目录（HBuilder X）
+**/unpackage/
+
+# ---------- 环境变量 & 密钥（绝对不能进仓库） ----------
+.env
+.env.*
+!.env.example
+# 宝塔/SSH密钥
+*.pem
+*.key
+secrets/
+credentials/
+
+# ---------- 日志 & 运行时临时文件 ----------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+
+# 上传目录（运行时用户上传，不进仓库）
+server/public/uploads/
+server/uploads/
+
+# ---------- 缓存 & 系统文件 ----------
+.cache/
+.temp/
+.tmp/
+.parcel-cache/
+.vite/
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# ---------- IDE / 编辑器（建议个人本地忽略，按需保留） ----------
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+
+# ---------- 数据库（SQLite 如有） ----------
+*.sqlite
+*.sqlite3
+*.db
+
+# ---------- Node.js 运行专用 ----------
+pidfiles/
+.pids
+*.pid
+*.seed
+*.pid.lock
+.npm
+.eslintcache
+.stylelintcache
