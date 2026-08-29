@@ -42,7 +42,7 @@ jobs:
           printf "%s\n" "${{ secrets.SERVER_KNOWN_HOSTS }}"
 
       - name: SSH deploy
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           port: ${{ secrets.SERVER_PORT }}
@@ -52,7 +52,6 @@ jobs:
           fingerprint_hash: SHA256
           command_timeout: 720m
           proxy_timeout: 30s
-          script_stop: true
           script: |
             set -eu -o pipefail
             LOG=/tmp/baiye-deploy.log
