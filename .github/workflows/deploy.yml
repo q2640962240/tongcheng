@@ -88,12 +88,13 @@ jobs:
             echo "after: $(git log --oneline -1)" | tee -a "$LOG"
             echo "[2/8] check golden rules" | tee -a "$LOG"
             PASS=0
-            head -1 deploy/nginx-docker.conf | grep -q worker_processes && PASS=$((PASS+1))
+            # ① nginx-docker.conf: 前 15 行必须含 worker_processes（首行通常是分隔注释 #====，允许指令落在前几行）
+            head -15 deploy/nginx-docker.conf | grep -qE '^\s*worker_processes\s+' && PASS=$((PASS+1))
             HC=$(grep -c healthcheck.js server/Dockerfile 2>/dev/null || echo 0)
             [ "$HC" -gt 0 ] && PASS=$((PASS+1))
             tail -3 admin/Dockerfile | grep -q nginx.conf && PASS=$((PASS+1))
             PASS=$((PASS+1))
-            if [ "$PASS" -lt 3 ]; then echo "FAIL GOLDEN PASS=$PASS"; exit 2; fi
+            if [ "$PASS" -lt 4 ]; then echo "FAIL GOLDEN PASS=$PASS (need 4/4)"; exit 2; fi
             echo "PASS=$PASS/4" | tee -a "$LOG"
             echo "[3/8] cleanup" | tee -a "$LOG"
             docker compose down -v --remove-orphans 2>&1 | tee -a "$LOG" | tail -5
