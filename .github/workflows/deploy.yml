@@ -34,7 +34,6 @@ jobs:
     timeout-minutes: 120
     environment:
       name: production
-      url: http://${{ secrets.SERVER_HOST }}
 
     steps:
       - name: Audit host key
