@@ -237,7 +237,16 @@ async function seed() {
   console.log('')
 }
 
-seed().catch(err => {
+// 成功后必须显式关闭连接池并退出：
+// sequelize 连接池是常驻句柄，不关则 Node 事件循环不空、进程永不退出，
+// 会卡住容器 entrypoint 中 seed 之后的 `exec node src/app.js`（API 永不启动）。
+seed().then(async () => {
+  try {
+    const { sequelize: seq } = require('./models')
+    if (seq && typeof seq.close === 'function') await seq.close()
+  } catch (_) { /* 关闭失败不阻塞退出 */ }
+  process.exit(0)
+}).catch(err => {
   console.error('种子初始化失败:', err)
   process.exit(1)
 })
