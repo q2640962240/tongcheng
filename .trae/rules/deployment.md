@@ -1,233 +1,248 @@
-# 白夜陪玩 — 部署规则 (DEPLOYMENT RULES)
+﻿# 白夜陪玩 — 部署规则 (DEPLOYMENT RULES)
 
-> **任何对部署相关文件的修改前必须读此文件。所有踩过的坑均已记录。**
-
----
-
-## 0. 部署总览
-
-| 项 | 值 |
-|---|---|
-| 服务器 | Aliyun ECS 2C4G, 101.132.17.214, Aliyun Linux 3 |
-| SSH | root@101.132.17.214:22, key ~/.ssh/github_actions_deploy |
-| 域名 | zyb001.cn + www.zyb001.cn -> 101.132.17.214 |
-| SSL | Let's Encrypt SAN in /opt/baiye/deploy/certbot/ |
-| CI/CD | GitHub Actions .github/workflows/deploy.yml |
-| 仓库 | github.com/q2640962240/tongcheng main |
-| 路径 | /opt/baiye, Docker Compose v2+, 6 containers |
-| 管理员 | admin / admin123 |
-| MySQL | root/Baiye@2024! DB companion_play |
-| Redis | BaiyeRedis2026!, 64MB+AOF |
-| JWT | baiye_prod_jwt_secret_please_change_ME_2026_v1_abcdef |
+> **任何对部署相关文件的修改前必须读此文件。所有"踩过的坑"均已记录，重复犯错 = 低级失误。**
 
 ---
 
-## 1. 容器拓扑
+## §0 部署总览表
 
-公网->80/443->baiye-gateway(nginx:1.27-alpine)
-  +-baiye-admin:80 (nginx)
-  +-baiye-h5:80 (nginx)
-  +-baiye-server:3000 (node:20-slim)
-      +-baiye-mysql:3306 (internal only)
-      +-baiye-redis:6379 (internal only)
-
-Networks: back(server+mysql+redis), front(all 6)
-Only gateway 80/443 exposed; DB bound to 127.0.0.1
-2C4G requires 4G swapfile
-
----
-
-## 2. Dockerfile Rules
-
-Rule 1 - server/Dockerfile apt MUST use HTTP Aliyun mirror (ECS blocks HTTPS deb822):
-  RUN rm -f /etc/apt/sources.list.d/debian.sources
-  RUN echo 'deb http://mirrors.aliyun.com/debian/ bookworm main' > /etc/apt/sources.list
-  RUN echo 'deb http://mirrors.aliyun.com/debian-security/ bookworm-security main' >> /etc/apt/sources.list
-  RUN apt-get update && apt-get install -y wget curl ca-certificates procps net-tools iproute2
-
-Rule 2 - server/Dockerfile MUST NOT install 'timeout' package (provided by coreutils)
-
-Rule 3 - admin/h5 Dockerfile uses nginx:1.27-alpine runtime, no apt needed
-
-Rule 4 - All 3 Dockerfiles: npm_config_registry=https://registry.npmmirror.com, no 'npm cache clean --force'
+| 项 | 值 | 备注 |
+|---|---|---|
+| 服务器 | 阿里云轻量 ECS 2C4G | 公网 101.132.17.214，Aliyun Linux 3.2104 LTS |
+| 服务器 SSH | root@101.132.17.214:22 | 密钥 ~/.ssh/github_actions_deploy (ed25519) |
+| 域名 | zyb001.cn + www.zyb001.cn | DNS A -> 101.132.17.214 |
+| SSL | Let's Encrypt SAN | /opt/baiye/deploy/certbot/ |
+| 部署 | GitHub Actions CI/CD | .github/workflows/deploy.yml |
+| 仓库 | github.com/q2640962240/tongcheng | main |
+| 服务器路径 | /opt/baiye | git clone 目标 |
+| 容器 | Docker Compose (2.29+) | 6 容器 2 网络 |
+| 管理员 | admin / admin123 | https://zyb001.cn/admin/ |
+| MySQL | Baiye@2024! | DB companion_play |
+| Redis | BaiyeRedis2026! | 64MB + AOF |
+| JWT | baiye_prod_jwt_secret_please_change_ME_2026_v1_abcdef | — |
 
 ---
 
-## 3. Nginx Gateway Rules
+## §1 6 容器拓扑
 
-Rule 1 - HTTPS server block MUST have: location /health { proxy_pass http://server:3000/health; }
-Rule 2 - HTTP 80 -> HTTPS 443 redirect is CORRECT, deploy.yml HTTP verify must accept 301|302
-Rule 3 - Only ASCII in nginx.conf. No Unicode backticks, no Markdown code fences.
+公网 -> 80/443 -> [baiye-gateway] nginx:1.27-alpine
+                            |
+             +--------------+--------------+
+             v              v              v
+       baiye-admin     baiye-h5       baiye-server
+       (nginx:alpine)  (nginx:alpine)  (node:20-slim)
+                                      :3000 API
+                                             |
+                             +---------------+---------------+
+                             v                               v
+                       baiye-mysql                      baiye-redis
+                       (mysql:8.0)                      (redis:7-alpine)
+
+网络: back (server/mysql/redis) + front (server/admin/h5/gateway)
+暴露: 仅 gateway 80+443；数据库绑定 127.0.0.1
+内存: 2C4G 必须 4G swapfile (npm install + vite build 防 OOM)
 
 ---
 
-## 4. seed.js MUST exit
+## §2 构建源四大黄金规则
 
-Add at end of seed.js:
+### (1) server/Dockerfile apt 源必须用 HTTP 阿里云镜像
+
+绝对不能用 HTTPS + deb822 + Signed-By:
+
+RUN rm -f /etc/apt/sources.list.d/debian.sources \
+  && echo 'deb http://mirrors.aliyun.com/debian/ bookworm main' > /etc/apt/sources.list \
+  && echo 'deb http://mirrors.aliyun.com/debian-security/ bookworm-security main' >> /etc/apt/sources.list \
+  && apt-get update \
+  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends wget curl ca-certificates procps net-tools iproute2 \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+### (2) server/Dockerfile 不能安装 timeout 包
+
+timeout 命令由 coreutils 自带，Debian 没有名为 timeout 的 apt 包。
+正确列表: wget curl ca-certificates procps net-tools iproute2
+
+### (3) admin/h5 Dockerfile 不需要 apt
+
+运行时是 nginx:1.27-alpine，无 apt 步骤。
+
+### (4) npm 统一 npmmirror.com + 不做 cache clean
+
+所有三个 Dockerfile 的 npm install:
+  ENV npm_config_registry=https://registry.npmmirror.com
+  # 不要 && npm cache clean --force (Docker 层缓存会处理)
+
+---
+
+## §3 Nginx Gateway 三大黄金规则
+
+### (1) HTTPS 必须有 /health location
+location /health { proxy_pass http://server:3000/health; }
+
+### (2) HTTP 80 -> HTTPS 443 重定向是正确行为
+deploy.yml HTTP verify 期望值必须包含 301|302
+
+### (3) 只用标准 ASCII 字符
+Unicode 反引号、Markdown 反引号都会导致 nginx -t 报错
+
+---
+
+## §4 seed.js 必须主动退出
+
+sequelize 连接池保持 Node.js 事件循环。
+seed.js 末尾必须有:
   await sequelize.close();
   process.exit(0);
 
-Without this, sequelize pool keeps Node event loop alive, entrypoint never reaches exec node src/app.js.
-
 ---
 
-## 5. GitHub Actions SSH Setup
+## §5 GitHub Actions SSH 配置
 
-Server side:
-  ssh-keygen -t ed25519 -N '' -f ~/.ssh/github_actions_deploy
-  cat ~/.ssh/github_actions_deploy.pub >> ~/.ssh/authorized_keys
-  chmod 600 ~/.ssh/authorized_keys ~/.ssh/github_actions_deploy
+### 服务器端
+ssh-keygen -t ed25519 -N "" -f ~/.ssh/github_actions_deploy
+cat ~/.ssh/github_actions_deploy.pub >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys ~/.ssh/github_actions_deploy
 
-GitHub Secrets (settings/secrets/actions):
+### GitHub Secrets (settings/secrets/actions)
   SERVER_HOST = 101.132.17.214
   SERVER_PORT = 22
   SERVER_USER = root
-  SERVER_SSH_KEY = full output of cat ~/.ssh/github_actions_deploy (BEGIN/END must be included)
+  SERVER_SSH_KEY = cat ~/.ssh/github_actions_deploy 完整输出
 
-Verify SERVER_SSH_KEY:
-  wc -l = 6-8 lines
-  head -1 = BEGIN OPENSSH PRIVATE KEY
-  tail -1 = END OPENSSH PRIVATE KEY
+### SERVER_SSH_KEY 校验
+  wc -l  # 6-8 行
+  head -1  # BEGIN OPENSSH PRIVATE KEY
+  tail -1  # END OPENSSH PRIVATE KEY
 
-Aliyun security group: allow 22/tcp 80/tcp 443/tcp inbound.
-
----
-
-## 6. deploy.yml v2 Smart Build
-
-OLD operations (removed, caused 15-30min deploys):
-  x docker compose down -v (wipes volumes)
-  x docker rmi -f baiye-server baiye-admin baiye-h5
-  x docker system prune -af (clears ALL cache)
-  x --no-cache (forces full rebuild)
-
-NEW smart logic:
-  + git diff OLD_SHA NEW_SHA detects what changed
-  + CHANGED_SERVER/ADMIN/H5/INFRA flags
-  + Only build changed services
-  + Docker layer cache reused (npm install skipped if package.json unchanged)
-  + docker image prune -f (only dangling images)
-
-6-step pipeline:
-  [1/6] sync code          git fetch + reset --hard origin/main
-  [2/6] golden rules       4 checks, PASS>=4 required
-  [3/6] smart diff         git diff -> BUILD PLAN
-  [4/6] build              only services marked true in PLAN
-  [5/6] up -d + healthy    docker compose up -d, wait for server healthy
-  [6/6] HTTP verify        curl 4 endpoints
-
-Manual trigger inputs:
-  GIT_RESET_MODE: hard/mixed/keep (default hard)
-  ONLY_START: true = skip pull/build, just up -d
-  FORCE_REBUILD: true = ignore diff, rebuild ALL
-
-Logs: tail -f /tmp/baiye-deploy.log
-
-Expected deploy time: 30s-3min for code-only changes, 5-10min for full rebuild
+### 阿里云安全组
+入方向放行: 22/tcp 80/tcp 443/tcp
 
 ---
 
-## 7. Aliyun ECS 2C4G Limits
+## §6 deploy.yml v2 Smart Build
 
-Outbound HTTP 80: BLOCKED -> apt MUST use domestic mirrors
-Outbound HTTPS 443: OK -> Docker Hub/npm works
-Available RAM: ~2.8G -> MUST have 4G swapfile
-Disk: 49G -> enough
-Docker Compose: v2+ only (no standalone docker-compose)
+### v2 优化: 30秒~3分钟快速部署
 
-First-time server init:
-  dnf install -y git curl wget
-  dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-  dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-  systemctl enable --now docker
-  fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
-  echo '/swapfile none swap defaults 0 0' >> /etc/fstab
-  mkdir -p /opt && cd /opt
-  git clone git@github.com:q2640962240/tongcheng.git baiye
-  cd /opt/baiye && docker compose up -d --build
+移除的旧操作 (导致 15-30 分钟):
+  ✗ docker compose down -v (清空卷)
+  ✗ docker rmi -f baiye-server baiye-admin baiye-h5
+  ✗ docker system prune -af (清所有缓存)
+  ✗ --no-cache (强制从头构建)
 
----
+新增的智能逻辑:
+  ✓ git diff OLD_SHA NEW_SHA 判断变更范围
+  ✓ CHANGED_SERVER/ADMIN/H5/INFRA 标志
+  ✓ 只 build 变化的服务
+  ✓ Docker 层缓存复用
+  ✓ docker image prune -f 只清悬空镜像
 
-## 8. Manual Deploy (only when Actions broken)
+### 6 步流水线
+  [1/6] sync code         git fetch + reset --hard origin/main
+  [2/6] golden rules      4 项校验 (PASS>=4)
+  [3/6] smart diff        git diff -> BUILD PLAN
+  [4/6] build             只 build PLAN=true 的服务
+  [5/6] up -d + healthy   docker compose up -d
+  [6/6] HTTP verify       curl 4 端点
 
-  cd /opt/baiye
-  eval "$(ssh-agent -s)" && ssh-add ~/.ssh/github_actions_deploy
-  git fetch --prune origin main && git reset --hard origin/main
-  docker image prune -f
-  docker compose build server  # or admin / h5 / mysql redis gateway
-  docker compose up -d
-  for i in $(seq 1 48); do docker compose ps server | grep -qi healthy && break; sleep 5; done
-  for ep in /health /api/health /admin/ /; do curl -sk -o /dev/null -w "%{http_code}" https://zyb001.cn$ep; echo " $ep"; done
+### 手动触发参数
+  GIT_RESET_MODE (hard/mixed/keep)
+  ONLY_START (true=只 up -d)
+  FORCE_REBUILD (true=忽略 diff, 全量重建)
 
----
-
-## 9. Local Pre-push Checklist
-
-  cd server && npm test
-  node server/scripts/_e2e_diagnose.js
-  grep -c 'URIs: https' server/Dockerfile    # = 0
-  grep -c 'mirrors.aliyun.com' server/Dockerfile # >= 2
-  grep -c 'timeout' server/Dockerfile    # apt list = 0
-  git add . && git commit -m 'fix: x' && git push
-  # push main triggers deploy.yml automatically
+### 日志
+  tail -f /tmp/baiye-deploy.log
 
 ---
 
-## 10. FAQ
+## §7 阿里云 ECS 2C4G 限制
 
-Q: Actions 'SSH deploy' fails in 3 seconds?
-A: 99% SERVER_SSH_KEY wrong. Include BEGIN/END lines, don't merge into one.
+  出站 HTTP 80: 被阻断 -> apt 必须国内镜像
+  出站 HTTPS 443: 可达 -> Docker Hub/npm 正常
+  可用内存: ~2.8G -> 必须 4G swapfile
+  磁盘: 49G -> 够用
+  Docker Compose: v2+ (docker compose)
 
-Q: apt exit 100 during build?
-A: Must use old sources.list format + HTTP Aliyun mirror.
-
-Q: Gateway healthcheck fails?
-A: HTTPS block missing /health location, or HTTP->HTTPS 301 redirect.
-
-Q: Server always Unhealthy?
-A: seed.js missing sequelize.close() + process.exit(0).
-
-Q: Deploy very fast (30s)?
-A: No --no-cache, Docker layer cache works, smart diff only builds changed services.
-
-Q: Force full rebuild?
-A: Actions manual run, set FORCE_REBUILD=true.
-
-Q: Skip build, just restart?
-A: ONLY_START=true in Actions, or docker compose up -d on server.
-
-Q: Admin/h5 502 Bad Gateway?
-A: gateway proxy_pass must use Docker Compose service name, not IP.
+### 服务器首次初始化
+dnf install -y git curl wget
+dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+systemctl enable --now docker
+fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+echo '/swapfile none swap defaults 0 0' >> /etc/fstab
+mkdir -p /opt && cd /opt
+git clone git@github.com:q2640962240/tongcheng.git baiye
+cd /opt/baiye && docker compose up -d --build
 
 ---
 
-## 11. Rollback
+## §8 手动部署 (仅 Actions 挂了)
 
-Option A - server local:
-  cd /opt/baiye && git log --oneline -5
-  git reset --hard HEAD~1
-  docker compose build server && docker compose up -d server
-
-Option B - Actions ONLY_START:
-  Actions -> Deploy -> Run workflow -> ONLY_START=true
-
-Option C - safest:
-  git revert <bad-commit-sha>
-  git push origin main
+cd /opt/baiye
+eval "" && ssh-add ~/.ssh/github_actions_deploy
+git fetch --prune origin main && git reset --hard origin/main
+docker image prune -f
+docker compose build server  # 或 admin / h5 / infra
+docker compose up -d
+for i in ; do docker compose ps server | grep -qi healthy && break; sleep 5; done
+for ep in /health /api/health /admin/ /; do curl -sk -o /dev/null -w "%{http_code}" https://zyb001.cn; echo " "; done
 
 ---
 
-## 12. File Responsibility Table
+## §9 部署前本地 Checklist
 
-What to change            File                              Read Rule
------------               ------                            ---------
-apt source                server/Dockerfile                 2(1)
-apt packages              server/Dockerfile                 2(2)
-npm mirror                all Dockerfiles                   2(4)
-nginx routes              deploy/nginx-docker.conf         3 (all)
-add/remove container      docker-compose.yml                1
-SSH key                   server + GitHub Secrets           5
-password/JWT              docker-compose.yml env            0
-deploy pipeline           .github/workflows/deploy.yml      6
+cd server && npm test
+node server/scripts/_e2e_diagnose.js
+grep -c 'URIs: https' server/Dockerfile    # = 0
+grep -c 'mirrors.aliyun.com' server/Dockerfile # >= 2
+grep -c '\btimeout\b' server/Dockerfile    # apt 列表 = 0
+git add . && git commit -m "fix: x" && git push
+# push main -> deploy.yml 自动触发
 
-Version: v2.0 (2026-08-30) - 22+ Actions runs + v2 Smart Build optimization
+---
+
+## §10 FAQ
+
+Q: Actions "SSH deploy" 3 秒挂?
+A: SERVER_SSH_KEY 值不对。头尾两行一起粘。
+
+Q: apt exit 100?
+A: 必须用旧式 sources.list + HTTP 阿里云镜像。
+
+Q: gateway healthcheck 失败?
+A: HTTPS block 缺 /health location 或 HTTP 被 301 重定向。
+
+Q: server 一直 Unhealthy?
+A: seed.js 缺 sequelize.close() + process.exit(0)。
+
+Q: 部署很快 (30秒)?
+A: 无 --no-cache, Docker 层缓存生效, smart diff 只 build 变化的服务。
+
+Q: 想全量重建?
+A: Actions 手动触发 FORCE_REBUILD=true。
+
+Q: 想跳过 build?
+A: ONLY_START=true 或服务器 docker compose up -d。
+
+---
+
+## §11 回滚
+
+cd /opt/baiye && git log --oneline -5
+git reset --hard HEAD~1
+docker compose build server && docker compose up -d server
+# 或: git revert <sha> -> push -> 自动部署
+
+---
+
+## §12 文件职责
+
+apt 源            server/Dockerfile      -> §2(1)
+apt 包列表        server/Dockerfile      -> §2(2)
+npm 镜像          所有 Dockerfile          -> §2(4)
+nginx 路由        deploy/nginx-docker.conf -> §3
+容器拓扑          docker-compose.yml       -> §1
+SSH key           服务器 + GitHub Secrets -> §5
+密码/JWT          docker-compose.yml env   -> §0
+deploy 流程       .github/workflows/deploy.yml -> §6
+
+文档: v2.0 (2026-08-30) - 22+ Actions Run + v2 Smart Build
