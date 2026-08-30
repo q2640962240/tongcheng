@@ -221,9 +221,10 @@ async function seed() {
   console.log('')
   console.log('🌱 白夜后端 · 生产级数据初始化')
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  // 0. 建表 / 连接
-  const bootstrapInfo = await db.bootstrap({ force: true })
-  console.log(`  🗄️  存储驱动: ${bootstrapInfo.driver.toUpperCase()} ${bootstrapInfo.force ? '(force 模式重建表)' : '(alter 模式补齐列)'}`)
+  // 0. 建表 / 连接（注意：绝对不能 force:true，否则每次容器启动 DROP TABLE 清空数据!）
+  //    首次启动表不存在 → alter 会自动建表；后续启动 → alter 只补新增列，不碰已有数据
+  const bootstrapInfo = await db.bootstrap({ force: false })
+  console.log(`  🗄️  存储驱动: ${bootstrapInfo.driver.toUpperCase()} (alter 模式: 只补列, 不重建表, 数据安全)`)
 
   if (sequelize.usingMysql) {
     // MySQL：事务包裹，失败全部回滚
