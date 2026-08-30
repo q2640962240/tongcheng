@@ -1,4 +1,4 @@
-name: Deploy to Alibaba Cloud
+﻿name: Deploy to Alibaba Cloud
 
 on:
   push:
@@ -113,7 +113,7 @@ jobs:
             echo "$DIFF" | grep -qE '(^|/)server/|Dockerfile' && CHANGED_SERVER=true || true
             echo "$DIFF" | grep -qE '(^|/)admin/' && CHANGED_ADMIN=true || true
             echo "$DIFF" | grep -qE '(^|/)app/' && CHANGED_H5=true || true
-            echo "$DIFF" | grep -qE '(^|/)deploy/|^docker-compose|Dockerfile' && CHANGED_INFRA=true || true
+            echo "$DIFF" | grep -qE '(^|/)deploy/|^docker-compose|Dockerfile|^\.github/' && CHANGED_INFRA=true || true
 
             FORCE="${{ github.event.inputs.FORCE_REBUILD }}"
             [ "$FORCE" = "true" ] && { CHANGED_SERVER=true; CHANGED_ADMIN=true; CHANGED_H5=true; CHANGED_INFRA=true; echo "FORCE_REBUILD=true -> all dirty"; }

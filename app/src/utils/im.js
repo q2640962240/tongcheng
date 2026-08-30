@@ -418,3 +418,5 @@ class TIMManager {
 
 const tim = new TIMManager()
 export default tim
+
+// force rebuild: ensure H5 image includes latest TIM SDK bundle
