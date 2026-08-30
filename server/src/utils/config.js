@@ -91,6 +91,23 @@ const ENV_DEFAULTS = {
     channelId: process.env.PUSH_CHANNEL_ID || '',
     appKey: process.env.PUSH_APP_KEY || '',
     masterSecret: process.env.PUSH_MASTER_SECRET || ''
+  },
+  im: {
+    // 腾讯云即时通信 IM (Tencent Cloud Chat / TIM)；enabled=true 时前端优先走腾讯云 IM 真实通道，否则回退本项目自建 WebSocket
+    enabled: process.env.IM_ENABLED === 'true',
+    // SDKAppID（腾讯云 IM 控制台 → 应用管理 → 创建应用后获取）
+    sdkAppId: process.env.IM_SDK_APP_ID || '',
+    // 密钥 Key：IM 控制台 → 应用管理 → 基本配置 → 获取密钥
+    secretKey: process.env.IM_SECRET_KEY || '',
+    // UserSig 过期时间(秒)，默认 180 天
+    expireSeconds: process.env.IM_EXPIRE_SECONDS || '15552000',
+    // 管理员账号（用于服务端 REST API: 单发消息 / 导入账号 等），一般填 "administrator"
+    adminUserId: process.env.IM_ADMIN_USER_ID || 'administrator',
+    // 云 API (v3) 用于调用 REST: v4/im_open_login_svc/account_import 等接口
+    cloudSecretId: process.env.IM_CLOUD_SECRET_ID || '',
+    cloudSecretKey: process.env.IM_CLOUD_SECRET_KEY || '',
+    // 接入地域，默认 ap-guangzhou (华南广州)
+    imRegion: process.env.IM_REGION || 'ap-guangzhou'
   }
 }
 

@@ -801,6 +801,22 @@ const MODULE_META = {
         { label: '阿里云 OSS', value: 'aliyun' }
       ]
     }
+  },
+  im: {
+    label: '即时通信 (IM)',
+    icon: 'ChatDotRound',
+    color: '#07C160',
+    description: '腾讯云 IM（Chat UIKit / TIM SDK）：提供多端同步、离线消息、漫游、会话列表。启用后前端自动从自建 WS 切换到腾讯云真实通道。',
+    options: {
+      imRegion: [
+        { label: '华南广州 (ap-guangzhou)', value: 'ap-guangzhou' },
+        { label: '华北北京 (ap-beijing)', value: 'ap-beijing' },
+        { label: '华东上海 (ap-shanghai)', value: 'ap-shanghai' },
+        { label: '西南成都 (ap-chengdu)', value: 'ap-chengdu' },
+        { label: '中国香港 (ap-hongkong)', value: 'ap-hongkong' },
+        { label: '新加坡 (ap-singapore)', value: 'ap-singapore' }
+      ]
+    }
   }
 }
 const FIELD_LABELS = {
@@ -859,7 +875,16 @@ const FIELD_LABELS = {
   region:          { label: 'OSS 地域 Region',       placeholder: 'oss-cn-hangzhou', required: true },
   bucket:          { label: 'OSS 存储桶 Bucket',     placeholder: 'baiye-prod', required: true },
   endpoint:        { label: '自定义 Endpoint',       placeholder: 'ECS 内网可加速' },
-  cdnDomain:       { label: 'CDN 加速域名',          placeholder: 'https://cdn.example.com' }
+  cdnDomain:       { label: 'CDN 加速域名',          placeholder: 'https://cdn.example.com' },
+
+  // im 模块字段标签（与 FIELD_LABELS 同名 key 会自动覆盖其它模块）
+  sdkAppId:       { label: 'SDKAppID（IM 应用 ID）',           placeholder: '如：1600000001，从腾讯云 IM 控制台获取', required: true },
+  secretKey:      { label: 'IM 密钥 Key（签发 UserSig 用）',     placeholder: 'IM 控制台 → 基本配置 → 获取密钥', required: true },
+  expireSeconds:  { label: 'UserSig 有效期 (秒)',              placeholder: '默认 15552000 = 180 天', required: true },
+  adminUserId:    { label: '服务端管理员 UserID',               placeholder: '默认 administrator' },
+  cloudSecretId:  { label: '腾讯云 API SecretId (REST v3)',     placeholder: '账号导入、单发消息等 REST 调用需配置' },
+  cloudSecretKey: { label: '腾讯云 API SecretKey (REST v3)',    placeholder: '配合 SecretId 使用' },
+  imRegion:       { label: 'IM 接入地域',                       placeholder: '默认 ap-guangzhou', required: true }
 }
 
 function collectTemplate() {
@@ -925,6 +950,16 @@ function collectTemplate() {
       { key: 'accessKeySecret', type: 'secret', description: 'AccessKey Secret' },
       { key: 'endpoint',        type: 'string', description: '自定义 Endpoint（ECS 内网可填，加速回源）' },
       { key: 'cdnDomain',       type: 'string', description: 'CDN 加速域名（可选）' }
+    ],
+    im: [
+      { key: 'enabled',         type: 'boolean', description: '是否启用腾讯云 IM：true=前端优先走 TIM SDK 真实通道，false=回退自建 WebSocket 聊天' },
+      { key: 'sdkAppId',        type: 'secret',  description: 'SDKAppID：IM 控制台 → 应用管理 → 创建应用后获取(纯数字)' },
+      { key: 'secretKey',       type: 'secret',  description: '密钥 Key：IM 控制台 → 基本配置 → 获取密钥，用于服务端签发 UserSig' },
+      { key: 'expireSeconds',   type: 'number',  description: 'UserSig 有效期(秒)：默认 15552000 = 180 天' },
+      { key: 'adminUserId',     type: 'string',  description: '服务端管理员账号：一般填 administrator，用于 REST API 调用单发消息、账号导入等' },
+      { key: 'cloudSecretId',   type: 'secret',  description: '腾讯云 API SecretId：调用 v3 REST(账号导入、单发消息等) 使用，非必填' },
+      { key: 'cloudSecretKey',  type: 'secret',  description: '腾讯云 API SecretKey：配合 cloudSecretId 使用' },
+      { key: 'imRegion',        type: 'select',  description: '接入地域：默认 ap-guangzhou' }
     ]
   }
 }

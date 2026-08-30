@@ -91,6 +91,18 @@ const CONFIG_TEMPLATES = {
     { key: 'accessKeySecret', value: '',      type: 'secret',  description: 'AccessKey Secret' },
     { key: 'endpoint',        value: '',      type: 'string',  description: '自定义 Endpoint (可选, ECS 内网可填)' },
     { key: 'cdnDomain',       value: '',      type: 'string',  description: 'CDN 加速域名, 如 https://cdn.example.com (可选)' }
+  ],
+
+  // 7. 腾讯云即时通信 IM (Chat UIKit / TIM SDK)
+  im: [
+    { key: 'enabled',         value: 'false',            type: 'boolean', description: '是否启用腾讯云 IM：true=前端优先走 TIM SDK 真实通道(会话/离线/多端同步)，false=回退自建 WebSocket 聊天' },
+    { key: 'sdkAppId',        value: '',                 type: 'secret',  description: 'SDKAppID：IM 控制台 → 应用管理 → 创建应用后获取(纯数字，string 保存)' },
+    { key: 'secretKey',       value: '',                 type: 'secret',  description: '密钥 Key：IM 控制台 → 应用管理 → 基本配置 → 获取密钥，用于服务端签发 UserSig' },
+    { key: 'expireSeconds',   value: '15552000',         type: 'number',  description: 'UserSig 有效期(秒)：默认 15552000 = 180 天' },
+    { key: 'adminUserId',     value: 'administrator',    type: 'string',  description: '服务端管理员账号：一般填 administrator，用于 REST API 调用单发消息、账号导入等' },
+    { key: 'cloudSecretId',   value: '',                 type: 'secret',  description: '腾讯云 API SecretId：用于调用 v3 服务端 REST(账号导入、单发消息等)，非必填' },
+    { key: 'cloudSecretKey',  value: '',                 type: 'secret',  description: '腾讯云 API SecretKey：配合 cloudSecretId 使用' },
+    { key: 'imRegion',        value: 'ap-guangzhou',     type: 'string',  description: '接入地域：默认 ap-guangzhou (华南广州)' }
   ]
 }
 

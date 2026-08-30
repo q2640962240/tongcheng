@@ -11,7 +11,7 @@
             所有第三方服务密钥在此配置；修改后
             <el-tag type="warning" effect="dark" round size="small" style="margin: 0 6px;">无需重启服务</el-tag>
             即可生效。<br />
-            建议按顺序：<strong>应用基础 → 短信 → 微信支付/支付宝 → OSS → 推送</strong>
+            建议按顺序：<strong>应用基础 → 短信 → 微信支付/支付宝 → OSS → 推送 → 即时通信 IM</strong>
           </div>
         </div>
         <el-button :loading="store.loading" @click="store.loadModules()">
@@ -206,12 +206,13 @@ import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Setting, Refresh, InfoFilled, Promotion, Check, Connection, RefreshRight,
-  Goods, Wallet, Bell, Picture, Message
+  Goods, Wallet, Bell, Picture, Message, ChatDotRound
 } from '@element-plus/icons-vue'
 import { useConfigStore } from '../../store/config'
 
 const ICON_MAP = {
-  Setting, Goods, Wallet, Bell, Picture, Message
+  Setting, Goods, Wallet, Bell, Picture, Message,
+  ChatDotRound
 }
 const resolveIcon = (n) => ICON_MAP[n] || Setting
 
