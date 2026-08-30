@@ -58,6 +58,7 @@
 import { ref } from 'vue'
 import { onShow, onPullDownRefresh, onLoad } from '@dcloudio/uni-app'
 import { serviceApi } from '../../api'
+import { requireElite } from '../../utils/fallback'
 
 const subs = [
   { key: 'virtual-lover', name: '虚拟恋人' },
@@ -86,10 +87,14 @@ const loadData = async () => {
 const onSub = (key) => { subCategory.value = key; loadData() }
 const onDetail = (item) => uni.navigateTo({ url: `/pages/service-detail/service-detail?id=${item.id}` })
 const onContact = (item) => {
+  if (!requireElite()) return
   if (!item.provider) return
   uni.navigateTo({ url: `/pages/chat/chat?userId=${item.provider.id}&name=${encodeURIComponent(item.provider.nickname)}` })
 }
-const onPublish = () => uni.navigateTo({ url: '/pages/service-publish/service-publish' })
+const onPublish = () => {
+  if (!requireElite()) return
+  uni.navigateTo({ url: '/pages/service-publish/service-publish' })
+}
 const onBack = () => uni.navigateBack()
 
 onLoad(loadData)

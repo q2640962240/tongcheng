@@ -145,7 +145,16 @@
 
 <script setup>
 import { ref, reactive, computed } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { serviceApi, uploadApi } from '../../api'
+import { requireElite } from '../../utils/fallback'
+
+// 页面级守卫：非精英用户直接拉起开通弹窗，避免 401→登录死循环
+onLoad(() => {
+  if (!requireElite()) {
+    setTimeout(() => uni.navigateBack({ delta: 1, fail: () => uni.switchTab({ url: '/pages/home/home' }) }), 50)
+  }
+})
 
 const categories = [
   { key: 'warm', label: '暖心服务' },

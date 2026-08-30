@@ -101,9 +101,15 @@ router.get('/', optionalAuth, async (req, res, next) => {
     const { Op } = require('../models')
     const matchCity = (rowCity) => {
       if (!cityVariants.size) return true
-      if (!rowCity) return false
-      const r = String(rowCity)
-      for (const v of cityVariants) if (r.startsWith(v) || v.startsWith(r)) return true
+      // 服务者未填写城市/城市为空：不强制过滤（全国可展示，避免"选了具体城市 → 空城市服务全被隐藏"的反直觉）
+      if (!rowCity) return true
+      const r = String(rowCity).trim()
+      if (!r) return true
+      for (const v of cityVariants) {
+        const vv = String(v).trim()
+        if (!vv) continue
+        if (r.startsWith(vv) || vv.startsWith(r)) return true
+      }
       return false
     }
     const keywordStr = String(keyword || '').trim()
@@ -271,12 +277,48 @@ router.post('/', auth, async (req, res, next) => {
   try {
     const { title, description, category, subCategory, coverImage, price, priceUnit, duration, tags } = req.body
     if (!title || !category || price == null) return fail(res, '参数不完整')
+    const user = await User.findByPk(req.userId)
+    // 城市兜底：按当前用户 city → 规范化 → 去尾缀兼容；保证即使前端未上传/用户 city 异常，也不会产生空白 city 导致后续首页匹配漏掉
+    let city = ''
+    try {
+      const norm = require('../utils/geo').normalizeCityName
+      const raw = user ? (user.city || '') : ''
+      city = String(raw || '').trim()
+      if (!city) {
+        try {
+          const cfg = require('../utils/config').getModuleConfig
+          const appCfg = await cfg('app')
+          city = String((appCfg && appCfg.defaultCity) || '').trim()
+        } catch (_) {}
+      }
+      if (city && typeof norm === 'function') {
+        const n = norm(city)
+        if (n) city = n
+      }
+    } catch (_) {}
+    // 自动过审：配置中心 app.serviceAutoApprove=true 时直接 online，否则 pending
+    let status = 'pending'
+    let tip = '服务发布成功，等待审核'
+    try {
+      const { getModuleConfig } = require('../utils/config')
+      const cfg = await getModuleConfig('app')
+      if (cfg && cfg.serviceAutoApprove === true) {
+        status = 'online'
+        tip = '服务发布成功，已自动上架'
+      }
+    } catch (_) {}
     const service = await Service.create({
       providerId: req.userId,
       title, description, category, subCategory, coverImage,
-      price, priceUnit, duration, tags
+      price, priceUnit, duration, tags, city, status
     })
-    success(res, service, '服务发布成功，等待审核')
+    // 自动过审且用户未开通服务者身份：自动升级为服务者
+    try {
+      if (user && !user.isProvider && status === 'online') {
+        await user.update({ isProvider: true })
+      }
+    } catch (_) {}
+    success(res, service, tip)
   } catch (err) { next(err) }
 })
 

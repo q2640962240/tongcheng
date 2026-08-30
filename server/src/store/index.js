@@ -55,7 +55,29 @@ class Collection {
 
   /** 创建 */
   async create(values) {
-    const record = this.applyDefaults(values)
+    const patch = { ...values }
+    // 创建时同步处理 password / passwordHash，保证 users/admins 密码正确存储
+    if (this.name === 'users' || this.name === 'admins') {
+      const bcrypt = require('bcryptjs')
+      const { _isBcryptHash } = require('../models/Admin')
+      if (typeof patch.password === 'string' && patch.password && !_isBcryptHash(patch.password)
+          && !(typeof patch.password === 'string' && patch.password.includes(':') && !patch.password.startsWith('$'))) {
+        const h = bcrypt.hashSync(patch.password, 10)
+        patch.password = h
+        patch.passwordHash = h
+      } else if (typeof patch.password === 'string' && patch.password) {
+        if (!patch.passwordHash) patch.passwordHash = patch.password
+      }
+      if (typeof patch.passwordHash === 'string' && patch.passwordHash && !_isBcryptHash(patch.passwordHash)
+          && !(typeof patch.passwordHash === 'string' && patch.passwordHash.includes(':') && !patch.passwordHash.startsWith('$'))) {
+        const h = bcrypt.hashSync(patch.passwordHash, 10)
+        patch.passwordHash = h
+        patch.password = h
+      } else if (typeof patch.passwordHash === 'string' && patch.passwordHash && !patch.password) {
+        patch.password = patch.passwordHash
+      }
+    }
+    const record = this.applyDefaults(patch)
     this._hooks.beforeCreate.forEach(fn => fn(record))
     this.data.push(record)
     this.persist()
@@ -169,23 +191,58 @@ class Collection {
     obj.get = function (key) { return record[key] }
     obj.set = function (key, val) { record[key] = val; Object.assign(obj, record) }
     obj.toJSON = function () { return { ...record } }
-    // 统一密码校验：复用 Admin 的 hash 判定，优先 bcrypt；否则兼容旧明文比较（迁移过渡期）
-    obj.verifyPassword = function (plain) {
-      const bcrypt = require('bcryptjs')
-      const { _isBcryptHash } = require('../models/Admin')
-      const hashed = record.password
-      if (!hashed || !plain) return false
-      if (_isBcryptHash(hashed)) return bcrypt.compareSync(String(plain), String(hashed))
-      return String(hashed) === String(plain)
+    /** Sequelize 兼容：instance.save() 将当前 instance.dataValues 写回底层 record 并持久化 */
+    obj.save = async function () {
+      // 兼容 User/Admin.prototype.setPassword 修改 instance.this.passwordHash 的写法
+      // 同时兼容 DataTypes 在 wrap 后通过 setter 设置的各种字段
+      for (const k of Object.keys(obj)) {
+        if (['update','destroy','increment','reload','get','set','toJSON','save','setPassword','verifyPassword',
+             'dataValues','_model','_prevDataValues'].includes(k)) continue
+        // 只拷贝基础类型/简单对象，避免循环引用
+        const v = obj[k]
+        if (typeof v === 'function') continue
+        record[k] = v
+      }
+      record.updatedAt = new Date().toISOString()
+      self.persist()
+      Object.assign(obj, record)
+      return obj
     }
-    // 密码 setter 钩子：Admin 模型在 Sequelize 里通过 DataTypes setter 实现 bcrypt；
-    // JSON 驱动下 create/update 时要保持同样的幂等行为，避免二次 hash 导致登录失败
-    if (self.name === 'admins' || self.name === 'users') {
-      const pwd = obj.password
-      if (typeof pwd === 'string' && pwd && !require('../models/Admin')._isBcryptHash(pwd)) {
-        const hashed = require('bcryptjs').hashSync(pwd, 10)
+    // 兼容 User/Admin 原型上的 setPassword / verifyPassword：原型方法设置 this.passwordHash，
+    // 需要 obj.passwordHash 真正写入 record。这里通过 proxy-write 模式保证 setPassword 后 record 也更新。
+    if (self.name === 'users' || self.name === 'admins') {
+      // 挂载 setPassword：直接写入 record.passwordHash（兼容 bcrypt/legacy 两种存储格式）
+      obj.setPassword = function (plain) {
+        if (typeof plain !== 'string' || !plain) return
+        const bcrypt = require('bcryptjs')
+        const hashed = bcrypt.hashSync(plain, 10)
+        record.passwordHash = hashed
+        obj.passwordHash = hashed
+        // 向下兼容 JSON 层旧 password 字段（admins 仍用 password）
         record.password = hashed
         obj.password = hashed
+      }
+      // 覆盖 verifyPassword：同时支持 bcrypt(passwordHash) 与 legacy(passwordHash / password)
+      obj.verifyPassword = function (plain) {
+        const bcrypt = require('bcryptjs')
+        const hash = record.passwordHash || record.password
+        if (!hash || !plain) return false
+        // bcrypt
+        if (typeof hash === 'string' && hash.length === 60 && hash.startsWith('$2')) {
+          return bcrypt.compareSync(String(plain), String(hash))
+        }
+        // User model: salt:scrypt (crypto.scryptSync)
+        if (typeof hash === 'string' && hash.includes(':') && !hash.startsWith('$')) {
+          try {
+            const [salt, expected] = hash.split(':')
+            if (salt && expected) {
+              const crypto = require('crypto')
+              const actual = crypto.scryptSync(String(plain || ''), salt, 32).toString('hex')
+              return actual === expected
+            }
+          } catch (_) {}
+        }
+        return String(hash) === String(plain)
       }
     }
     return obj
@@ -206,7 +263,29 @@ class Collection {
     const hits = this._query(options)
     const nowStr = new Date().toISOString()
     for (const record of hits) {
-      Object.assign(record, values, { updatedAt: nowStr })
+      const patch = { ...values, updatedAt: nowStr }
+      // 兼容 auth/POST password 及 Model.update(patch)：如果 patch 中包含 password / passwordHash 且 plain，
+      // 自动 hash 为 bcrypt，并同时写入 passwordHash + password 两个字段（双向兼容）
+      if (this.name === 'users' || this.name === 'admins') {
+        const bcrypt = require('bcryptjs')
+        const { _isBcryptHash } = require('../models/Admin')
+        if (typeof patch.password === 'string' && patch.password && !_isBcryptHash(patch.password)) {
+          const h = bcrypt.hashSync(patch.password, 10)
+          patch.password = h
+          patch.passwordHash = h
+        } else if (typeof patch.password === 'string' && patch.password) {
+          // 已是 bcrypt：同步到 passwordHash
+          patch.passwordHash = patch.password
+        }
+        if (typeof patch.passwordHash === 'string' && patch.passwordHash && !_isBcryptHash(patch.passwordHash)
+            && !(typeof patch.passwordHash === 'string' && patch.passwordHash.includes(':') && !patch.passwordHash.startsWith('$'))) {
+          // 普通 plain -> bcrypt
+          const h = bcrypt.hashSync(patch.passwordHash, 10)
+          patch.passwordHash = h
+          patch.password = h
+        }
+      }
+      Object.assign(record, patch)
     }
     if (hits.length) this.persist()
     return [hits.length]
@@ -227,6 +306,37 @@ class Collection {
     if (this._hooks[name]) this._hooks[name].push(fn)
   }
 }
+
+/**
+ * Model.increment 静态辅助：按主键 id 把字段 field 增加 by（兼容 Sequelize Model.increment('field', { by, where })/Sequelize instance.increment ）
+ * 用法 1: Model.increment(id, field, by = 1)   — 本站 services.js 等用的 3 参数版本
+ * 用法 2: Model.increment(field, { by: n, where: { id } }) — Sequelize 标准静态调用
+ */
+function addStaticIncrement(Collection) {
+  const origCreate = Collection.prototype.create ? null : null
+  // 在构造方法返回的 Collection 实例上挂 increment 静态方法（define 返回 collection，所以在 Collection prototype 上定义，任何实例都能用）
+  Collection.prototype.increment = function (arg1, arg2, arg3) {
+    // 用法 1: coll.increment(id, field, by) — 第一个参数是数字 id
+    if (typeof arg1 === 'number' || (typeof arg1 === 'string' && /^\d+$/.test(arg1))) {
+      const id = Number(arg1); const field = String(arg2 || ''); const by = Number(arg3 != null ? arg3 : 1)
+      return this.incrementField(id, field, by)
+    }
+    // 用法 2: coll.increment(field, { by, where }) — Sequelize 风格
+    const field = String(arg1 || '')
+    const opts = (arg2 && typeof arg2 === 'object') ? arg2 : {}
+    const by = Number(opts.by != null ? opts.by : 1)
+    const where = opts.where || {}
+    const hits = this._query({ where })
+    for (const r of hits) {
+      r[field] = (Number(r[field]) || 0) + by
+      r.updatedAt = new Date().toISOString()
+    }
+    if (hits.length) this.persist()
+    return hits.length
+  }
+  return Collection
+}
+addStaticIncrement(Collection)
 
 /**
  * 匹配 where 条件

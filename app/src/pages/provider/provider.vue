@@ -188,8 +188,9 @@ const onOrderDirect = () => {
 }
 
 onLoad((q) => {
-  if (q.id) {
-    providerId.value = Number(q.id)
+  const id = q.id || q.uid || q.userId || q.providerId
+  if (id) {
+    providerId.value = Number(id)
     loadData()
   }
 })

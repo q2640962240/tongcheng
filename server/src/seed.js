@@ -101,7 +101,8 @@ const SINGLE_CONFIGS = [
   { module: 'app', key: 'platform_commission_rate',     value: '0.2',  type: 'number', description: '平台抽成比例(0~1), 默认 20%' },
   { module: 'app', key: 'withdraw_min_amount_fen',      value: '1000', type: 'number', description: '最低提现额(分), 默认 10 元' },
   { module: 'app', key: 'withdraw_fee_rate',            value: '0',    type: 'number', description: '提现手续费比例(0~1), 默认 0' },
-  { module: 'app', key: 'signInRewardDiamond',          value: '10',   type: 'number', description: '每日签到奖励钻石数, 默认 10' }
+  { module: 'app', key: 'signInRewardDiamond',          value: '10',   type: 'number', description: '每日签到奖励钻石数, 默认 10' },
+  { module: 'app', key: 'serviceAutoApprove',            value: 'true', type: 'boolean', description: '用户发布服务是否自动过审(true=直接上架，false=进入审核队列，默认 true)' }
 ]
 
 async function ensureAdmin({ transaction }) {

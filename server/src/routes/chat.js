@@ -328,7 +328,11 @@ async function tryAiAutoReply({ app, senderId, aiUser, lastContent }) {
 /** 发送消息（HTTP 备用通道；实时消息走 WebSocket） */
 router.post('/', auth, async (req, res, next) => {
   try {
-    const { receiverId, type = 'text', content, duration } = req.body
+    const body = req.body || {}
+    // 兼容两个命名：receiverId（后端原生）& to（前端 IM 常用写法，避免用户端聊天页提示"参数不完整"）
+    const receiverIdRaw = body.receiverId != null ? body.receiverId : body.to
+    const receiverId = Number(receiverIdRaw) || null
+    const { type = 'text', content, duration } = body
     if (!receiverId || !content) return fail(res, '参数不完整')
 
     const other = await User.findByPk(receiverId)

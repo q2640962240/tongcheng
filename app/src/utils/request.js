@@ -26,22 +26,19 @@ const RELOGIN_COOLDOWN_MS = 12 * 1000
 function kickToLogin(reason = '登录已过期') {
   try {
     const now = Date.now()
+    if ((now - _lastReloginAt) < RELOGIN_COOLDOWN_MS) return // 防抖窗口内直接忽略，保持用户当前会话
+    _lastReloginAt = now
     const userApp = (typeof getApp === 'function') ? (getApp && getApp()) : null
-    const globalStore = (userApp && userApp.$pinia) ? null : null
-    // 兼容：如果全局 Pinia 已挂载，调用 userStore.logout() 统一清理
+    // 兼容：如果全局 Pinia 已挂载，调用 userStore.logout() 统一清理；清理后仍需显式跳转登录
     try {
       if (userApp && userApp.$pinia) {
         const { useUserStore } = require('../store/user')
         const s = useUserStore && useUserStore()
-        if (s && typeof s.logout === 'function' && (now - _lastReloginAt) >= RELOGIN_COOLDOWN_MS) {
-          _lastReloginAt = now
-          s.logout()
-          return
+        if (s && typeof s.logout === 'function') {
+          try { s.logout() } catch (_) {}
         }
       }
     } catch (_) {}
-    if ((now - _lastReloginAt) < RELOGIN_COOLDOWN_MS) return // 防抖窗口内直接忽略，保持用户当前会话
-    _lastReloginAt = now
     removeToken()
     uni.reLaunch({ url: '/pages/login/login' })
   } catch (_) {

@@ -54,6 +54,7 @@
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { serviceApi } from '../../api'
+import { requireElite } from '../../utils/fallback'
 
 const list = ref([])
 const loading = ref(false)
@@ -92,9 +93,15 @@ const onToggle = (item) => {
 }
 
 const onDetail = (item) => uni.navigateTo({ url: `/pages/service-detail/service-detail?id=${item.id}` })
-const onPublish = () => uni.navigateTo({ url: '/pages/service-publish/service-publish' })
+const onPublish = () => {
+  if (!requireElite()) return
+  uni.navigateTo({ url: '/pages/service-publish/service-publish' })
+}
 
-onShow(loadData)
+onShow(() => {
+  if (!requireElite()) return
+  loadData()
+})
 </script>
 
 <style lang="scss" scoped>

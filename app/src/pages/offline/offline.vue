@@ -62,9 +62,7 @@
 import { ref } from 'vue'
 import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { serviceApi } from '../../api'
-import { useUserStore } from '../../store/user'
-
-const userStore = useUserStore()
+import { requireElite } from '../../utils/fallback'
 const subCats = [
   { key: 'sport', name: '运动健身' },
   { key: 'date', name: '同城约会' },
@@ -88,28 +86,13 @@ const loadData = async () => {
   }
 }
 
-const checkElite = () => {
-  if (userStore.isLoggedIn && userStore.isElite) return true
-  uni.showModal({
-    title: '精英认证',
-    content: '线下约玩需完成精英认证，立即加入体验高效邀约',
-    confirmText: '立即加入',
-    cancelText: '再逛逛',
-    confirmColor: '#FFD60A',
-    success: (res) => {
-      if (res.confirm) uni.navigateTo({ url: '/pages/elite/elite' })
-    }
-  })
-  return false
-}
-
 const onSub = (key) => { subCategory.value = key; loadData() }
 const onDetail = (item) => {
-  if (!checkElite()) return
+  if (!requireElite()) return
   uni.navigateTo({ url: `/pages/service-detail/service-detail?id=${item.id}` })
 }
 const onPublish = () => {
-  if (!checkElite()) return
+  if (!requireElite()) return
   uni.navigateTo({ url: '/pages/service-publish/service-publish' })
 }
 const onBack = () => uni.navigateBack()

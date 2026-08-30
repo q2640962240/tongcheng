@@ -1,4 +1,4 @@
-﻿# =============================================================
+# =============================================================
 # 白夜陪玩 · 三端 monorepo (server + admin + app/uni-app)
 # 生成目的：避免把依赖/构建产物/日志/密钥等 1GB+ 内容传到 Git 仓库
 # 作用域：仓库根目录 + 所有子目录
@@ -38,6 +38,12 @@ logs/
 # 上传目录（运行时用户上传，不进仓库）
 server/public/uploads/
 server/uploads/
+
+# ---------- JSON 存储驱动的运行时数据文件（个人数据/敏感，不能进仓库；每次 seed 自动重建） ----------
+server/data/*.json
+!server/data/.gitkeep
+server/data-test/*.json
+!server/data-test/.gitkeep
 
 # ---------- 缓存 & 系统文件 ----------
 .cache/

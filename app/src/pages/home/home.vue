@@ -405,7 +405,7 @@ const onQuickTap = (q) => {
 const onElite = () => uni.navigateTo({ url: '/pages/elite-pay/elite-pay' })
 const onMoreService = () => uni.showToast({ title: '上滑查看更多', icon: 'none' })
 const onCardTap = (item) => uni.navigateTo({ url: `/pages/service-detail/service-detail?id=${item.id}` })
-const onEliteUserTap = (u) => uni.navigateTo({ url: `/pages/provider/provider?uid=${u.id}` })
+const onEliteUserTap = (u) => uni.navigateTo({ url: `/pages/provider/provider?id=${u.id}` })
 const onSayHi = (u) => {
   if (!requireElite()) return
   uni.navigateTo({ url: `/pages/chat/chat?to=${u.id}&hi=1` })

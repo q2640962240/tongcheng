@@ -286,22 +286,23 @@
           <el-input v-model="form.bio" type="textarea" :rows="2" maxlength="200" placeholder="一句话介绍" />
         </el-form-item>
 
-        <!-- 真人用户专属：密码 -->
-        <template v-if="form.userType === 'real'">
-          <el-form-item label="登录密码">
-            <el-input
-              v-model="form.password"
-              :type="showPwd ? 'text' : 'password'"
-              :placeholder="formMode === 'create' ? '设置登录密码（6-32 位）' : '不填则不修改密码'"
-              maxlength="32"
-              show-password
-            >
-              <template #append>
-                <el-button @click="showPwd = !showPwd">{{ showPwd ? '隐藏' : '显示' }}</el-button>
-              </template>
-            </el-input>
-          </el-form-item>
-        </template>
+        <!-- 密码字段：real / ai 用户都能设置（管理员可使用 AI 账号登录用户端测试/运营） -->
+        <el-form-item label="登录密码">
+          <el-input
+            v-model="form.password"
+            :type="showPwd ? 'text' : 'password'"
+            :placeholder="formMode === 'create' ? (form.userType === 'real' ? '设置登录密码（6-32 位）' : '可选：为 AI 用户设置管理员登录密码（6-32 位）') : '不填则不修改密码（AI 用户也可填写 6-32 位新密码直接设置）'"
+            maxlength="32"
+            show-password
+          >
+            <template #append>
+              <el-button @click="showPwd = !showPwd">{{ showPwd ? '隐藏' : '显示' }}</el-button>
+            </template>
+          </el-input>
+          <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+            为 AI 用户设置密码后，管理员可在用户端以「手机号 + 密码」登录该账号，用于测试或运营模拟
+          </div>
+        </el-form-item>
 
         <el-form-item label="业务标签">
           <el-checkbox v-model="form.isProvider">服务者（可接单）</el-checkbox>
@@ -568,11 +569,13 @@ const formRules = {
   password: [
     {
       validator: (_r, v, cb) => {
+        // 创建：真人用户必填密码；AI 用户可选（管理员后续也能补）
         if (formMode.value === 'create' && form.userType === 'real') {
           if (!v || String(v).length < 6 || String(v).length > 32) {
             return cb(new Error('新建真人用户请填写密码（6-32 位）'))
           }
         }
+        // 填写了则必须 6-32 位（AI 用户编辑时也要求）
         if (v && (String(v).length < 6 || String(v).length > 32)) {
           return cb(new Error('密码长度需 6-32 位'))
         }

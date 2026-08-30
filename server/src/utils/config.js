@@ -33,7 +33,9 @@ const ENV_DEFAULTS = {
     // 定位服务：amap（高德）/ tencent（腾讯）/ off（关闭，默认）
     // 开启后配合 geoKey 才能使用第 1 级逆地理；未配置时系统会自动降级到 IP + 手动选择
     geoProvider: process.env.APP_GEO_PROVIDER || '',
-    geoKey: process.env.APP_GEO_KEY || ''
+    geoKey: process.env.APP_GEO_KEY || '',
+    // 服务自动过审：true 表示用户发布服务直接 status=online，便于公测/演示；false(默认) 表示进入 pending 等待后台审核
+    serviceAutoApprove: process.env.APP_SERVICE_AUTO_APPROVE === 'true'
   },
   jwt: {
     secret: envConfig.jwt.secret,

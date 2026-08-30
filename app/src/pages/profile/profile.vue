@@ -202,6 +202,9 @@ const onNav = (url) => uni.navigateTo({ url })
 
 const onNavWithLogin = (url) => {
   if (!requireLogin()) return
+  // 精英专属页面（服务发布/我的服务/交易记录/提现等）再叠加 requireElite 守卫，避免 401 → 重复登录死循环
+  const eliteOnly = /\/(service-publish|my-services|transactions|withdraw|exchange|elite-pay)\//.test(url)
+  if (eliteOnly && !requireElite()) return
   uni.navigateTo({ url })
 }
 

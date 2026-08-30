@@ -66,6 +66,11 @@ const Service = sequelize.define('Service', {
   ratingAvg: {
     type: DataTypes.DECIMAL(3, 1),
     defaultValue: 5.0
+  },
+  city: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    comment: '服务所属城市（冗余：便于列表按城市过滤，避免 join user）'
   }
 }, {
   tableName: 'services',
@@ -74,7 +79,8 @@ const Service = sequelize.define('Service', {
     { fields: ['status'] },
     { fields: ['category'] },
     { fields: ['sort'] },
-    { fields: ['rating_avg'] }
+    { fields: ['rating_avg'] },
+    { fields: ['city'] }
   ]
 })
 

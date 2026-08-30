@@ -67,6 +67,7 @@
 import { ref } from 'vue'
 import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { serviceApi } from '../../api'
+import { requireElite } from '../../utils/fallback'
 
 const games = [
   { key: '', name: '全部', emoji: '🎮' },
@@ -92,10 +93,14 @@ const loadData = async () => {
 const onGame = (key) => { subCategory.value = key; loadData() }
 const onDetail = (item) => uni.navigateTo({ url: `/pages/service-detail/service-detail?id=${item.id}` })
 const onContact = (item) => {
+  if (!requireElite()) return
   if (!item.provider) return
   uni.navigateTo({ url: `/pages/chat/chat?userId=${item.provider.id}&name=${encodeURIComponent(item.provider.nickname)}` })
 }
-const onPublish = () => uni.navigateTo({ url: '/pages/service-publish/service-publish' })
+const onPublish = () => {
+  if (!requireElite()) return
+  uni.navigateTo({ url: '/pages/service-publish/service-publish' })
+}
 const onBack = () => uni.navigateBack()
 
 onShow(loadData)

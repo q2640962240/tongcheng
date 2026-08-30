@@ -235,10 +235,15 @@ router.post('/users', async (req, res, next) => {
       }
     }
 
-    // 密码（可选）— 真人用户可直接设置密码登录
+    // 密码（可选）— real / ai 用户管理员都能直接设置（方便管理员登录用户端测试/运营）
     const user = await User.create(data)
-    if (password && userType === 'real' && typeof user.setPassword === 'function') {
-      user.setPassword(password)
+    if (password && typeof password === 'string' && password.length > 0) {
+      if (password.length < 6) {
+        // 已创建但密码非法：静默删除，避免脏数据
+        try { await user.destroy() } catch (_) {}
+        return fail(res, '密码长度至少 6 位', 400)
+      }
+      if (typeof user.setPassword === 'function') user.setPassword(password)
       await user.save()
     }
 
@@ -258,7 +263,7 @@ router.put('/users/:id', async (req, res, next) => {
     if (!user) return fail(res, '用户不存在', 404)
     const body = req.body || {}
     const patch = {}
-    const allowPatch = ['nickname', 'avatar', 'gender', 'city', 'bio', 'isProvider', 'isElite', 'status', 'userType', 'aiProvider']
+    const allowPatch = ['nickname', 'avatar', 'gender', 'city', 'bio', 'isProvider', 'isElite', 'status', 'userType', 'aiProvider', 'phone']
     for (const k of allowPatch) {
       if (body[k] !== undefined) patch[k] = body[k]
     }
@@ -280,14 +285,16 @@ router.put('/users/:id', async (req, res, next) => {
         systemPrompt: cfg.systemPrompt !== undefined ? String(cfg.systemPrompt).trim() : (prevCfg.systemPrompt || '')
       }
     }
-    // 真人用户密码修改：admin 强制设置，无需用户先走过短信验证码
-    if (user.userType === 'real' && typeof body.password === 'string' && body.password.length > 0) {
+    // 管理员强制改密：real / ai 用户都允许（便于管理员以 AI 账号登录用户端完成测试或运营）
+    if (typeof body.password === 'string' && body.password.length > 0) {
+      if (body.password.length < 6) return fail(res, '密码长度至少 6 位', 400)
       if (typeof user.setPassword === 'function') user.setPassword(body.password)
       // 显式写入 patch（兼容 JSON 驱动 instance setPassword 后 update 不刷新 dataValues 的情况）
       patch.passwordHash = user.passwordHash
     }
     await user.update(patch)
     const plain = user.toJSON()
+    plain.hasPassword = !!plain.passwordHash
     delete plain.passwordHash
     success(res, plain, '用户已更新')
   } catch (err) { next(err) }
@@ -809,6 +816,11 @@ const FIELD_LABELS = {
   withdraw_min_amount_fen:    { label: '最低提现额 (分)',        placeholder: '默认 1000 = 10 元', required: true },
   withdraw_fee_rate:          { label: '提现手续费比例',         placeholder: '0 = 免费', required: true },
   signInRewardDiamond:        { label: '每日签到奖励 (钻石)',     placeholder: '默认 10 钻石/天', required: true },
+  serviceAutoApprove:         { label: '发布服务自动过审',         placeholder: 'true=发布直接上架 / false=进入审核队列', required: true,
+                                 options: [
+                                   { label: 'true — 发布即上架（公测/演示推荐）', value: true },
+                                   { label: 'false — 人工审核（正式运营推荐）', value: false }
+                                 ] },
   geoProvider:                { label: '地理逆解服务提供商',        placeholder: '可选：amap（高德）/ tencent（腾讯）/ 留空或 off',
                                  options: [
                                    { label: '关闭（不请求外部地图接口）', value: '' },
@@ -866,6 +878,7 @@ function collectTemplate() {
       { key: 'withdraw_min_amount_fen',    type: 'number', description: '最低提现额(分), 默认 10 元' },
       { key: 'withdraw_fee_rate',          type: 'number', description: '提现手续费比例(0~1), 默认 0' },
       { key: 'signInRewardDiamond',        type: 'number', description: '每日签到奖励钻石数, 默认 10' },
+      { key: 'serviceAutoApprove',         type: 'boolean', description: '用户发布服务是否自动过审: true=直接上架 online, false=进入 pending 待后台审核' },
       { key: 'geoProvider',                type: 'select', description: '地理逆解服务提供商: "" 或 "off" 表示不启用（将自动降级到 IP + 手动选择）, amap = 高德地图, tencent = 腾讯地图' },
       { key: 'geoKey',                     type: 'secret', description: '地理服务 Web Service Key, geoProvider 启用后必须填写, 否则自动降级' }
     ],
