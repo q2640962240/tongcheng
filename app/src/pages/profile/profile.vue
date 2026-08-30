@@ -126,7 +126,7 @@ import { useWalletStore } from '../../store/wallet'
 import { userApi } from '../../api'
 import {
   guard, unwrap, toObj, toStr, toNum, toBool,
-  requireLogin, avatarUrl
+  requireLogin, requireElite, avatarUrl
 } from '../../utils/fallback'
 
 const userStore = useUserStore()
@@ -221,7 +221,7 @@ const onRecharge = () => {
 }
 
 const onIncome = () => {
-  if (!requireLogin()) return
+  if (!requireElite()) return
   uni.navigateTo({ url: '/pages/withdraw/withdraw' })
 }
 

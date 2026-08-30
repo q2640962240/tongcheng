@@ -342,7 +342,7 @@ import { getCurrentBaseURL, openServerUrlModal } from '../../utils/request'
 import {
   toList, toStr, toNum, toObj, toBool, pickCity, getPath, unwrap, unwrapPage,
   guard, truncate, formatTime as ft, avatarUrl, coverUrl, pickTags,
-  debounce, requireLogin, resolveCityViaPipeline, safeMap
+  debounce, requireLogin, requireElite, resolveCityViaPipeline, safeMap
 } from '@/utils/fallback'
 
 const CITY_KEY = 'baiye_city'
@@ -672,6 +672,7 @@ const tagColor = (_, i) => ['tag-yellow','tag-purple','tag-blue','tag-pink'][toN
 const goPublish = () => uni.navigateTo({ url: '/pages/post/publish' })
 const goPublishFilter = () => {
   if (!requireLogin()) return
+  if (!requireElite()) return
   uni.showToast({ title: toStr('请先开通精英'), icon: 'none' })
   setTimeout(() => uni.navigateTo({ url: '/pages/elite-pay/elite-pay' }), 800)
 }
@@ -715,11 +716,11 @@ const onShare = (p) => {
   })
 }
 const onJoinGroup = (g) => {
-  if (!requireLogin()) return
+  if (!requireElite()) return
   uni.navigateTo({ url: `/pages/group/detail?id=${toStr(getPath(g, 'id'), '')}&autoJoin=1` })
 }
 const onFinderContact = (u) => {
-  if (!requireLogin()) return
+  if (!requireElite()) return
   uni.navigateTo({ url: `/pages/chat/chat?to=${toStr(getPath(u, 'id'), '')}` })
 }
 const onSign = async () => {

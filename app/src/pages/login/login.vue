@@ -113,7 +113,7 @@
           <input v-model="newPwd2" class="input" :password="!showNewPwd" maxlength="32" placeholder="请再次输入密码" />
         </view>
         <view class="m-row">
-          <view class="m-btn cancel" @tap="showSetPwd = false">稍后设置</view>
+          <view class="m-btn cancel" @tap="onCloseLater">稍后设置</view>
           <view class="m-btn confirm" @tap="onSavePwd">立即设置</view>
         </view>
       </view>
@@ -138,6 +138,22 @@ const newPwd = ref('')
 const newPwd2 = ref('')
 const showNewPwd = ref(false)
 let lastLoginPhone = ''
+const SKIP_SET_PWD_KEY = 'companion_skip_set_pwd'
+
+const markPasswordSet = () => {
+  // 兼容修复：设置密码成功后立即更新本地 user.hasPassword，避免退出后密码登录
+  // 再被服务端误判（服务端是对的，但本地 refresh 前 user 快照可能仍是 false）
+  try {
+    const u = { ...(userStore.user || {}) }
+    u.hasPassword = true
+    u.needSetPassword = false
+    userStore.user = u
+    try {
+      const USER_KEY = 'companion_user'
+      uni.setStorageSync(USER_KEY, JSON.stringify(u))
+    } catch (_) {}
+  } catch (_) {}
+}
 
 const onSendCode = async (scene = 'login') => {
   if (counting.value > 0) return
@@ -161,17 +177,24 @@ const onSendCode = async (scene = 'login') => {
   } catch (_) {}
 }
 
+const goHome = (delayMs = 400) => {
+  setTimeout(() => uni.switchTab({
+    url: '/pages/home/home',
+    fail: () => uni.reLaunch({ url: '/pages/home/home' })
+  }), delayMs)
+}
+
 const onAfterLogin = async (loginData) => {
   lastLoginPhone = phone.value
   uni.showToast({ title: '登录成功', icon: 'success' })
-  // 新注册或尚未设置密码 → 引导设置
+  // 新注册或尚未设置密码 → 引导设置（但用户之前点过"稍后设置"就不再弹，避免烦扰）
   const user = loginData && loginData.user
-  if (user && (user.needSetPassword || user.isNew || user.hasPassword === false)) {
-    setTimeout(() => {
-      showSetPwd.value = true
-    }, 450)
+  let skipLater = false
+  try { skipLater = !!uni.getStorageSync(SKIP_SET_PWD_KEY) } catch (_) {}
+  if (user && (user.needSetPassword || user.isNew || user.hasPassword === false) && !skipLater) {
+    setTimeout(() => { showSetPwd.value = true }, 450)
   } else {
-    setTimeout(() => uni.switchTab({ url: '/pages/home/home' }), 500)
+    goHome(500)
   }
 }
 
@@ -218,6 +241,13 @@ const onForgotPwd = () => {
   })
 }
 
+const onCloseLater = () => {
+  // 用户点稍后设置 → 记住这个选择（下次登录不再弹）并直接进首页，**不能只是关遮罩**
+  try { uni.setStorageSync(SKIP_SET_PWD_KEY, 1) } catch (_) {}
+  showSetPwd.value = false
+  goHome(200)
+}
+
 const onSavePwd = async () => {
   if (newPwd.value.length < 6 || newPwd.value.length > 32) {
     uni.showToast({ title: '密码长度 6-32 位', icon: 'none' })
@@ -229,9 +259,11 @@ const onSavePwd = async () => {
   }
   try {
     await authApi.setPassword({ newPassword: newPwd.value })
+    markPasswordSet()
+    try { uni.removeStorageSync(SKIP_SET_PWD_KEY) } catch (_) {}
     uni.showToast({ title: '密码已设置成功', icon: 'success' })
     showSetPwd.value = false
-    setTimeout(() => uni.switchTab({ url: '/pages/home/home' }), 400)
+    goHome(400)
   } catch (_) {}
 }
 </script>

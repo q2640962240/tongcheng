@@ -567,6 +567,49 @@ router.put('/services/:id/status', (req, res, next) => {
   auditHandler.handle(req, res, next)
 })
 
+/** 后台为指定用户上架服务（无需用户自行发布，直接 online） */
+router.post('/services/create-for-user', async (req, res, next) => {
+  try {
+    const {
+      userId,
+      title,
+      description,
+      category,
+      subCategory,
+      coverImage,
+      price,
+      priceUnit,
+      duration,
+      tags,
+      sort,
+      status
+    } = req.body
+    const providerId = Number(userId)
+    if (!providerId || !title || !category || price == null) {
+      return fail(res, '参数不完整：userId、title、category、price 为必填', 400)
+    }
+    const user = await User.findByPk(providerId)
+    if (!user) return fail(res, '指定用户不存在', 404)
+
+    const service = await Service.create({
+      providerId,
+      title,
+      description: description || '',
+      category,
+      subCategory: subCategory || null,
+      coverImage: coverImage || null,
+      price: Number(price) || 0,
+      priceUnit: priceUnit || '次',
+      duration: duration ? Number(duration) : null,
+      tags: Array.isArray(tags) ? tags : null,
+      sort: sort ? Number(sort) : 0,
+      status: ['draft', 'pending', 'online', 'offline'].includes(status) ? status : 'online',
+      rejectReason: null
+    })
+    success(res, { id: service.id }, '已为用户上架服务')
+  } catch (err) { next(err) }
+})
+
 /** 钱包流水别名：GET /admin/wallet/transactions ⇢ GET /admin/finance/transactions */
 router.get('/wallet/transactions', (req, res, next) => {
   const h = router.stack.find(l => l.route && l.route.path === '/finance/transactions' && l.route.methods.get)

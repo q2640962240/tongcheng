@@ -171,31 +171,49 @@ export function unwrapPage(resp, dflt = { list: [], total: 0 }) {
   return { list, total }
 }
 
-/* ==================== 登录守卫 ==================== */
+/* ==================== 登录 / 精英 守卫 ==================== */
+
+/**
+ * 是否已登录（本地 storage + Pinia 双重判断，避免"已登录但被误判未登录"的兜底死循环）
+ * @returns {boolean}
+ */
+export function isLoggedIn() {
+  const TOKEN_KEY = 'companion_token'
+  const USER_KEY = 'companion_user'
+  // L1：storage
+  try {
+    const token = uni.getStorageSync(TOKEN_KEY)
+    const userRaw = uni.getStorageSync(USER_KEY)
+    const userId = userRaw ? (JSON.parse(userRaw || '{}') || {}).id : null
+    if ((token && String(token).length > 8) || userId) return true
+  } catch (_) {}
+  // L2：Pinia userStore（如果全局已挂载）
+  try {
+    const app = (typeof getApp === 'function') ? (getApp && getApp()) : null
+    const pinia = app && app.$pinia
+    if (pinia) {
+      // 动态导入避免循环依赖
+      let store = null
+      try {
+        const mod = require('../store/user')
+        store = mod && mod.useUserStore && mod.useUserStore()
+      } catch (_) {}
+      if (store && (store.isLoggedIn || store.userId || (store.user && store.user.id) || store.token)) {
+        return true
+      }
+    }
+  } catch (_) {}
+  return false
+}
 
 /**
  * 未登录时跳到登录页，返回是否已登录
+ * 修复 Bug：即使接口偶发 401，只要本地有 token/user 就视为已登录，避免反复"去登录→回首页→再去登录"死循环
  * @returns {boolean} 是否已登录
  */
 export function requireLogin(redirect) {
   try {
-    // 必须与 auth.js 的 TOKEN_KEY 保持一致，避免出现"已登录仍提示未登录"的兜底误判
-    const TOKEN_KEY = 'companion_token'
-    const USER_KEY = 'companion_user'
-    let hasLogin = false
-    try {
-      const token = uni.getStorageSync(TOKEN_KEY)
-      const userRaw = uni.getStorageSync(USER_KEY)
-      const userId = userRaw ? (JSON.parse(userRaw || '{}') || {}).id : null
-      if ((token && String(token).length > 8) || userId) hasLogin = true
-    } catch (_) { /* ignore */ }
-    // 兜底：再用 Pinia userStore 判断一次（如果全局已挂载）
-    try {
-      if (!hasLogin) {
-        const u = (getApp && getApp() && getApp().$pinia) ? null : null
-      }
-    } catch (_) {}
-    if (hasLogin) return true
+    if (isLoggedIn()) return true
     uni.showModal({
       title: '请先登录',
       content: '该操作需要登录后才能继续',
@@ -207,9 +225,54 @@ export function requireLogin(redirect) {
         }
       }
     })
-  } catch (_) {
-    /* ignore */
+  } catch (_) { /* ignore */ }
+  return false
+}
+
+/**
+ * 精英守卫：Bug 4 修复 — 原先重复 requireLogin 造成"已登录仍要反复登录"的死循环。
+ * 核心业务（聊天/解锁微信号/下单/查看联系方式等）必须先开通精英会员；
+ * 未精英时弹窗引导跳精英付费页，不再反复弹出"请先登录"。
+ * @returns {boolean} 是否已开通精英（通过才可继续业务）
+ */
+export function requireElite(redirect) {
+  // L1：先确保登录
+  if (!requireLogin(redirect)) return false
+  let elite = false
+  // L2：Pinia userStore
+  try {
+    const app = (typeof getApp === 'function') ? (getApp && getApp()) : null
+    const pinia = app && app.$pinia
+    if (pinia) {
+      let store = null
+      try {
+        const mod = require('../store/user')
+        store = mod && mod.useUserStore && mod.useUserStore()
+      } catch (_) {}
+      if (store && store.isElite) elite = true
+    }
+  } catch (_) {}
+  // L3：再兜底 storage user.isElite
+  if (!elite) {
+    try {
+      const userRaw = uni.getStorageSync('companion_user')
+      const u = userRaw ? (JSON.parse(userRaw || '{}') || {}) : null
+      if (u && !!u.isElite) elite = true
+    } catch (_) {}
   }
+  if (elite) return true
+  uni.showModal({
+    title: '开通精英会员',
+    content: '该功能为精英专属，开通后可无限聊天、解锁对方微信号、尊享精英徽章。是否立即开通？',
+    confirmText: '立即开通',
+    cancelText: '稍后再说',
+    success: (r) => {
+      if (r.confirm) {
+        const url = '/pages/elite-pay/elite-pay'
+        uni.navigateTo({ url, fail: () => uni.reLaunch({ url }) })
+      }
+    }
+  })
   return false
 }
 

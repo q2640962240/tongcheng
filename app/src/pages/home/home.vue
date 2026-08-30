@@ -105,6 +105,48 @@
         </view>
       </view>
 
+      <!-- 附近精英用户（Bug 3 修复：社交平台属性，展示 isElite=true 的用户，即使未发布服务也能被看到和联系） -->
+      <view class="section">
+        <view class="section-head">
+          <text class="section-title">✨ 附近精英</text>
+          <text class="section-more" @tap="onNavDiscover">查看全部 ›</text>
+        </view>
+        <view v-if="eliteLoading" class="loading-wrap"><text class="loading">精英用户加载中…</text></view>
+        <scroll-view v-else-if="eliteUserList.length > 0" scroll-x class="hide-scrollbar elite-scroll">
+          <view class="elite-row">
+            <view
+              v-for="u in eliteUserList"
+              :key="u.id"
+              class="elite-card"
+              @tap="onEliteUserTap(u)"
+            >
+              <view class="elite-avatar-wrap">
+                <image class="elite-avatar" :src="u.avatar" mode="aspectFill" />
+                <view class="elite-crown">👑</view>
+              </view>
+              <view class="elite-info">
+                <text class="elite-name" :numberOfLines="1">{{ u.nickname }}</text>
+                <text class="elite-city" v-if="u.city" :numberOfLines="1">📍{{ u.city }}</text>
+                <text class="elite-bio" :numberOfLines="2">{{ u.bio }}</text>
+                <view class="say-hi" @tap.stop="onSayHi(u)">
+                  <text class="say-hi-text">打招呼</text>
+                </view>
+              </view>
+            </view>
+            <view v-if="eliteUserList.length < 12" class="elite-card join-elite" @tap="onElite">
+              <view class="join-emoji">+</view>
+              <text class="join-title">成为精英</text>
+              <text class="join-desc">解锁精英徽章，优先被推荐给附近的人</text>
+            </view>
+          </view>
+        </scroll-view>
+        <view v-else class="empty elite-empty">
+          <text class="empty-emoji">🌟</text>
+          <text class="empty-text">暂无精英用户，成为第一位精英被附近的人发现吧</text>
+          <view class="btn-primary empty-action" @tap="onElite">立即开通精英</view>
+        </view>
+      </view>
+
       <!-- 分类 chips -->
       <view class="chips">
         <scroll-view scroll-x class="hide-scrollbar">
@@ -156,10 +198,10 @@
 import { ref, watch, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import ServiceCard from '../../components/ServiceCard.vue'
-import { serviceApi, bannerApi, eliteApi, locationApi } from '../../api'
+import { serviceApi, bannerApi, eliteApi, locationApi, userApi } from '../../api'
 import { useUserStore } from '../../store/user'
 import {
-  toList, toStr, toNum, pickCity, getPath, guard, unwrap, requireLogin, resolveCityViaPipeline
+  toList, toStr, toNum, pickCity, getPath, guard, unwrap, requireLogin, requireElite, resolveCityViaPipeline
 } from '../../utils/fallback'
 import { getCurrentBaseURL, openServerUrlModal } from '../../utils/request'
 
@@ -237,6 +279,9 @@ const categories = [
 ]
 const activeCategory = ref('')
 const recommendList = ref([])
+// Bug 3 修复：首页展示已精英认证（isElite=true）的用户，即使没有发布服务，也可被社交平台用户看到并打招呼
+const eliteUserList = ref([])
+const eliteLoading = ref(false)
 
 const quickEntries = [
   { key: 'warm', label: '暖心陪伴', emoji: '🤍', path: '/pages/warm/warm' },
@@ -270,6 +315,26 @@ const loadEliteInfo = async () => {
   if (!eliteInfo.value || typeof eliteInfo.value !== 'object') {
     eliteInfo.value = { priceYuan: '30.00', totalJoinedApprox: 12876 }
   }
+}
+
+const loadEliteUsers = async () => {
+  eliteLoading.value = true
+  try {
+    const params = { isElite: true, page: 1, pageSize: 12 }
+    if (city.value && city.value !== '全国') params.city = city.value
+    const res = await guard(userApi.discover(params), null)
+    eliteUserList.value = toList(getPath(unwrap(res, null), 'list', []))
+      .filter((u) => u && u.id)
+      .map((u) => ({
+        id: u.id,
+        nickname: toStr(u.nickname, '精英用户'),
+        avatar: toStr(u.avatar || '', '/assets/avatar-provider-01.jpg', '/assets/avatar-provider-01.jpg'),
+        city: toStr(u.city || city.value || ''),
+        bio: toStr(u.bio || '欢迎认识我 ✨'),
+        isElite: !!u.isElite
+      }))
+  } catch (_) { eliteUserList.value = [] }
+  finally { eliteLoading.value = false }
 }
 
 const loadList = async () => {
@@ -306,7 +371,7 @@ watch(activeCategory, loadList)
 
 const onRefresh = async () => {
   refreshing.value = true
-  await Promise.all([loadBanners(), loadEliteInfo(), loadList()])
+  await Promise.all([loadBanners(), loadEliteInfo(), loadEliteUsers(), loadList()])
   refreshing.value = false
 }
 
@@ -314,6 +379,7 @@ onShow(() => {
   readCity()
   loadBanners()
   loadEliteInfo()
+  loadEliteUsers()
   loadList()
   if (userStore.token) msgBadge.value = true
 })
@@ -321,6 +387,7 @@ onMounted(() => tryAutoLocate())
 
 /* -------- 事件 -------- */
 const onSearch = () => uni.navigateTo({ url: '/pages/search/search' })
+const onNavDiscover = () => uni.navigateTo({ url: '/pages/discover/discover' })
 const onPickCity = () => uni.navigateTo({ url: '/pages/city/city' })
 const onMessage = () => uni.navigateTo({ url: '/pages/chat-list/chat-list' })
 const onBannerTap = (b) => {
@@ -336,8 +403,13 @@ const onQuickTap = (q) => {
 const onElite = () => uni.navigateTo({ url: '/pages/elite-pay/elite-pay' })
 const onMoreService = () => uni.showToast({ title: '上滑查看更多', icon: 'none' })
 const onCardTap = (item) => uni.navigateTo({ url: `/pages/service-detail/service-detail?id=${item.id}` })
+const onEliteUserTap = (u) => uni.navigateTo({ url: `/pages/provider/provider?uid=${u.id}` })
+const onSayHi = (u) => {
+  if (!requireElite()) return
+  uni.navigateTo({ url: `/pages/chat/chat?to=${u.id}&hi=1` })
+}
 const onContact = (item) => {
-  if (!requireLogin()) return
+  if (!requireElite()) return
   const providerId = getPath(item, '_raw.providerId', '')
   if (providerId) uni.navigateTo({ url: `/pages/chat/chat?to=${providerId}` })
   else uni.showToast({ title: `已向 ${toStr(item.nickname, '服务者')} 发起联系`, icon: 'none' })
@@ -527,6 +599,63 @@ const onContact = (item) => {
 }
 .elite-price { color: #0B0F1A; font-weight: 800; font-size: 30rpx; }
 .elite-plan { color: #0B0F1A; font-size: 20rpx; opacity: .8; }
+
+/* -------- 附近精英用户（Bug 3 修复） -------- */
+.section-head { padding: 16rpx 32rpx 8rpx; display: flex; justify-content: space-between; align-items: center; }
+.elite-scroll { width: 100%; }
+.elite-row {
+  display: inline-flex; gap: 20rpx;
+  padding: 12rpx 32rpx 24rpx;
+}
+.elite-card {
+  width: 260rpx; flex-shrink: 0;
+  border-radius: $by-radius-lg;
+  background: linear-gradient(180deg, color.change($by-aurora-a, $alpha: .14) 0%, color.change(#FFFFFF, $alpha: .04) 100%);
+  border: 1rpx solid color.change($by-gold, $alpha: .22);
+  padding: 18rpx 16rpx 18rpx;
+  display: flex; flex-direction: column; align-items: center; gap: 12rpx;
+}
+.elite-avatar-wrap { position: relative; width: 120rpx; height: 120rpx; }
+.elite-avatar {
+  width: 120rpx; height: 120rpx; border-radius: 9999rpx;
+  border: 3rpx solid $by-gold;
+  box-shadow: $by-shadow-gold;
+}
+.elite-crown {
+  position: absolute; top: -14rpx; left: 50%; transform: translateX(-50%);
+  font-size: 26rpx;
+  background: #FFFFFF; border-radius: 9999rpx;
+  padding: 0 10rpx;
+  box-shadow: 0 4rpx 14rpx rgba(0,0,0,.12);
+}
+.elite-info { width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4rpx; }
+.elite-name { font-size: 26rpx; font-weight: 700; color: $by-text-1; width: 100%; }
+.elite-city { font-size: 20rpx; color: $by-text-3; }
+.elite-bio {
+  font-size: 22rpx; color: $by-text-2;
+  line-height: 1.35; height: 60rpx; overflow: hidden;
+  width: 100%;
+}
+.say-hi {
+  margin-top: 6rpx; padding: 10rpx 20rpx;
+  background: $by-gradient-gold; color: #0B0F1A;
+  border-radius: 9999rpx;
+  font-size: 22rpx; font-weight: 700;
+  box-shadow: $by-shadow-gold;
+}
+.say-hi-text { color: #0B0F1A; }
+.join-elite { justify-content: center; text-align: center; gap: 8rpx; border-style: dashed; }
+.join-emoji {
+  width: 100rpx; height: 100rpx; border-radius: 9999rpx;
+  background: color.change($by-gold, $alpha: .18);
+  color: $by-gold; font-size: 56rpx; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  border: 2rpx dashed $by-gold;
+}
+.join-title { font-size: 26rpx; font-weight: 700; color: $by-text-1; }
+.join-desc { font-size: 20rpx; color: $by-text-3; padding: 0 12rpx; line-height: 1.4; }
+.elite-empty { padding: 60rpx 32rpx; }
+.empty-action { margin-top: 20rpx; padding: 16rpx 40rpx; font-size: 26rpx; }
 
 /* -------- Chips -------- */
 .chips { padding: 28rpx 0 12rpx; }

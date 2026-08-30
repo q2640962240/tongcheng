@@ -173,7 +173,7 @@ import {
   guard, unwrap, unwrapPage, safeMap, getPath,
   toStr, toNum, toBool, toObj, toList,
   avatarUrl, coverUrl, pickTags,
-  requireLogin, formatTime, formatCount
+  requireLogin, requireElite, formatTime, formatCount
 } from '../../utils/fallback'
 
 const service = ref(null)
@@ -362,10 +362,10 @@ const onProvider = () => {
   uni.navigateTo({ url: `/pages/provider/provider?id=${pid}` })
 }
 
-// ===== onOrder：requireLogin + guard + unwrap + toObj + 判 id =====
+// ===== onOrder：requireElite + guard + unwrap + toObj + 判 id =====
 const onOrder = () => {
   if (!service.value) return
-  if (!requireLogin()) return
+  if (!requireElite()) return
   const sid = toStr(getPath(service.value, 'id'), '')
   const title = toStr(getPath(service.value, 'title'), '服务订单')
   const qty = toNum(quantity.value, 1)

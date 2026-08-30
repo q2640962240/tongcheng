@@ -20,6 +20,36 @@ import { authApi } from '../api'
 /** 401 续期锁：同一时刻只跑一次 refresh，避免并发请求同时 refresh 造成 N 个 401 */
 let refreshLock = null
 
+/** 401 跳转登录防抖：在 12s 窗口内只允许最多 1 次 reLaunch，避免"已登录但接口偶发 401 → 多次 removeToken → 真退出 → 反复重登死循环" */
+let _lastReloginAt = 0
+const RELOGIN_COOLDOWN_MS = 12 * 1000
+function kickToLogin(reason = '登录已过期') {
+  try {
+    const now = Date.now()
+    const userApp = (typeof getApp === 'function') ? (getApp && getApp()) : null
+    const globalStore = (userApp && userApp.$pinia) ? null : null
+    // 兼容：如果全局 Pinia 已挂载，调用 userStore.logout() 统一清理
+    try {
+      if (userApp && userApp.$pinia) {
+        const { useUserStore } = require('../store/user')
+        const s = useUserStore && useUserStore()
+        if (s && typeof s.logout === 'function' && (now - _lastReloginAt) >= RELOGIN_COOLDOWN_MS) {
+          _lastReloginAt = now
+          s.logout()
+          return
+        }
+      }
+    } catch (_) {}
+    if ((now - _lastReloginAt) < RELOGIN_COOLDOWN_MS) return // 防抖窗口内直接忽略，保持用户当前会话
+    _lastReloginAt = now
+    removeToken()
+    uni.reLaunch({ url: '/pages/login/login' })
+  } catch (_) {
+    // 最后兜底：保证不因 kickToLogin 自身抛错而影响外层错误提示
+    try { removeToken() } catch (__) {}
+  }
+}
+
 /** 尝试使用 refreshToken 自动续期；成功返回 true */
 async function tryRefresh() {
   if (refreshLock) return refreshLock
@@ -261,8 +291,8 @@ export const request = (options) => {
                 timeout,
                 success: (r2) => {
                   if (r2.statusCode === 401) {
-                    removeToken()
-                    uni.reLaunch({ url: '/pages/login/login' })
+                    // 二次 401：refresh 也失效 → 真正过期 → 全局防抖跳登录（12s 内只跳 1 次）
+                    kickToLogin('登录已过期')
                     reject(new Error('登录已过期'))
                     return
                   }
@@ -288,14 +318,13 @@ export const request = (options) => {
                 }
               })
             } catch (_) {
-              removeToken()
-              uni.reLaunch({ url: '/pages/login/login' })
+              kickToLogin('登录已过期')
               reject(new Error('登录已过期'))
             }
             return
           }
-          removeToken()
-          uni.reLaunch({ url: '/pages/login/login' })
+          // 首次 401 且无 refreshToken 可续 / 续期接口自身失败 → 走全局 12s 防抖，避免并发请求清掉真会话造成死循环
+          kickToLogin('登录已过期')
           reject(new Error('登录已过期'))
           return
         }

@@ -17,6 +17,9 @@ export const auditElite = (id, approved) => http.put(`/admin/users/${id}/elite`,
 // 服务管理
 export const getServices = (params) => http.get('/admin/services', { params })
 export const auditService = (id, data) => http.put(`/admin/services/${id}/audit`, data)
+export const createServiceForUser = (data) => http.post('/admin/services/create-for-user', data)
+// 搜索用户（下拉选择器使用）
+export const searchUsers = (keyword, pageSize = 20) => http.get('/admin/users', { params: { keyword, page: 1, pageSize } })
 // 用户端可展示服务类型 / 分类管理
 export const serviceCategoriesApi = {
   list: () => http.get('/admin/service-categories'),

@@ -217,7 +217,7 @@ import { serviceApi, postApi, groupApi, userApi } from '../../api'
 import {
   toList, toStr, toNum, toObj, unwrap, unwrapPage, guard,
   getPath, avatarUrl, coverUrl, pickTags, formatTime, truncate,
-  debounce, requireLogin, safeMap, pickCity
+  debounce, requireLogin, requireElite, safeMap, pickCity
 } from '@/utils/fallback'
 
 const HISTORY_KEY = 'baiye_search_history'
@@ -442,7 +442,7 @@ const preview = (images, i) => {
   uni.previewImage({ urls: imgs, current: toStr(imgs[toNum(i, 0)], imgs[0]) })
 }
 const onChat = (u) => {
-  if (!requireLogin()) return
+  if (!requireElite()) return
   uni.navigateTo({ url: `/pages/chat/chat?to=${toStr(getPath(u, 'id'), '')}` })
 }
 
