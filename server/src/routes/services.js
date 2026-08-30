@@ -275,26 +275,33 @@ router.put('/:id', auth, async (req, res, next) => {
 /** 发布服务 */
 router.post('/', auth, async (req, res, next) => {
   try {
-    const { title, description, category, subCategory, coverImage, price, priceUnit, duration, tags } = req.body
+    const body = req.body || {}
+    const { title, description, category, subCategory, coverImage, price, priceUnit, duration, tags } = body
     if (!title || !category || price == null) return fail(res, '参数不完整')
     const user = await User.findByPk(req.userId)
-    // 城市兜底：按当前用户 city → 规范化 → 去尾缀兼容；保证即使前端未上传/用户 city 异常，也不会产生空白 city 导致后续首页匹配漏掉
+    // 城市优先级：
+    //  1) 请求体 body.city / body.location.city（前端 service-publish 可能放在 location）
+    //  2) 当前用户 city（已改到深圳）
+    //  3) 配置中心 app.defaultCity 兜底
+    //  归一化：normalizeCityName(深圳) → 深圳市；matchCity 已用 startsWith 双向兼容深圳/深圳市
     let city = ''
     try {
-      const norm = require('../utils/geo').normalizeCityName
-      const raw = user ? (user.city || '') : ''
-      city = String(raw || '').trim()
-      if (!city) {
+      const { normalizeCityName } = require('../utils/geo')
+      const bodyCityRaw = body.city || (body.location && (body.location.city || body.location.name)) || ''
+      const userCityRaw = user ? (user.city || '') : ''
+      let raw = String(bodyCityRaw || userCityRaw || '').trim()
+      if (!raw) {
         try {
-          const cfg = require('../utils/config').getModuleConfig
-          const appCfg = await cfg('app')
-          city = String((appCfg && appCfg.defaultCity) || '').trim()
+          const { getModuleConfig } = require('../utils/config')
+          const appCfg = await getModuleConfig('app')
+          raw = String((appCfg && appCfg.defaultCity) || '').trim()
         } catch (_) {}
       }
-      if (city && typeof norm === 'function') {
-        const n = norm(city)
-        if (n) city = n
+      if (raw && typeof normalizeCityName === 'function') {
+        const n = normalizeCityName(raw)
+        if (n) raw = n
       }
+      city = raw
     } catch (_) {}
     // 自动过审：配置中心 app.serviceAutoApprove=true 时直接 online，否则 pending
     let status = 'pending'

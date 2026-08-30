@@ -23,7 +23,8 @@ describe('POST /api/posts — 发布动态', () => {
     expect(res.body.code).toBe(0)
     expect(res.body.data.id).toBeDefined()
     expect(res.body.data.userId).toBe(userId)
-    expect(res.body.data.city).toBe('上海')
+    // 城市经过 normalizeCityName 归一化：'上海' 可能变成 '上海市'，前缀匹配即可
+    expect(res.body.data.city && String(res.body.data.city).startsWith('上海')).toBe(true)
   })
 
   test('空内容被拒绝', async () => {
@@ -83,7 +84,8 @@ describe('GET /api/posts — 动态列表', () => {
     const res = await request(app)
       .get('/api/posts?city=北京&pageSize=20')
       .expect(200)
-    expect(res.body.data.list.every(p => p.city === '北京' || p.city === '')).toBe(true)
+    // 城市经过 normalizeCityName 归一化：'北京' → '北京市'；另外空城市全国可展示
+    expect(res.body.data.list.every(p => !p.city || String(p.city).startsWith('北京'))).toBe(true)
   })
 
   test('返回列表含用户信息且不含 likes 明细', async () => {

@@ -24,8 +24,15 @@ router.get('/', optionalAuth, async (req, res, next) => {
     }
     const matchCity = rowCity => {
       if (!cityVariants.size) return true
-      if (!rowCity) return false
-      for (const v of cityVariants) if (String(rowCity).startsWith(v) || String(v).startsWith(String(rowCity))) return true
+      // 空城市：全国可见，不做强制过滤（对齐 services.js matchCity 行为）
+      if (!rowCity) return true
+      const r = String(rowCity).trim()
+      if (!r) return true
+      for (const v of cityVariants) {
+        const vv = String(v).trim()
+        if (!vv) continue
+        if (r.startsWith(vv) || vv.startsWith(r)) return true
+      }
       return false
     }
     // keyword 长度 <2 时：ignored=true 且空数组，避免误匹配/性能问题
@@ -43,15 +50,18 @@ router.get('/', optionalAuth, async (req, res, next) => {
       }
       where[Op.or] = ors
     }
-    // city 精确 where 只在 norm 可用时优化；否则后续 matchCity 过滤
-    if (cityNorm) where.city = cityNorm
+    // city 用宽松的 [Op.like] 先走一层（城市归一前后前缀匹配），再由 matchCity 兜底
+    if (cityRaw) {
+      const prefix = cityRaw.replace(/市$/, '').replace(/区$/, '').replace(/县$/, '')
+      where[Op.and] = (where[Op.and] || []).concat([{ city: { [Op.like]: `${prefix}%` } }])
+    }
     let { count: total, rows } = await Post.findAndCountAll({
       where,
       order: [['top', 'DESC'], ['id', 'DESC']],
       limit: pageSize,
       offset
     })
-    // 补充 cityVariants 过滤（兼容历史不带"市"的数据）
+    // 补充 cityVariants 过滤（兼容历史不带"市"的数据和空城市）
     rows = rows.filter(p => matchCity(p.city))
     total = rows.length
     const userIds = [...new Set(rows.map(p => p.userId))]
@@ -88,20 +98,40 @@ router.get('/', optionalAuth, async (req, res, next) => {
   } catch (e) { next(e) }
 })
 
-/** 发布动态（登录 + 敏感词） */
-router.post('/', auth, sensitiveFilter(['text', 'tags']), async (req, res, next) => {
+/** 发布动态（登录 + 敏感词）
+ *  兼容字段：text / content 都可作为内容；城市可来自顶层 city 或 location.city（前端 publish.vue 用 location.city）
+ */
+// text / content 双兼容（publish.vue 用 text，其他客户端可能用 content）；location/city 可能含城市名，也过一下
+router.post('/', auth, sensitiveFilter(['text', 'content', 'tags', 'remark']), async (req, res, next) => {
   try {
-    const { text, images = [], location = {}, city = '', category = 'dynamic' } = req.body
-    if (!text || String(text).trim().length === 0) return fail(res, '动态内容不能为空')
-    if (String(text).length > 500) return fail(res, '动态字数超过 500 字上限')
-    if (Array.isArray(images) && images.length > 9) return fail(res, '最多上传 9 张图片')
+    const body = req.body || {}
+    const textRaw = body.text ?? body.content ?? ''
+    const images = Array.isArray(body.images) ? body.images : []
+    const location = typeof body.location === 'object' ? body.location : {}
+    const cityRaw = body.city
+      || (location && (location.city || location.name))
+      || ''
+    const category = body.category || 'dynamic'
+    const tags = Array.isArray(body.tags) ? body.tags : []
+    const text = String(textRaw || '').trim()
+    if (text.length === 0) return fail(res, '动态内容不能为空')
+    if (text.length > 500) return fail(res, '动态字数超过 500 字上限')
+    if (images.length > 9) return fail(res, '最多上传 9 张图片')
+    // city 归一化：同时保留 normalize 后的标准名 + 原始名，并记录 location.city
+    const cityNorm = cityRaw ? normalizeCityName(String(cityRaw)) || String(cityRaw).trim() : ''
+    const cityFinal = cityNorm || String(cityRaw).trim()
+    const locationFinal = { ...location }
+    if (cityFinal && (!locationFinal.city || locationFinal.city !== cityFinal)) {
+      locationFinal.city = cityFinal
+    }
     const post = await Post.create({
       userId: req.userId,
-      text: String(text).trim(),
-      images: Array.isArray(images) ? images.slice(0, 9) : [],
-      location: typeof location === 'object' ? location : {},
-      city: city || '',
+      text,
+      images: images.slice(0, 9),
+      location: locationFinal,
+      city: cityFinal,
       category,
+      tags,
       auditStatus: 'approved',
       likes: [],
       likeCount: 0,

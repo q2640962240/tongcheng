@@ -342,6 +342,20 @@ addStaticIncrement(Collection)
  * 匹配 where 条件
  * 支持：{ field: value, field: { [Op.eq]: v, [Op.like]: '%v%', [Op.gt]: v, [Op.in]: [...] } }
  */
+/** 宽松相等：数字/数字字符串在两边都是类数字时做值比较，否则严格 === */
+function looseEq(a, b) {
+  if (a === b) return true
+  const aInt = (typeof a === 'number' || (typeof a === 'string' && /^-?\d+$/.test(a))) ? Number(a) : NaN
+  const bInt = (typeof b === 'number' || (typeof b === 'string' && /^-?\d+$/.test(b))) ? Number(b) : NaN
+  if (!isNaN(aInt) && !isNaN(bInt)) return aInt === bInt
+  return false
+}
+/** 宽松 includes：配合 looseEq */
+function looseIncludes(arr, val) {
+  if (!Array.isArray(arr)) return false
+  return arr.some(x => looseEq(x, val))
+}
+
 function matchWhere(record, where) {
   if (!where) return true
   // 处理 Op.or
@@ -369,9 +383,9 @@ function matchWhere(record, where) {
       }
     } else if (Array.isArray(cond)) {
       // 数组直接做 IN
-      if (!cond.includes(val)) return false
+      if (!looseIncludes(cond, val)) return false
     } else {
-      if (val !== cond) return false
+      if (!looseEq(val, cond)) return false
     }
   }
   return true
@@ -379,20 +393,36 @@ function matchWhere(record, where) {
 
 function matchOp(op, val, target) {
   const opName = String(op).toLowerCase()
-  if (opName === 'eq') return val === target
-  if (opName === 'ne') return val !== target
-  if (opName === 'gt') return val > target
-  if (opName === 'gte') return val >= target
-  if (opName === 'lt') return val < target
-  if (opName === 'lte') return val <= target
-  if (opName === 'in') return Array.isArray(target) && target.includes(val)
-  if (opName === 'notin') return Array.isArray(target) && !target.includes(val)
+  if (opName === 'eq') return looseEq(val, target)
+  if (opName === 'ne') return !looseEq(val, target)
+  if (opName === 'gt') {
+    const a = (typeof val === 'string' && /^-?\d/.test(val)) ? Number(val) : val
+    const b = (typeof target === 'string' && /^-?\d/.test(target)) ? Number(target) : target
+    return a > b
+  }
+  if (opName === 'gte') {
+    const a = (typeof val === 'string' && /^-?\d/.test(val)) ? Number(val) : val
+    const b = (typeof target === 'string' && /^-?\d/.test(target)) ? Number(target) : target
+    return a >= b
+  }
+  if (opName === 'lt') {
+    const a = (typeof val === 'string' && /^-?\d/.test(val)) ? Number(val) : val
+    const b = (typeof target === 'string' && /^-?\d/.test(target)) ? Number(target) : target
+    return a < b
+  }
+  if (opName === 'lte') {
+    const a = (typeof val === 'string' && /^-?\d/.test(val)) ? Number(val) : val
+    const b = (typeof target === 'string' && /^-?\d/.test(target)) ? Number(target) : target
+    return a <= b
+  }
+  if (opName === 'in') return looseIncludes(target, val)
+  if (opName === 'notin') return Array.isArray(target) && !looseIncludes(target, val)
   if (opName === 'like') {
     if (typeof val !== 'string') return false
     const re = new RegExp('^' + String(target).replace(/%/g, '.*').replace(/_/g, '.') + '$')
     return re.test(val)
   }
-  if (opName === 'is') return val === target
+  if (opName === 'is') return looseEq(val, target)
   return false
 }
 
