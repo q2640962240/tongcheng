@@ -34,27 +34,40 @@ http {
         listen 80; server_name _;
         root /usr/share/nginx/html; index index.html; charset utf-8;
         client_max_body_size 20m;
-        # 带 hash 的静态资源：长缓存 + immutable (Vite 产物文件名自带内容 hash)
-        location ~* \.[a-f0-9]{8}\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot)$ {
-            expires 1y;
-            add_header Cache-Control "public, max-age=31536000, immutable";
-            try_files $uri =404;
-        }
+        # =============================================================
+        # 缓存策略说明（刻意不写量词正则，避免 heredoc+nginx 解析歧义）：
+        #   - Vite / uni-app H5 所有带内容 hash 的产物全部在 /assets/ 目录下
+        #   - /static/ 目录放长资源图（默认 30d）
+        #   - index.html + SPA 路由一律 no-cache no-store（浏览器每次重验证）
+        # =============================================================
+        # /assets/ 目录: 所有 JS/CSS/图片 都带 hash — 长缓存 immutable
         location ^~ /assets/ {
-            expires 1y;
+            expires 365d;
             add_header Cache-Control "public, max-age=31536000, immutable";
             try_files $uri =404;
         }
-        location ^~ /static/ { expires 30d; add_header Cache-Control "public, immutable"; }
-        # index.html 和 所有非 hash 文件: no-cache + revalidate
+        # /static/ 目录: 同样长缓存
+        location ^~ /static/ {
+            expires 30d;
+            add_header Cache-Control "public, immutable";
+            try_files $uri =404;
+        }
+        # 常见后缀静态资源（不带量词，扩展名匹配即可触发长缓存）
+        location ~* \.(?:js|css|png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot|otf|map)$ {
+            expires 365d;
+            add_header Cache-Control "public, max-age=31536000, immutable";
+            try_files $uri =404;
+        }
+        # index.html 本身: 绝对不缓存
         location = /index.html {
-            add_header Cache-Control "no-cache, no-store, must-revalidate, max-age=0";
-            add_header Pragma "no-cache";
-            add_header Expires "0";
+            add_header Cache-Control "no-cache, no-store, must-revalidate, max-age=0" always;
+            add_header Pragma "no-cache" always;
+            add_header Expires "Thu, 01 Jan 1970 00:00:00 GMT" always;
             try_files $uri /index.html;
         }
+        # SPA 路由兜底: 所有不匹配上面静态路径的请求，都返回 index.html（同样不缓存）
         location / {
-            add_header Cache-Control "no-cache, no-store, must-revalidate, max-age=0";
+            add_header Cache-Control "no-cache, no-store, must-revalidate, max-age=0" always;
             try_files $uri $uri/ /index.html;
         }
     }
