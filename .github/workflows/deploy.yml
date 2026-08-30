@@ -122,6 +122,7 @@ jobs:
             echo "after: $(git log --oneline -1)" | tee -a "$LOG"
 
             # ---[PROD] 还原真实证书（若之前备份成功）---
+            restored=0
             if [ "$restore_flag" = "1" ] && [ -f "$CERT_BACKUP_DIR/fullchain.pem" ] && [ -f "$CERT_BACKUP_DIR/privkey.pem" ]; then
               echo "restore REAL cert from $CERT_BACKUP_DIR/ -> $CERT_SRC/" | tee -a "$LOG"
               mkdir -p "$CERT_SRC"
@@ -129,15 +130,50 @@ jobs:
               cp -f "$CERT_BACKUP_DIR/privkey.pem"   "$CERT_SRC/privkey.pem"
               cp -f "$CERT_BACKUP_DIR/cert.pem"      "$CERT_SRC/cert.pem"
               cp -f "$CERT_BACKUP_DIR/chain.pem"     "$CERT_SRC/chain.pem"
-              # 验证还原后的证书匹配度（私钥 modulus == 证书 modulus）
-              if command -v openssl >/dev/null 2>&1; then
-                MOD_CERT=$(openssl x509 -noout -modulus -in "$CERT_SRC/fullchain.pem" 2>/dev/null | openssl md5 2>/dev/null || echo "n/a")
-                MOD_KEY=$(openssl rsa  -noout -modulus -in "$CERT_SRC/privkey.pem"   2>/dev/null | openssl md5 2>/dev/null || echo "n/a")
-                echo "cert modulus md5=$MOD_CERT  key modulus md5=$MOD_KEY" | tee -a "$LOG"
-                # 显示证书有效期
-                openssl x509 -noout -dates -in "$CERT_SRC/fullchain.pem" 2>/dev/null | tee -a "$LOG" || true
+              restored=1
+            fi
+            # ---[PROD] Fallback 1：若仓库目录仍是占位，但宿主机 certbot 默认路径 /etc/letsencrypt 下有真实 LE 证书，复制过来（certbot --webroot 生成的）---
+            if [ "$restored" = "0" ]; then
+              HOST_CERT="/etc/letsencrypt/live/zyb001.cn"
+              if [ -f "$HOST_CERT/fullchain.pem" ] && [ -f "$HOST_CERT/privkey.pem" ]; then
+                HI=$(openssl x509 -in "$HOST_CERT/fullchain.pem" -noout -issuer 2>/dev/null || echo "")
+                echo "$HI" | grep -qE "Let's Encrypt|R3|ISRG" && {
+                  echo "FALLBACK: found REAL LE cert at $HOST_CERT -> copy to $CERT_SRC" | tee -a "$LOG"
+                  mkdir -p "$CERT_SRC"
+                  cp -f "$HOST_CERT/fullchain.pem" "$CERT_SRC/fullchain.pem"
+                  cp -f "$HOST_CERT/privkey.pem"   "$CERT_SRC/privkey.pem"
+                  [ -f "$HOST_CERT/cert.pem" ]  && cp -f "$HOST_CERT/cert.pem"  "$CERT_SRC/cert.pem"
+                  [ -f "$HOST_CERT/chain.pem" ] && cp -f "$HOST_CERT/chain.pem" "$CERT_SRC/chain.pem"
+                  # 同步保存到 backup
+                  mkdir -p "$CERT_BACKUP_DIR"
+                  cp -f "$CERT_SRC/fullchain.pem" "$CERT_BACKUP_DIR/fullchain.pem"
+                  cp -f "$CERT_SRC/privkey.pem"   "$CERT_BACKUP_DIR/privkey.pem"
+                  cp -f "$CERT_SRC/cert.pem"      "$CERT_BACKUP_DIR/cert.pem"
+                  cp -f "$CERT_SRC/chain.pem"     "$CERT_BACKUP_DIR/chain.pem"
+                  restored=1
+                } || echo "host /etc/letsencrypt issuer='$HI' (not LE, skip)" | tee -a "$LOG"
               fi
             fi
+            # ---[PROD] Fallback 2：CERT_BACKUP_DIR 之前备份过但 restore_flag=0（比如本次首次执行新脚本），只要 backup里是真实LE就还原 ---
+            if [ "$restored" = "0" ] && [ -f "$CERT_BACKUP_DIR/fullchain.pem" ] && [ -f "$CERT_BACKUP_DIR/privkey.pem" ]; then
+              BI=$(openssl x509 -in "$CERT_BACKUP_DIR/fullchain.pem" -noout -issuer 2>/dev/null || echo "")
+              echo "$BI" | grep -qE "Let's Encrypt|R3|ISRG" && {
+                echo "FALLBACK2: $CERT_BACKUP_DIR has REAL LE cert -> restore" | tee -a "$LOG"
+                mkdir -p "$CERT_SRC"
+                cp -f "$CERT_BACKUP_DIR/fullchain.pem" "$CERT_SRC/fullchain.pem"
+                cp -f "$CERT_BACKUP_DIR/privkey.pem"   "$CERT_SRC/privkey.pem"
+                cp -f "$CERT_BACKUP_DIR/cert.pem"      "$CERT_SRC/cert.pem"
+                cp -f "$CERT_BACKUP_DIR/chain.pem"     "$CERT_SRC/chain.pem"
+                restored=1
+              }
+            fi
+            if [ "$restored" = "1" ] && command -v openssl >/dev/null 2>&1; then
+              MOD_CERT=$(openssl x509 -noout -modulus -in "$CERT_SRC/fullchain.pem" 2>/dev/null | openssl md5 2>/dev/null || echo "n/a")
+              MOD_KEY=$(openssl rsa  -noout -modulus -in "$CERT_SRC/privkey.pem"   2>/dev/null | openssl md5 2>/dev/null || echo "n/a")
+              echo "RESTORE cert modulus md5=$MOD_CERT  key modulus md5=$MOD_KEY" | tee -a "$LOG"
+              openssl x509 -noout -dates -in "$CERT_SRC/fullchain.pem" 2>/dev/null | tee -a "$LOG" || true
+            fi
+            [ "$restored" = "0" ] && echo "REAL cert not available — using repo PLACEHOLDER (browser HTTPS will show cert error until certbot runs)" | tee -a "$LOG"
 
             # --- Smart diff: 哪些目录改了 ---
             CHANGED_SERVER=false
