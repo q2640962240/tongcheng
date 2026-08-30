@@ -72,7 +72,7 @@ services:
       JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET:-baiye_prod_jwt_refresh_secret_please_change_ME_2026_v1}"
       JWT_REFRESH_EXPIRES_IN: 30d
       APP_NAME: "白夜"
-      APP_DOMAIN: "${APP_DOMAIN:-http://zyb001.cn}"
+      APP_DOMAIN: "${APP_DOMAIN:-https://zyb001.cn}"
       CORS_ORIGINS: "${CORS_ORIGINS:-*}"
     volumes:
       - server-uploads:/app/uploads
@@ -132,10 +132,12 @@ services:
       - "443:443"
     volumes:
       - ./deploy/nginx-docker.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/certbot/etc/letsencrypt:/etc/letsencrypt:ro
+      - ./deploy/certbot/www:/var/www/certbot:ro
       - gateway-logs:/var/log/nginx
     networks: [front]
     healthcheck:
-      test: ["CMD-SHELL","wget -qO- http://127.0.0.1/health >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL","wget --no-check-certificate -qO- https://127.0.0.1/health >/dev/null 2>&1 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
