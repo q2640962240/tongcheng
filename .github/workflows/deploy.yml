@@ -96,8 +96,14 @@ jobs:
               echo "changed files:" | tee -a "$LOG"
               echo "$DIFF" | tee -a "$LOG"
             else
+              # OLD_SHA==NEW_SHA 时说明服务器已在最新 commit（可能是快速连续 push 触发两次 deploy，
+              # 第一次已 reset 完成），此时 diff 为空但不能跳过构建 — 必须全量 build 保证镜像同步最新代码
               DIFF=""
-              echo "first deploy or same commit -> build all" | tee -a "$LOG"
+              CHANGED_SERVER=true
+              CHANGED_ADMIN=true
+              CHANGED_H5=true
+              CHANGED_INFRA=true
+              echo "same commit or first deploy -> full build (OLD_SHA=$OLD_SHA NEW_SHA=$NEW_SHA)" | tee -a "$LOG"
             fi
 
             CHANGED_SERVER=false
