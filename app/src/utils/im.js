@@ -18,27 +18,14 @@
  */
 
 // ============================================================
-// 1. 条件编译：按平台选择 TIM SDK（H5/APP 走 tim-js-sdk；mp-weixin 走 tim-wx-sdk）
+// 1. 条件编译 + 静态 import（必须用 import 而非 require，否则 Vite 不会打包 SDK）
+//    uni-app 编译期根据平台选择对应 import，另一平台的 import 被丢弃
 // ============================================================
 // #ifdef H5 || APP-PLUS || APP
-let TIMCore = null
-try {
-  // eslint-disable-next-line import/no-unresolved
-  TIMCore = require('tim-js-sdk')
-} catch (_) {
-  TIMCore = null
-}
+import TIMCore from 'tim-js-sdk'
 // #endif
-
 // #ifdef MP-WEIXIN
-let TIMCoreMP = null
-try {
-  // eslint-disable-next-line import/no-unresolved
-  TIMCoreMP = require('tim-wx-sdk')
-} catch (_) {
-  TIMCoreMP = null
-}
-const TIMCore = TIMCoreMP
+import TIMCore from 'tim-wx-sdk'
 // #endif
 
 import request from './request'
