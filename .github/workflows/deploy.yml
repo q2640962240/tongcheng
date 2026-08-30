@@ -74,6 +74,37 @@ jobs:
 
             # --- 1/8 sync code ---
             echo "[1/8] sync code" | tee -a "$LOG"
+            # ---[PROD] 保护真实证书：git reset 前备份本机 /opt/baiye/deploy/certbot 里的真实 LE 证书 ---
+            CERT_BACKUP_DIR=/root/.baiye-certs-backup
+            mkdir -p "$CERT_BACKUP_DIR"
+            CERT_SRC="./deploy/certbot/etc/letsencrypt/live/zyb001.cn"
+            restore_flag=0
+            if [ -f "$CERT_SRC/fullchain.pem" ] && [ -f "$CERT_SRC/privkey.pem" ]; then
+              # 判断是否是"真实 LE 证书或其他有效证书"：
+              #  ① 颁发者 Issuer 包含 Let's Encrypt / R3 / ISRG  ② 或 私钥不是仓库里的自签名占位（通过 Subject O 字段判断）
+              # 满足任一说明不是我们刚写的占位自签名 → 备份，git reset 后还原
+              ISSUER=$(openssl x509 -in "$CERT_SRC/fullchain.pem" -noout -issuer 2>/dev/null || echo "")
+              SUBJECT=$(openssl x509 -in "$CERT_SRC/fullchain.pem" -noout -subject 2>/dev/null || echo "")
+              echo "current cert issuer='$ISSUER' subject='$SUBJECT'" | tee -a "$LOG"
+              IS_PLACEHOLDER=0
+              echo "$SUBJECT" | grep -q "BaiYePlaceholder" && IS_PLACEHOLDER=1 || true
+              IS_LE=0
+              echo "$ISSUER" | grep -qE "Let's Encrypt|R3|ISRG" && IS_LE=1 || true
+              if [ "$IS_PLACEHOLDER" = "0" ] || [ "$IS_LE" = "1" ]; then
+                echo "detected REAL cert (placeholder=$IS_PLACEHOLDER LE=$IS_LE) → backup before reset" | tee -a "$LOG"
+                cp -f "$CERT_SRC/fullchain.pem" "$CERT_BACKUP_DIR/fullchain.pem" 2>/dev/null && \
+                cp -f "$CERT_SRC/privkey.pem"   "$CERT_BACKUP_DIR/privkey.pem"   2>/dev/null && \
+                cp -f "$CERT_SRC/cert.pem"      "$CERT_BACKUP_DIR/cert.pem"      2>/dev/null && \
+                cp -f "$CERT_SRC/chain.pem"     "$CERT_BACKUP_DIR/chain.pem"     2>/dev/null && \
+                restore_flag=1
+                [ "$restore_flag" = "1" ] && echo "backup OK -> $CERT_BACKUP_DIR/" | tee -a "$LOG" || echo "backup FAILED (will use reset version)" | tee -a "$LOG"
+              else
+                echo "current cert is PLACEHOLDER (selfsigned) -> no backup" | tee -a "$LOG"
+              fi
+            else
+              echo "no cert files yet -> skip backup (first deploy?)" | tee -a "$LOG"
+            fi
+
             OU=$(git remote get-url origin 2>/dev/null || true)
             [ "$OU" = "git@github.com:q2640962240/tongcheng.git" ] || git remote set-url origin git@github.com:q2640962240/tongcheng.git
             mkdir -p ~/.ssh
@@ -89,6 +120,24 @@ jobs:
             esac
             NEW_SHA=$(git rev-parse HEAD)
             echo "after: $(git log --oneline -1)" | tee -a "$LOG"
+
+            # ---[PROD] 还原真实证书（若之前备份成功）---
+            if [ "$restore_flag" = "1" ] && [ -f "$CERT_BACKUP_DIR/fullchain.pem" ] && [ -f "$CERT_BACKUP_DIR/privkey.pem" ]; then
+              echo "restore REAL cert from $CERT_BACKUP_DIR/ -> $CERT_SRC/" | tee -a "$LOG"
+              mkdir -p "$CERT_SRC"
+              cp -f "$CERT_BACKUP_DIR/fullchain.pem" "$CERT_SRC/fullchain.pem"
+              cp -f "$CERT_BACKUP_DIR/privkey.pem"   "$CERT_SRC/privkey.pem"
+              cp -f "$CERT_BACKUP_DIR/cert.pem"      "$CERT_SRC/cert.pem"
+              cp -f "$CERT_BACKUP_DIR/chain.pem"     "$CERT_SRC/chain.pem"
+              # 验证还原后的证书匹配度（私钥 modulus == 证书 modulus）
+              if command -v openssl >/dev/null 2>&1; then
+                MOD_CERT=$(openssl x509 -noout -modulus -in "$CERT_SRC/fullchain.pem" 2>/dev/null | openssl md5 2>/dev/null || echo "n/a")
+                MOD_KEY=$(openssl rsa  -noout -modulus -in "$CERT_SRC/privkey.pem"   2>/dev/null | openssl md5 2>/dev/null || echo "n/a")
+                echo "cert modulus md5=$MOD_CERT  key modulus md5=$MOD_KEY" | tee -a "$LOG"
+                # 显示证书有效期
+                openssl x509 -noout -dates -in "$CERT_SRC/fullchain.pem" 2>/dev/null | tee -a "$LOG" || true
+              fi
+            fi
 
             # --- Smart diff: 哪些目录改了 ---
             CHANGED_SERVER=false
