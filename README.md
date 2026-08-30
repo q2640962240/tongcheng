@@ -502,6 +502,7 @@ FAIL > 0 时，脚本会把失败项的 body/code 都打印出来，按信息定
 | 后端服务 | ✅ 运行中 | PM2 守护 + Nginx 反代，生产域名可访问 |
 | 管理后台 | ✅ 可访问 | `https://zyb001.cn/admin/` 可登录操作 |
 | App BASE_URL | ✅ 已修复 | 生产域名 API 已连通（LAN IP → 公网域名切换完成） |
+| GitHub Actions 模式 A | ✅ 已验证 | push main → 自动 SSH 拉代码 + 8 步重建镜像 + 6 容器 healthy + HTTP/HTTPS 双栈验收（CI 模式 A 首次 smoke 测试 commit） |
 
 ### 尚未部署 / 待完成
 
