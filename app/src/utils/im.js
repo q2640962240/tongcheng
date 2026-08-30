@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 腾讯云即时通信 IM (TIM) — uni-app 三端 SDK 单例封装
  *
  * 跨端策略：
@@ -87,7 +87,7 @@ class TIMManager {
     // 1. 先 GET config（是否启用）
     let cfg = { enabled: false, ready: false, sdkAppId: '' }
     try {
-      const r1 = await request({ url: '/api/im/config', method: 'GET', skipAuth: true })
+      const r1 = await request({ url: '/im/config', method: 'GET', skipAuth: true })
       if (r1 && r1.data) cfg = r1.data
     } catch (e) {
       console.warn('[im] /config fail', e && e.message)
@@ -101,7 +101,7 @@ class TIMManager {
     }
     // 2. POST /api/im/login 拿 userSig
     try {
-      const r2 = await request({ url: '/api/im/login', method: 'POST' })
+      const r2 = await request({ url: '/im/login', method: 'POST' })
       return r2.data || {}
     } catch (e) {
       console.warn('[im] /login fail', e && e.message)
