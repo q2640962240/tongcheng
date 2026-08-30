@@ -7,21 +7,11 @@ RUN npm install --omit=dev --no-audit --no-fund --legacy-peer-deps && npm cache 
 FROM node:20-slim
 ENV TZ=Asia/Shanghai NODE_ENV=production PORT=3000 HOST=0.0.0.0
 WORKDIR /app
-# 阿里云 ECS 出口常阻断 deb.debian.org:80（HTTP 明文），容器内 apt 走国内 HTTPS 镜像：
-# node:20-slim = debian bookworm (v12)，sources 为 deb822 格式：/etc/apt/sources.list.d/debian.sources
-RUN printf '%s\n' \
-  'Types: deb' \
-  'URIs: https://mirrors.aliyun.com/debian/' \
-  'Suites: bookworm bookworm-updates' \
-  'Components: main' \
-  'Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg' \
-  '' \
-  'Types: deb' \
-  'URIs: https://mirrors.aliyun.com/debian-security/' \
-  'Suites: bookworm-security' \
-  'Components: main' \
-  'Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg' \
-  > /etc/apt/sources.list.d/debian.sources \
+# 阿里云 ECS 出口阻断 deb.debian.org:80 且 HTTPS 签名校验链可能有问题
+# 改用 HTTP 阿里云镜像 + 旧式 /etc/apt/sources.list（绕过 deb822 + Signed-By 签名校验）
+RUN rm -f /etc/apt/sources.list.d/debian.sources \
+  && echo 'deb http://mirrors.aliyun.com/debian/ bookworm main' > /etc/apt/sources.list \
+  && echo 'deb http://mirrors.aliyun.com/debian-security/ bookworm-security main' >> /etc/apt/sources.list \
   && apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends wget curl ca-certificates procps net-tools iproute2 \
   && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
