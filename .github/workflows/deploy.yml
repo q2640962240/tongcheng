@@ -198,25 +198,40 @@ jobs:
             # --- 7/8 up -d + healthy ---
             echo "[7/8] up -d + healthy" | tee -a "$LOG"
             docker compose up -d 2>&1 | tee -a "$LOG" | tail -10
-            for i in $(seq 1 48); do
+            # 等待 server healthy（首次 MySQL 初始化+seed 可能 3~6 分钟 → 96 * 5s = 8 分钟）
+            for i in $(seq 1 96); do
               S=$(docker compose ps server 2>/dev/null | awk "NR>1 {print \$6}")
               echo "$S" | grep -qi healthy && { echo "server_healthy_in_$((i*5))s" | tee -a "$LOG"; break; }
               sleep 5
             done
+            # 等待 gateway healthy（HTTPS 证书加载+proxy_pass 到 3 个 upstreams ready，30*5s = 2.5 分钟）
+            for i in $(seq 1 30); do
+              G=$(docker compose ps gateway 2>/dev/null | awk "NR>1 {print \$6}")
+              echo "$G" | grep -qi healthy && { echo "gateway_healthy_in_$((i*5))s" | tee -a "$LOG"; break; }
+              sleep 5
+            done
+            # 额外等待 3 个上游稳定（避免 502 瞬态）
+            sleep 5
 
             # --- 8/8 verify ---
             echo "[8/8] final summary" | tee -a "$LOG"
             docker compose ps | tee -a "$LOG"
             FAIL=0
             check() {
-              local n="$1" u="$2" e="$3" c
-              c=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 "$u" 2>&1 || echo 000)
-              if echo "$e" | grep -Eq "(^|[|])$c([|]|$)"; then
-                echo "OK $n HTTP $c" | tee -a "$LOG"
-              else
-                echo "FAIL $n HTTP $c expect $e" | tee -a "$LOG"
-                FAIL=$((FAIL+1))
-              fi
+              local n="$1" u="$2" e="$3" c tries=0
+              # 每个端点最多重试 3 次（10s+5s = 最多 45s/端点）
+              while [ $tries -lt 3 ]; do
+                c=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 -H "Host: zyb001.cn" "$u" 2>&1 || echo 000)
+                if echo "$e" | grep -Eq "(^|[|])$c([|]|$)"; then
+                  echo "OK $n HTTP $c (try=$((tries+1)))" | tee -a "$LOG"
+                  return 0
+                fi
+                tries=$((tries+1))
+                echo "  retry $n HTTP $c expect $e (try=$tries)" | tee -a "$LOG"
+                sleep 5
+              done
+              echo "FAIL $n HTTP $c expect $e" | tee -a "$LOG"
+              FAIL=$((FAIL+1))
             }
             check "API/api" http://127.0.0.1/api/health "200|301|302"
             check "API/root" http://127.0.0.1/health      "200|301|302"
@@ -224,7 +239,16 @@ jobs:
             check "H5"       http://127.0.0.1/            "200|301|302|304"
             free -h 2>/dev/null | head -2 | tee -a "$LOG"
             df -h / | tail -1 | tee -a "$LOG"
-            if [ "$FAIL" -gt 0 ]; then echo "VERIFY_FAIL=$FAIL"; exit 20; fi
+            if [ "$FAIL" -gt 0 ]; then
+              echo "VERIFY_FAIL=$FAIL" | tee -a "$LOG"
+              echo "------ tail deploy log (last 80 lines) ------"
+              tail -n 80 "$LOG" 2>/dev/null || true
+              echo "------ docker compose logs gateway (last 40) ------"
+              docker compose logs --tail=40 gateway 2>&1 || true
+              echo "------ docker compose logs server (last 40) ------"
+              docker compose logs --tail=40 server 2>&1 || true
+              exit 20
+            fi
             echo "SUCCESS: https://${{ secrets.SERVER_HOST }}/"
 # v2 变更: 移除 --no-cache / docker system prune / docker rmi -f / down -v
 # v2 变更: git diff 智能判断哪些服务目录变了，只 build 变了的
