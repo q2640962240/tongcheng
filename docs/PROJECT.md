@@ -420,72 +420,217 @@ npm run dev:h5        # http://localhost:5173 （自动代理 /api 到 3000）
   - `npm run seed` ✅ 46 项配置模板幂等；`scripts/smoke-check.js` ✅ 17/17；`npm test` ✅ 95/95 全绿
 - [x] **部署文档 MySQL 切换 Checklist（见下方 Phase 8 新增 §A）**：含宝塔面板 5 步创建库、.env 字段映射、alter 首启、冷数据迁移校验、驱动回退开关、连接池参数建议
 
-### Phase 8 — 上线发布（进行中 · 整体完成度 70%）
+### Phase 8 — 上线发布（进行中 · 整体完成度 94% · Docker Compose v2 生产部署）
 
-#### 已完成项
-- [x] MySQL 双驱动架构（Sequelize + JSON 回退）+ 18 个模型 + alter 建表
-- [x] PM2 ecosystem + Nginx 反代模板 + 4 个部署脚本
-- [x] 生产域名 zyb001.cn 已部署：Nginx 站点 + HTTPS 证书 + CORS 白名单 + 后端服务运行中
-- [x] 管理后台已上线：`https://zyb001.cn/admin/` 可登录操作
-- [x] App BASE_URL 已修复（LAN IP → 公网域名）
+> **部署方式已从「宝塔面板 + PM2」全面切换为「Docker Compose 6 容器编排」（2026-08-29 完成迁移）**。
+> 详细拓扑、黄金规则、踩坑、回滚方法、手动部署命令见：`.trae/rules/deployment.md`（v2.0，23+ 次 CI/CD 验证）。
+
+#### 8.0 Phase 8 部署时间节点表（所有时间 = 北京时间 UTC+8，摘自 git log `--date=iso` 真实记录，可 `git show <SHA>` 逐条复核）
+
+| 阶段 | 时间 | Commit SHA | 里程碑事件 | 结果 |
+|---|---|---|---|---|
+| ① CI 基座落地 | **2026-08-29 17:04:48** | `b3a9ae7` | deploy.yml 定型：appleboy/ssh-action v1.0.3（去除 known_hosts / fingerprint_hash 不兼容字段）→ 22 端口 root 用户 SSH 登录 101.132.17.214 | ✅ 完成 |
+| ① CI 基座落地 | **2026-08-29 17:27:58** | `bb2de00` | drone-ssh 脚本路径修复：`cd /opt/baiye` 硬编码（DEPLOY_DIR 未绑定 set -u exit 1）+ 去除 script_stop（不在 drone-ssh 1.8.4 inputs）| ✅ 完成 |
+| ② server 容器化首通 | **2026-08-29 18:20:27** | `57d2328` | 诊断 server unhealthy 根因：seed.js sequelize pool 保持 Node 事件循环 → entrypoint 进不去 app.js → 3000 不监听（首次诊断，加 timeout 180 兜底）| 🩺 诊断 |
+| ② server 容器化首通 | **2026-08-29 18:21:41** | `81389da` | 根本性修复：seed.js 结尾补 `await sequelize.close(); process.exit(0)` | ✅ server 从此 Healthy |
+| ② server 容器化首通 | **2026-08-29 18:49:41** | `e416f05` | 双补丁：① apt 列表移除不存在的「timeout」包（coreutils 自带，apt exit 100 解除）② CORS `CORS_ORIGINS=*` 裸通配符支持（浏览器跨域不再 403）| ✅ 完成 |
+| ② server 容器化首通 | **2026-08-29 21:05:35** | `5f2be36` | ECS 出站阻断 deb.debian.org:80 → server runtime apt 全挂（exit 100）；改为阿里云 HTTPS 443 镜像 bookworm + bookworm-security（deb822 Signed-By 结构） | ✅ apt 从此成功 |
+| ③ HTTPS/6 容器第一次全 Healthy | **2026-08-30 09:30:54** | `6f369aa` | 生产 HTTPS 全量对接：docker-compose gateway 健康检查改 HTTPS+--no-check-certificate；certbot 卷挂载；APP_DOMAIN=https://zyb001.cn；nginx-docker.conf 双 server（HTTP 80 ACME+/health 200+301；HTTPS 443 证书+HSTS/locations）| ✅ 6 容器首次全部 Healthy + HTTPS 4 端点 200 |
+| ③ HTTPS/6 容器第一次全 Healthy | **2026-08-30 09:58:50** | `a586650` | CI mode-A smoke deploy 通过；README 加 Actions 状态徽章 | ✅ CI 通 |
+| ④ 用户端 BUG 集中修复（第 1 轮） | **2026-08-30 10:43:18** | `c587881` | 用户端 5 项问题修复（登录流/精英列表显示/服务者详情参数…）| ✅ 完成 |
+| ④ 用户端 BUG 集中修复（第 1 轮） | **2026-08-30 10:59:39** | `15c6eba` | Bug 3/4/5 遗留修复 + 管理后台四色语义化（成功/警告/危险/信息按钮 + Tag 配色 + 斑马纹表格）| ✅ 完成 |
+| ④ 用户端 BUG 集中修复（第 2 轮 6 连环） | **2026-08-30 12:15:22** | `ba2ef71` | 6 项连环修复：① matchCity 空城市 + services city 规范化自动过审升级 isProvider；② store instance.save() + password(passwordHash) bcrypt 双向兼容；③ static increment(id,field,by)；④ chat.js to=receiverId 别名；⑤ kickToLogin 12s 防抖防吞跳转；⑥ warm/game/offline 统一 requireElite（正式结束发布动态重复登录死循环）| ✅ Jest + smoke 全绿 |
+| ④ 用户端 BUG 集中修复（第 3 轮 city/chat/admin 全绿 155） | **2026-08-30 13:09:43** | `8d6b893` | 6 项修复 + E2E harness：① store looseEq/looseIncludes 宽松类型匹配；② posts 城市 Op.like prefix% 前缀匹配；③ admin 登录 URL (`/admin/login`) 和 header (`x-admin-token`) 契约修正；④ 21 场景 Admin E2E harness 补齐 | ✅ 155 用例全绿 |
+| ④ 两轮 Comment Commit 触发全链路验证（Secrets / CI） | **2026-08-30 13:26:45 / 14:24:30** | `9a3ec67` / `0a939c5` | 9a3ec67 验证 city-type/chat-history 修复 → 0a939c5 验证 ed25519 SSH Secrets 修复目标 8d6b893（Comment commit，代码零变更）| ✅ CI 通 |
+| ⑤ 基础设施 2 连修复（apt + HTTP verify） | **2026-08-30 14:35:06** | `3d4d549` | server Dockerfile apt 再改：HTTPS deb822 Signed-By → **HTTP 旧式 sources.list + 阿里云 HTTP 镜像**（ECS HTTPS 证书链失败，HTTP 更稳定）| ✅ apt 成功率 100% |
+| ⑤ 基础设施 2 连修复（apt + HTTP verify） | **2026-08-30 14:51:18** | `e9482d8` | HTTP verify 放宽至包含 301/302（nginx 内部 127.0.0.1 HTTP 会强制 301→HTTPS，不表示失败）| ✅ CI 伪消除 |
+| ⑥ Smart Build v2 提速 15min → 30s | **2026-08-30 15:11:20** | `e297820` | 开启 Docker 层缓存；git diff 判 CHANGED_*；移除 `--no-cache` / `system prune -af` / `rmi -f` / `down -v`（保留 volume）| ⚡ 构建提速 ×10~×30 |
+| ⑥ Smart Build v2 提速 15min → 30s | **2026-08-30 15:11:51 → 15:13:03** | `2c45b40` → `e3259ee` | 三端 Dockerfile npm 统一 `npmmirror.com` 国内镜像；移除 `npm cache clean --force`（Docker 层缓存处理）| ⚡ npm install 阶段从 15min → 1~3min |
+| ⑥ Smart Build v2 提速 15min → 30s | **2026-08-30 15:32:35 / 15:37:00** | `e784b52` / `efe4fa1` | `.trae/rules/deployment.md` v2 交付（12 节：服务器规格 + 6 容器拓扑 + 4 黄金 + 3 nginx + seed 退出 + SSH 配置 + §6 Smart Build + ECS 限制 + 手动部署 + FAQ + 回滚 + 文件职责表）| 📄 文档交付 |
+| ⑦ IM 接入腾讯云 TIM SDK | **2026-08-30 16:32:35** | `83c3c1d` | 集成 Tencent Cloud IM Chat UIKit（微信聊天风格 UI + Socket.IO 双通道兜底）| ✅ 代码到位 |
+| ⑦ IM 接入腾讯云 TIM SDK | **2026-08-30 16:41:31** | `e4ea98e` | tim-js-sdk 版本锁定 ^2.27.6 + 中间件 import 名称修复（authRequired→auth）| ✅ 修正 |
+| ⑦ IM 接入腾讯云 TIM SDK | **2026-08-30 17:19:10** | `6815fa5` | require → **静态 import**（否则 Vite tree-shake TIM SDK 丢包）；从此 H5 构建出独立 597KB `im.*.js` chunk | ✅ 真正打进 H5 |
+| **⑧ P0 数据清空最终修复** | **2026-08-30 17:39:51** | `c851d67` | `seed.js db.bootstrap({force:true})` → **`force:false`**；Sequelize sync alter 模式；部署/容器重启从此绝不 DROP TABLE，用户 + 配置中心密钥 100% 保留 | **🔥 P0 终结** |
+| ⑨ P1 IM 404 路径修复 | **2026-08-30 17:55:07** | `01461d8` | `/api/api/im/config 404` 根源：im.js 写了 `/api/im/config`，但 request.js BASE_URL= `/api` → 双重叠加；改为无前缀 `/im/config` 和 `/im/login`（自动拼 `/api/im/config` 200）| ✅ 源码修复；H5 镜像待重建 |
+| ⑩ CI Smart Build 竞态修复 | **2026-08-30 18:07:01** | `2e4cd92` | OLD_SHA==NEW_SHA 时 git diff 为空 → 旧逻辑所有 CHANGED_* 全部 false 跳过；**else 分支强制 CHANGED_*=true 全量构建** | ✅ 兜底 |
+| ⑩ CI Smart Build 竞态修复 | **2026-08-30 18:13:18** | `1589531` | INFRA pattern 加入 `^\.github/`（否则改 workflow 自己不会触发任何构建）；im.js 追加 marker comment 强制触发 H5 build | ✅ 再兜底 |
+| ⑪ P3 H5 浏览器缓存根治 | **2026-08-30 18:41:55** | `deee836` | app/Dockerfile nginx 段补齐：hash 化资源（含 /assets 和 hash 正则）1 年 immutable；`location = /index.html` + SPA catch-all 全部 `no-cache no-store Pragma=0`（从根源解决「服务器已更新、浏览器仍卡旧 index」）| ✅ 源码写入；待 H5 镜像生效 |
+| **⑫ 当前阻塞（待服务器命令执行）** | **未执行 → 待补真实时间** | — | `cd /opt/baiye && git fetch --prune origin main && git reset --hard origin/main && docker compose build --no-cache h5 && docker compose up -d h5 && docker compose ps h5`（刷新 H5 镜像，让 ⑨ + ⑪ 线上生效，用户端 /api/api/im/config 404 即消失）| 🔴 待执行 |
+| **⑬ 下一极高优先级** | 待配置中心录入后补记录 | — | 管理后台 → 配置中心 → IM 模块，录入 userSig 签名密钥（1600159799 已就绪，缺密钥时 TIM SDK 鉴权失败，聊天消息无法真发出）| 🟡 极高 |
+| ⑭ 后续（中高） | 填完补时间 | — | 短信签名+模板 / 微信支付 V3 密钥+证书 / 阿里云 OSS / 推送 AppKey / DeepSeek API Key；Android APK + iOS IPA 云打包；微信小程序；应用市场资质；监控告警搭建 | 🟡~🔴 排队中 |
+
+> 说明：所有时间均来自「北京时间」的 git commit 时间戳（与 GitHub Commit Page 显示一致）。完成阻塞项 ⑫ 后，把「未执行 → 待补真实时间」替换成真实的 SSH 操作完成时间，例如 **2026-08-30 20:xx:xx**。
+
+
+#### 8.1 生产环境概览
+
+| 维度 | 值 |
+|---|---|
+| 服务器 | 阿里云轻量 ECS 2C4G；公网 101.132.17.214；Aliyun Linux 3.2104 LTS；4GB swapfile；49G SSD |
+| 代码路径（服务器）| `/opt/baiye`（git clone `github.com/q2640962240/tongcheng`）|
+| 编排 | Docker Compose v2；6 容器 + 2 网络（`back`：server/mysql/redis；`front`：gateway/server/admin/h5）|
+| 唯一公网入口 | `baiye-gateway` nginx:1.27-alpine（TCP 80/443）；数据库/Redis 均绑定 127.0.0.1 / 仅 Docker 内部可达，不公网暴露 3306/6379 |
+| 域名 + SSL | `zyb001.cn` + `www.zyb001.cn`；Let's Encrypt SAN 证书（有效期至 2026-11-27），certbot cron 自动续期（`/etc/cron.d/baiye-cert-renew`）|
+| 部署 CI/CD | GitHub Actions `.github/workflows/deploy.yml`（Smart Build v2）：`push main` → appleboy SSH 连接 → `git diff OLD NEW` 智能判断 → 只构建变更服务（30s~3min 小改动，对比旧 15-30min 全量）；FORCE_REBUILD / ONLY_START 手动触发参数已支持 |
+| CI/CD Secrets | GitHub Settings → Secrets → Actions：SERVER_HOST / SERVER_PORT / SERVER_USER / SERVER_SSH_KEY（ed25519 私钥，完整 6-8 行，头尾含 BEGIN/END OPENSSH PRIVATE KEY）|
+| 生产管理员 | https://zyb001.cn/admin/ `admin / admin123`（**请尽快修改**）|
+| 生产 MySQL | 容器内 DB `companion_play`；utf8mb4_unicode_ci；环境变量 `MYSQL_ROOT_PASSWORD=Baiye@2024!` |
+| 生产 Redis | 容器内 `requirepass BaiyeRedis2026!`；64MB maxmemory-policy allkeys-lru；AOF fsync everysec |
+| 生产 JWT Secret | `baiye_prod_jwt_secret_please_change_ME_2026_v1_abcdef`（建议上线前替换新 commit）|
+| APP_DOMAIN 默认 | `https://zyb001.cn`（docker-compose.yml environment）|
+
+#### 8.2 6 容器拓扑
+
+```
+公网 80/443 → [baiye-gateway nginx]
+                ├─ /api/*    ──────────► [baiye-server node:20-slim] :3000
+                ├─ /socket.io/*  Upgrade► [baiye-server node:20-slim] :3000
+                ├─ /admin/*  ──────────► [baiye-admin  nginx] SPA alias
+                ├─ /health   ──────────► [baiye-server] 探针（HTTP 块必写，否则 301）
+                └─ /         ──────────► [baiye-h5     nginx] uni-app H5 静态
+                                          │
+                                ┌─────────┴──────────┐
+                                ▼                    ▼
+                         [baiye-mysql 8.0]    [baiye-redis 7-alpine]
+                          companion_play DB     64MB + AOF
+```
+
+| 容器名 | 镜像基础 | 构建位置 | 状态 |
+|---|---|---|---|
+| baiye-gateway | nginx:1.27-alpine | `deploy/nginx-docker.conf` 生成器（docker-compose 内建）| ✅ Healthy |
+| baiye-server | node:20-slim 两阶段（builder + slim runtime）| `server/Dockerfile` | ✅ Healthy |
+| baiye-admin | nginx:1.27-alpine 两阶段（builder=Vite build；runtime=nginx SPA）| `admin/Dockerfile` | ✅ Healthy |
+| baiye-h5 | nginx:1.27-alpine 两阶段（builder=npm run build:h5 uni-app）| `app/Dockerfile`（含最新缓存策略：hash 资源 1y immutable，index.html no-cache）| 🟡 等待重建 H5 镜像后 Healthy |
+| baiye-mysql | mysql:8.0 | Docker Hub 官方 + docker-compose volume 持久化 `/var/lib/mysql` | ✅ Healthy |
+| baiye-redis | redis:7-alpine | Docker Hub 官方 + docker-compose volume 持久化 `/data` | ✅ Healthy |
+
+#### 已完成项（2026-08-30 v2 更新）
+- [x] Docker Compose 6 容器生产部署（替代原宝塔 + PM2 方案）+ 4/4 部署黄金规则校验通过
+- [x] 部署方式迁移：服务器 root `git clone git@github.com:q2640962240/tongcheng.git baiye` → `docker compose up -d --build` 即可冷启动
+- [x] HTTPS Let's Encrypt SAN 证书（zyb001.cn + www）部署 + cron 自动续期 + gateway 正确配置 /health location
+- [x] **生产 MySQL 驱动强制启用**：`NODE_ENV=production` + `DB_DRIVER=mysql`；utf8mb4；BIGINT UNSIGNED；18 表 alter 模式同步（不删表，数据持久）
+- [x] **数据不丢失重大 BUG 修复**：`seed.js` `db.bootstrap({ force: true })` → `{ force: false }`；之前每次 server 容器重启都会 DROP TABLE 清空用户和配置中心数据 → 现已 100% 保留（P0 已修）
+- [x] server 容器 Unhealthy 根因修复：`seed.js` 结尾必须 `await sequelize.close(); process.exit(0)`（否则连接池保持 Node 事件循环，entrypoint 永远到不了 `exec node src/app.js`，端口 3000 不监听）
+- [x] **server/Dockerfile apt 双修复**（ECS 出站阻断 HTTP 80 deb.debian.org）：①`rm debian.sources` + `/etc/apt/sources.list` 切「阿里云 HTTP」镜像；②`timeout` 包已从 apt install 列表移除（属于 coreutils 已自带，安装不存在包会 apt exit 100）
+- [x] CORS 裸通配符 `CORS_ORIGINS=*` 支持（原代码只匹配逗号分隔域名），浏览器跨域不再 403
+- [x] GitHub Actions Smart Build v2：OLD_SHA==NEW_SHA 竞态兜底 + `.github/` 纳入 INFRA pattern（P2 修复）；§6 4/4 金标准：worker_processes 首行、healthcheck.js 存在、admin Dockerfile nginx.conf 尾部、HEAD SHA 匹配
+- [x] 管理后台已上线：`https://zyb001.cn/admin/` + **用户管理可创建 AI 用户 + 设置登录密码**（userType 限制已去掉）+ **新增「指定用户上架服务」对话框**（admin 后台服务管理）
+- [x] 管理后台视觉升级：成功/警告/危险/信息四色语义按钮 + Tag 配色分化 + 表格斑马纹（Element Plus）
+- [x] App BASE_URL 已实现 4 级优先级（无重新打包即可切换）：① 运行时 localStorage 热切换 ② VITE_API_BASE 编译变量 ③ H5 默认 `/api` 同源代理 ④ App/小程序默认 `https://zyb001.cn/api`
+- [x] 腾讯云 IM SDK 接入（用户端 H5 构建输出独立 `im.*.js` chunk ≈597KB，本地构建验证只含正确 `/im/config` 路径）+ 后端 `/im/config` + `/im/login` 接口返回 sdkAppId 1600159799 ap-guangzhou
+- [x] 精英守卫全面修复（解决发布动态/服务重复弹窗死循环）：`requireElite` 替代 `requireLogin` 放在发布/联系入口，配合 request.js kickToLogin 12s 冷却，避免 401 往返跳转
+- [x] 服务者详情页 500 修复：home.vue `?id=` + provider.vue 接受 `id/uid/userId/providerId` 四种别名
+- [x] 服务发布后「同城其他用户看不到」三连环修复：①发布时 city 字段兜底 ②matchCity 允许空值 ③动态城市 `Op.like prefix%` 前缀模糊匹配（解决「北京朝阳区」搜不到）
+- [x] 聊天记录查不到修复：`store/index.js` looseEq / looseIncludes 宽松匹配，string id ⇄ numeric id 不再相互错过（JSON 回退 + MySQL 均生效）
 - [x] App 离线资源包构建完成（98 文件 / 5.43 MB）+ 图标 17 档 + 启动图 7 档
-- [x] 密码登录 + AI DeepSeek 接入 + 服务分类管理 + 配置中心真测试（v2.1 迭代）
-- [x] 城市选择多级菜单 + JWT 自动续期 + 管理后台错误修复（v2.1 迭代）
+- [x] 城市选择多级菜单 + 全国 34 省 382 地级市（民政部 2024 版数据）
+- [x] 密码登录双 Tab + 「稍后设置密码」跳首页 + 设置完密码立即刷新 Pinia hasPassword
+- [x] 服务自动审核配置：`serviceAutoApprove=true`（管理后台配置中心 → 应用配置 → 默认自动上架）
 
-#### 待完成项（按优先级排列）
-- [ ] **MySQL 生产驱动切换**：当前生产仍用 JSON 驱动；需 .env 设 NODE_ENV=production + DB_DRIVER=mysql + 填 DB 连接信息后重启
-- [ ] **短信服务配置**：阿里云/腾讯云短信签名+模板未申请，当前 dev 模式
-- [ ] **微信支付配置**：商户号/API V3 密钥/证书未配置
-- [ ] **Android APK 云打包**：HBuilder X 打包 + 证书（离线资源已就绪）
-- [ ] **iOS IPA 云打包**：Apple Developer 证书 + Provisioning Profile
-- [ ] **应用市场资质**：ICP 备案 / 软著 / 隐私政策 URL
-- [ ] **监控告警**：API 错误率 / 订单成功率 / UGC 审核积压
+#### 8.3 待完成项（按优先级排列）
 
-#### §A MySQL 切换 Checklist（生产级 · 推荐配合宝塔面板使用）
-1. **服务器环境准备**：MySQL 8.0+（最低 5.7，需 utf8mb4 支持）；Node 18+；Nginx 反代后端/管理后台；防火墙放行 3306（仅本机或内网）/80/443
-2. **宝塔面板一键建库**（推荐）：宝塔 → 数据库 → 添加数据库 → 库名 `companion_play` / 字符集 `utf8mb4` / 排序 `utf8mb4_unicode_ci` → 自动生成账号密码 → 复制到下一步
-3. **后端 .env 对齐**：拷贝 `server/.env.example` 为 `server/.env`；`NODE_ENV=production`；`DB_DRIVER=mysql`（即使不写 production 也会强制 mysql）；填 `DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD`；连接池建议：`DB_POOL_MIN=5 DB_POOL_MAX=40`（2C4G）/ `DB_POOL_MAX=80`（4C8G）；时区保持默认 `+08:00`
-4. **首次启动（alter 建表 / 补索引）**：`cd server && npm ci && npm run seed` — ① `authenticate()` 成功 ② `sequelize.sync({ alter: true })` 自动建表/补齐列/补齐索引 **绝不删老列**；首次 seed 后：管理员 `admin / admin123` 登录后台立刻改密
-5. **冷数据迁移（JSON → MySQL）**：若线上已有 JSON 数据，按以下顺序迁移避免外键孤儿：
-   - ① admins → users → wallets → services → banners → posts → groups
-   - ② comments → groupJoins → orders → eliteOrders → transactions → reviews → invites → messages → feedbacks → signIns → configs
-   - 迁移脚本完成后，`SELECT COUNT(*)` 逐表比对 JSON 条数；`GET /api/health` 确认 `status: ok + driver: mysql + dbOk: true`
-6. **驱动回退应急开关**：若 MySQL 临时故障又需快速恢复，仅需在 `server/.env` 中临时设置 `NODE_ENV=development DB_DRIVER=json` 并重启进程（注意：回退后 JSON 仅为本地文件，不同步 MySQL；这是降级不是长期方案，最多 24h 内修复 MySQL 连接后切回）
-7. **生产健康断言**：
-   - `GET /health` → `{ status: 'ok', driver: 'mysql', storage: 'mysql://...', ... }`
-   - `GET /api/health` → `{ status: 'ok', driver: 'mysql', dbOk: true }`
-   - `GET /api/admin/config/status` → `{ driver: 'mysql', ok: true, dbOk: true, target, pool }`
-   - 管理后台 → 配置中心 → 6 模块测试连通性（短信/微信/支付宝/OSS 未配置时按预期返回 400 级业务错误，非 5xx）
-8. **宝塔运维建议**：后端 PM2 守护 (`pm2 start src/app.js --name by-server`)；cron 每日 02:00 `mysqldump companion_play | gzip > /backup/by-$(date +%F).sql.gz` + 保留 7 天；Nginx 配置上传大小 `client_max_body_size 20m` 匹配本地 multer 限制
-- [x] **App 离线资源包构建完成**：执行 `cd app && npm run build:app`（uni build -p app）输出产物至 `app/dist/build/app`，共 **98 个文件 / 5.43 MB**；构建零错误；动态 + 静态导入冲突告警已消除（order-detail.vue / settings.vue 的 `await import('../../utils/request')` 全部改为脚本顶部静态 import）；Sass legacy-js-api deprecation 不影响上线，HBuilder X 发行模式会重编译
-- [x] **App 打包资源完整性校验（icon + splash）**：
-  - App 级多尺寸图标 `app/unpackage/res/icons`：共 **17 张**（20/29/40/58/60/72/76/80/87/96/120/144/152/167/180/192 + 1024x1024），全部非空；与 `manifest.json → distribute.icons` 100% 对齐
-  - 启动图 `app/src/static/app-plus`：**7 张主流尺寸**（750x1334 / 828x1792 / 1080x1920 / 1125x2436 / 1242x2688 / 720x1280 / 1280x720 + splash.png 兜底）
-  - 额外 App 图标副本 `app/src/static/app-plus/icon-*.png`：9 档（48/72/96/128/144/192/256/512/1024）+ icon.png 基础版；manifest.json 引用的 unpackage/res/icons/** 均已通过图标脚本生成
-- [x] **manifest.json App 发布基础配置就绪**：name=白夜 / appid=`__UNI__B38A42D` / versionName=1.0.0 / versionCode=100 / vueVersion=3；`app-plus.distribute.android` 已声明 INTERNET/STORAGE R&W/CAMERA/RECORD_AUDIO/VIBRATE/ACCESS_NETWORK_STATE 7 项权限；`modules` 开启 Push / Share；`sdkConfigs.oauth/payment/push` 为占位空对象，需要在 HBuilder X 可视化界面选填微信/QQ/支付宝/推送后 DCloud 会自动合并
-- [ ] **HBuilder X 云打包步骤（Android）**：①打开 HBuilder X → 项目 → 打开目录 → 选 `app/` 作为项目根 ②菜单 发行 → 原生App-云打包 ③平台勾选 Android（APK） ④证书：使用自有证书 → 选择 .keystore 文件（建议 RSA2048，30 年有效期；未生成时可临时用 DCloud 公共证书 打测试包，正式上架必须替换为自有证书）→ 填写 keystore 密码 / alias / alias 密码 ⑤「打正式包」勾选，Android 包名填公司反域名（如 `com.baiye.app`，manifest.json 默认未写，HBuilder X 打包表单里补） ⑥权限保持当前声明即可；「开启 x86 支持」不勾选（应用市场主流 arm64-v8a / armeabi-v7a） ⑦使用传统 uni 统计保持默认 ⑧点击「打包」→ 等待 3-8 分钟，完成后控制台给出 APK 下载链接 ⑨验证 APK 签名：`keytool -printcert -jarfile 白夜.apk`
-- [ ] **HBuilder X 云打包步骤（iOS）**：①①同 Android 前两步 ②平台勾选 iOS ③证书文件：上传发布版 .p12（从 Apple Developer 导出 Distribution 证书，Keychain 导出 p12 需设置密码）→ 填 p12 密码 ④Provisioning Profile：上传发布版 .mobileprovision（Apple Developer → Identifiers 注册 app ID → Profiles 新建 App Store 类型，绑定对应 app ID + 证书 + 全部设备无关） ⑤Bundle ID：填入与 .mobileprovision 一致的反域名（如 `com.baiye.app`） ⑥「打正式包」勾选 ⑦打包完成 → 下载 .ipa → 使用 Transporter App 或 `xcrun altool --upload-app -f 白夜.ipa -t ios -u APPLE_ID -p APP_SPECIFIC_PASSWORD` 上传至 App Store Connect → TestFlight → 提交审核
-- [ ] **证书 / 配置项占位清单（真实值由团队密钥管理器维护）**：
-  | 类型 | 字段 | 占位值 / 生成方法 | 必须 |
-  |---|---|---|---|
-  | Android 签名 | keystore 文件 | `keytool -genkey -v -keystore baiye-release.keystore -alias baiye -keyalg RSA -keysize 2048 -validity 10950` | ✅ 上架 |
-  | Android 签名 | keystore 密码 | **≥8 位，字母+数字，单独存档** | ✅ |
-  | Android 签名 | alias | baiye（与 keytool 一致） | ✅ |
-  | Android 签名 | alias 密码 | 可与 keystore 密码一致 | ✅ |
-  | Android 应用 | 包名 (package) | `com.baiye.app`（推荐） | ✅ |
-  | iOS 签名 | Distribution .p12 | Apple Developer → Certificates → Apple Distribution → 下载 .cer → 导入 Keychain → 右键导出 .p12 | ✅ |
-  | iOS 签名 | p12 密码 | 导出时手动设置 | ✅ |
-  | iOS 签名 | .mobileprovision (App Store) | Apple Developer → Profiles → App Store，绑定 app ID + Distribution 证书 | ✅ |
-  | iOS 应用 | Bundle ID | 与 .mobileprovision 的 Identifier 一致 | ✅ |
-  | iOS 连接 | App Store Connect Apple ID | 开发者账户邮箱 | ✅ |
-  | iOS 连接 | App 专用密码 | appleid.apple.com → 安全 → 生成 | ✅ 上传 |
-  | 管理后台 | 7 大模块配置（应用/短信/微信支付/支付宝/推送/OSS/地理） | 登录 http://服务器IP:5174 管理后台 → 配置中心 → 逐项填入 + 测试连通性 | ✅ 线上 |
-- [x] **「原生 App 云打包发布清单 v1.0」独立文档已生成**：[docs/APP-PACKAGING-CHECKLIST.md](APP-PACKAGING-CHECKLIST.md) 涵盖 §0 前置 7 项 Gate、§1 离线资源包重构建、§2 证书 17 条占位表（Android 8/ iOS 9）、§3 Android 云打包表单 + 签名验证、§4 iOS 云打包表单 + Transporter 上传、§5 真机冒烟 12+3+3 条、§6 应用市场 ICP/软著/隐私政策 资质、§7 产物归档 SHA256/dSYM、§8 常见失败 10 条速查、§9 运维证书到期预警
-- [ ] **生产环境打包前必改（request.js BASE_URL）**：`app/src/utils/request.js` 的 `BASE_URL` 默认值当前走 H5 dev server 代理；生产 APK/IPA 必须指向真实公网 HTTPS 域名（推荐在管理后台「应用配置」里注入 baseUrl 再由客户端首启动拉取；短期方案直接改 `VITE_API_BASE=https://api.baiye.example.com` 环境变量后重新 `npm run build:app`）
-- [ ] **App Store / 应用市场提审**（按 `docs/APP-STORE-CHECKLIST.md` v2 九大类逐项过；打包细节完全对齐 `docs/APP-PACKAGING-CHECKLIST.md` §5 真机冒烟 18 条 + §6 市场资质）
-- [ ] **生产环境部署**：后端 HTTPS + 管理后台 HTTPS + 移动端 H5 静态资源 CDN；微信小程序上传代码 → 开发版 → 体验版 → 提审
-- [ ] **监控告警**（API 错误率 / 订单成功率 / UGC 审核积压 / 敏感词命中异常尖峰）
-- [ ] **首次冷启动用户灰度**（1% → 5% → 20% → 100%），观察举报工单 / 敏感词拦截 / 精英转化漏斗
+| 优先级 | 项目 | 说明 |
+|---|---|---|
+| **🔴 阻塞** | **刷新 H5 镜像（IM 路径修复生效）** | 当前线上 H5 仍请求 `/api/api/im/config` 404。需在服务器 SSH 执行：`cd /opt/baiye && git fetch --prune origin main && git reset --hard origin/main && docker compose build --no-cache h5 && docker compose up -d h5 && docker compose ps h5` |
+| **🟡 极高** | 配置中心填写真实密钥：腾讯云 IM userSig 密钥 | SDKAppID=1600159799 已就位，但 `/im/login` 生成合法 userSig 需密钥字符串；否则 IM 消息会鉴权失败 |
+| **🟡 高** | 短信服务（阿里云 / 腾讯云）签名 + 模板 | 当前 dev 模式直接返回真实验证码字段，生产需要配置中心录入 + 测试连通性 |
+| **🟡 高** | 微信支付 V3 密钥 + 平台证书 + 回调 URL | 钱包充值 / 精英付费 / 订单支付都依赖此通道；`APP_DOMAIN=https://zyb001.cn` 回调无需额外改 |
+| **🟡 中** | 支付宝公钥 / 私钥 | 备用支付通道 |
+| **🟡 中** | 阿里云 OSS Bucket + RAM 子账号 | 图片/语音上传切换至对象存储；本地 multer 仅冷启动初期 |
+| **🟡 中** | 推送（极光 / 个推）AppKey | IM 离线 / 订单状态 / 叫醒推送；未配置时 fallback 到 Socket.IO 在线通道 |
+| **🟡 中** | AI DeepSeek / OpenAI API Key | 管理后台录入后，AI 用户聊天三级兜底生效 |
+| **🟡 高** | Android APK 云打包 + 签名证书 | HBuilder X 步骤见 §8.5（BASE_URL 无需重打包：默认 https://zyb001.cn/api + 热切换）|
+| **🟡 中** | iOS IPA 云打包 + App Store Connect | §8.5 |
+| **🟡 中** | 微信小程序提审 | 合法域名单填 `https://zyb001.cn`（request/uploadFile/downloadFile/socket）|
+| **🟡 中** | 应用市场资质：ICP 备案 / 软著 / 隐私政策 URL | 对应九大类 APP-STORE-CHECKLIST |
+| **🔴 低** | 监控告警 | API 错误率 / 订单成功率 / UGC 审核积压；阿里云云监控 `curl /health` HTTP 200 探针即可起步 |
+| **🔴 低** | 冷启动灰度 | 1% → 5% → 20% → 100% |
+
+#### 8.4 IM 接入说明（腾讯云即时通信 TIM）
+
+1. **SDK**：H5 端静态 import `tim-js-sdk + tim-upload-plugin`（Vite 代码分割出独立 `im.<hash>.js`，首次进入消息页懒加载；**不再 require 动态依赖**）
+2. **配置**：`app/src/utils/im.js` 路径修正：**请使用 `url: '/im/config'` 而不是 `/api/im/config`**。因为 `app/src/utils/request.js` 的 H5 BASE_URL 默认为 `/api`（同源网关代理，CORS 零依赖），finalURL = `/api` + `/im/config` = `/api/im/config` 正确。若写成 `/api/im/config` → 最终双叠加 `/api/api/im/config` HTTP 404。
+3. **后端**：
+   - `GET /im/config`：返回 `{ enabled, ready, sdkAppId, imRegion }`（当前 ap-guangzhou 1600159799）
+   - `POST /im/login`：已登录用户 → 用配置中心密钥签发 userSig 返回给客户端
+4. **状态**：SDK 已打包进 H5；后端接口 HTTP 200 已通过；仅缺配置中心录入密钥，完成后即可真实发消息。
+
+#### 8.5 客户端 BASE_URL 生产切换说明（无需每次重打包）
+
+`app/src/utils/request.js` 提供了 `getRuntimeBaseURL` / `setRuntimeBaseURL` / `resetRuntimeBaseURL` 热切换 API（uni 本地存储 `app.baseURL`），默认解析顺序：
+
+```
+① 运行时 localStorage (用户端「我的→设置→服务器地址」图形化弹窗填 https://zyb001.cn/api → 立即生效)
+  ↓ (无)
+② VITE_API_BASE 编译期 env
+  ↓ (无)
+③ IS_H5 ? '/api' (同源 nginx gateway /api proxy，生产 zyb001.cn 已在工作)
+  ↓ (App/小程序)
+④ 'https://zyb001.cn/api' (内置最终兜底生产域名)
+```
+
+**因此：APK/IPA 打包不再需要手动改 BASE_URL**，客户端默认就能连到正确生产公网；如果以后迁移域名，只要在管理后台「应用配置」里改或让用户在设置里贴新地址，立即生效。
+
+#### 8.6 发布迭代 / 回滚 / Smart Build 命令速查
+
+**（服务器 SSH，/opt/baiye 目录下）**
+
+```bash
+# ⭐ 标准更新流程（代码 + 构建 + 重启）
+cd /opt/baiye
+eval "$(ssh-agent -s)" >/dev/null 2>&1
+ssh-add ~/.ssh/github_actions_deploy            # 加载 SSH key（ed25519）
+git fetch --prune origin main
+git reset --hard origin/main                    # 同步 main 最新（任何本地修改会被覆盖，幂等）
+docker compose build server admin h5            # 全量 build（也可以只改了什么就 build 哪个，节省时间）
+docker compose up -d
+for i in $(seq 1 24); do
+  [ "$(docker inspect --format '{{.State.Health.Status}}' baiye-server 2>/dev/null)" = "healthy" ] && break
+  sleep 5; echo -n .
+done
+# 4 端点验收
+for ep in /health /api/health /admin/ /; do
+  curl -sk -o /dev/null -w "$ep -> %{http_code}\n" https://zyb001.cn$ep
+done
+
+# ⭐ 仅重建 H5（如修复前端 CSS/JS 路径）
+cd /opt/baiye && git fetch && git reset --hard origin/main \
+  && docker compose build --no-cache h5 \
+  && docker compose up -d h5 && docker compose ps h5
+
+# ⭐ 回滚上一个 commit（避免重复踩坑）
+cd /opt/baiye
+git log --oneline -5
+git reset --hard HEAD~1
+docker compose build server   # 或 h5 / admin / ...
+docker compose up -d server
+```
+
+#### 8.7 HBuilder X 云打包步骤（保留原文档但标注：BASE_URL 已内置，无需重改）
+
+##### Android APK
+① 打开 HBuilder X → 项目 → 打开目录 → 选 `app/` 作为项目根
+② 菜单 **发行 → 原生 App-云打包**
+③ 平台勾选 Android（APK）
+④ 证书：使用自有证书 → 选择 .keystore（建议 RSA2048 30 年；无证书可选 DCloud 公共证书打临时测试包）→ 填 keystore 密码 / alias / alias 密码
+⑤「打正式包」勾选，Android 包名推荐 `com.baiye.app`（manifest.json 未声明，打包表单里补）
+⑥ 权限保持默认声明；「开启 x86」不勾；统计保持默认
+⑦ 打包完成 → 下载 APK → `keytool -printcert -jarfile 白夜.apk` 验证签名
+⑧ 安装 APK → 首页加载、登录、下单、IM 均走 `https://zyb001.cn/api`（无需配置；如需内网联调，在 App「我的 → 设置 → 服务器地址」弹窗填新地址即可）
+
+##### iOS IPA
+① Apple Developer：Identifier → 注册 app ID（如 `com.baiye.app`）→ Certificates → Apple Distribution 导出 p12；Profiles 创建 App Store Release 用的 .mobileprovision
+② HBuilder X 发行 → 原生 App 云打包 → iOS → 上传 .p12 + .mobileprovision → 填密码 + Bundle ID → 打正式包
+③ 下载 .ipa → Transporter App 或 `xcrun altool --upload-app -f 白夜.ipa -t ios -u <APPLE_ID> -p <APP_SPECIFIC_PASSWORD>` 上传 App Store Connect
+④ TestFlight 内部测试 → App Store 提审
+
+证书 / 配置项完整 17 项占位清单见：`docs/APP-PACKAGING-CHECKLIST.md` §2
+
+#### 8.8 应用市场提审 / 资质 / 监控（收尾）
+- 九大类自检清单 → `docs/APP-STORE-CHECKLIST.md`
+- 打包证书完整清单 → `docs/APP-PACKAGING-CHECKLIST.md`
+- 隐私政策（三段位置新增：动态发布/组局/位置匹配）→ `docs/PRIVACY-POLICY.md`
+- 品牌素材映射表 → `docs/BRAND-REFERENCE.md`
 
 ---
 

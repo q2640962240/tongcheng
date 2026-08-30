@@ -1,4 +1,4 @@
-﻿name: Deploy to Alibaba Cloud
+name: Deploy to Alibaba Cloud
 
 on:
   push:
@@ -91,13 +91,22 @@ jobs:
             echo "after: $(git log --oneline -1)" | tee -a "$LOG"
 
             # --- Smart diff: 哪些目录改了 ---
+            CHANGED_SERVER=false
+            CHANGED_ADMIN=false
+            CHANGED_H5=false
+            CHANGED_INFRA=false
+
             if [ "$OLD_SHA" != "0000000" ] && [ "$OLD_SHA" != "$NEW_SHA" ]; then
               DIFF=$(git diff --name-only $OLD_SHA $NEW_SHA 2>/dev/null || echo "")
               echo "changed files:" | tee -a "$LOG"
               echo "$DIFF" | tee -a "$LOG"
+              echo "$DIFF" | grep -qE '(^|/)server/|Dockerfile' && CHANGED_SERVER=true || true
+              echo "$DIFF" | grep -qE '(^|/)admin/' && CHANGED_ADMIN=true || true
+              echo "$DIFF" | grep -qE '(^|/)app/' && CHANGED_H5=true || true
+              echo "$DIFF" | grep -qE '(^|/)deploy/|^docker-compose|Dockerfile|^\.github/' && CHANGED_INFRA=true || true
             else
               # OLD_SHA==NEW_SHA 时说明服务器已在最新 commit（可能是快速连续 push 触发两次 deploy，
-              # 第一次已 reset 完成），此时 diff 为空但不能跳过构建 — 必须全量 build 保证镜像同步最新代码
+              # 第一次已 reset 完成），或首次部署；此时必须全量 build 保证镜像同步最新代码
               DIFF=""
               CHANGED_SERVER=true
               CHANGED_ADMIN=true
@@ -105,15 +114,6 @@ jobs:
               CHANGED_INFRA=true
               echo "same commit or first deploy -> full build (OLD_SHA=$OLD_SHA NEW_SHA=$NEW_SHA)" | tee -a "$LOG"
             fi
-
-            CHANGED_SERVER=false
-            CHANGED_ADMIN=false
-            CHANGED_H5=false
-            CHANGED_INFRA=false
-            echo "$DIFF" | grep -qE '(^|/)server/|Dockerfile' && CHANGED_SERVER=true || true
-            echo "$DIFF" | grep -qE '(^|/)admin/' && CHANGED_ADMIN=true || true
-            echo "$DIFF" | grep -qE '(^|/)app/' && CHANGED_H5=true || true
-            echo "$DIFF" | grep -qE '(^|/)deploy/|^docker-compose|Dockerfile|^\.github/' && CHANGED_INFRA=true || true
 
             FORCE="${{ github.event.inputs.FORCE_REBUILD }}"
             [ "$FORCE" = "true" ] && { CHANGED_SERVER=true; CHANGED_ADMIN=true; CHANGED_H5=true; CHANGED_INFRA=true; echo "FORCE_REBUILD=true -> all dirty"; }
