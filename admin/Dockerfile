@@ -1,15 +1,14 @@
 FROM node:20-slim AS builder
-ENV TZ=Asia/Shanghai NODE_OPTIONS=--max-old-space-size=2048
+ENV TZ=Asia/Shanghai NODE_OPTIONS=--max-old-space-size=2048 npm_config_registry=https://registry.npmmirror.com
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm install --include=dev --no-audit --no-fund --legacy-peer-deps && npm cache clean --force 2>/dev/null || true
+RUN npm install --include=dev --no-audit --no-fund --legacy-peer-deps
 COPY . .
 RUN npm run build && ls -la dist/
 
 FROM nginx:1.27-alpine
 ENV TZ=Asia/Shanghai
-RUN set -eu; \
-  mkdir -p /etc/nginx /usr/share/nginx/html /var/cache/nginx /var/run /var/log/nginx;
+RUN set -eu; mkdir -p /etc/nginx /usr/share/nginx/html /var/cache/nginx /var/run /var/log/nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 RUN cat > /etc/nginx/nginx.conf <<'NGXEOF'
 worker_processes  auto;
