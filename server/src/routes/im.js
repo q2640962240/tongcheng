@@ -8,7 +8,7 @@
  */
 const router = require('express').Router()
 const { success, fail } = require('../utils/response')
-const { authRequired } = require('../middleware/auth')
+const { auth } = require('../middleware/auth')
 const { getModuleConfig } = require('../utils/config')
 const { genUserSig } = require('../utils/im')
 const { User } = require('../models')
@@ -48,7 +48,7 @@ router.get('/config', async (req, res, next) => {
  *   }
  *  - 若 im.enabled=false 或配置不齐全，前端应该回退自建 WebSocket 聊天。
  */
-router.post('/login', authRequired, async (req, res, next) => {
+router.post('/login', auth, async (req, res, next) => {
   try {
     const { cfg, ready } = await loadImCfg()
     if (!cfg.enabled) return success(res, { enabled: false, ready: false, sdkAppId: '' })
@@ -86,7 +86,7 @@ router.post('/login', authRequired, async (req, res, next) => {
  *   - cloudSecretId / cloudSecretKey 已配置时，使用腾讯云 API v3 签名真实调用；
  *   - 未配置时返回 200，但 action=no-op，前端仍可继续（TIM SDK 首次 login 也会自动导入非黑名单用户）。
  */
-router.post('/account-import', authRequired, async (req, res, next) => {
+router.post('/account-import', auth, async (req, res, next) => {
   try {
     const { cfg } = await loadImCfg()
     const user = await User.findByPk(req.user?.id || req.userId)
@@ -134,7 +134,7 @@ router.post('/account-import', authRequired, async (req, res, next) => {
  * Body:
  *   { toUserId: string, text: string, ext?: object }
  */
-router.post('/sendmsg', authRequired, async (req, res, next) => {
+router.post('/sendmsg', auth, async (req, res, next) => {
   try {
     const { cfg, ready } = await loadImCfg()
     if (!cfg.enabled) return fail(res, 'IM 未启用', 503)
