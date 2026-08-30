@@ -34,8 +34,29 @@ http {
         listen 80; server_name _;
         root /usr/share/nginx/html; index index.html; charset utf-8;
         client_max_body_size 20m;
+        # 带 hash 的静态资源：长缓存 + immutable (Vite 产物文件名自带内容 hash)
+        location ~* \.[a-f0-9]{8}\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot)$ {
+            expires 1y;
+            add_header Cache-Control "public, max-age=31536000, immutable";
+            try_files $uri =404;
+        }
+        location ^~ /assets/ {
+            expires 1y;
+            add_header Cache-Control "public, max-age=31536000, immutable";
+            try_files $uri =404;
+        }
         location ^~ /static/ { expires 30d; add_header Cache-Control "public, immutable"; }
-        location / { try_files $uri $uri/ /index.html; }
+        # index.html 和 所有非 hash 文件: no-cache + revalidate
+        location = /index.html {
+            add_header Cache-Control "no-cache, no-store, must-revalidate, max-age=0";
+            add_header Pragma "no-cache";
+            add_header Expires "0";
+            try_files $uri /index.html;
+        }
+        location / {
+            add_header Cache-Control "no-cache, no-store, must-revalidate, max-age=0";
+            try_files $uri $uri/ /index.html;
+        }
     }
 }
 NGXEOF
