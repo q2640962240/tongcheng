@@ -37,9 +37,7 @@
         </el-select>
         <el-button type="primary" @click="loadData">查询</el-button>
         <div style="flex:1" />
-        <el-button type="success" @click="openCreateDialog">
-          <el-icon style="margin-right: 4px"><Plus /></el-icon>指定用户上架服务
-        </el-button>
+        <el-button type="success" @click="openCreateDialog">+ 指定用户上架服务</el-button>
         <el-button link type="primary" @click="router.push('/services/categories')">前往分类管理 →</el-button>
       </div>
       <el-alert
@@ -61,7 +59,7 @@
     </div>
 
     <div class="page-card">
-      <el-table :data="list" v-loading="loading" border>
+      <el-table :data="list" v-loading="loading" border stripe>
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="title" label="服务标题" min-width="160" show-overflow-tooltip />
         <el-table-column label="顶级分类" width="120">
@@ -209,7 +207,6 @@
 import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
 import { getServices, auditService, serviceCategoriesApi, createServiceForUser, searchUsers } from '../../api'
 
 const router = useRouter()

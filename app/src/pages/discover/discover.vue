@@ -669,15 +669,19 @@ const groupStatusText = (s) => {
 const tagColor = (_, i) => ['tag-yellow','tag-purple','tag-blue','tag-pink'][toNum(i, 0) % 4]
 
 /* --- actions --- */
-const goPublish = () => uni.navigateTo({ url: '/pages/post/publish' })
-const goPublishFilter = () => {
-  if (!requireLogin()) return
+const goPublish = () => {
   if (!requireElite()) return
-  uni.showToast({ title: toStr('请先开通精英'), icon: 'none' })
-  setTimeout(() => uni.navigateTo({ url: '/pages/elite-pay/elite-pay' }), 800)
+  uni.navigateTo({ url: '/pages/post/publish' })
+}
+const goPublishFilter = () => {
+  if (!requireElite()) return
+  uni.navigateTo({ url: '/pages/post/publish?mode=filter' })
 }
 const goElite = () => uni.navigateTo({ url: '/pages/elite-pay/elite-pay' })
-const goCreateGroup = () => uni.navigateTo({ url: '/pages/post/publish?mode=group' })
+const goCreateGroup = () => {
+  if (!requireElite()) return
+  uni.navigateTo({ url: '/pages/post/publish?mode=group' })
+}
 const goGroupDetail = (g) => uni.navigateTo({ url: `/pages/group/detail?id=${toStr(getPath(g, 'id'), '')}` })
 const goPostDetail = (p) => uni.navigateTo({ url: `/pages/group/detail?id=${toStr(getPath(p, 'id'), '')}&mode=post` })
 const goUser = (u) => uni.navigateTo({ url: `/pages/provider/provider?id=${toStr(getPath(u, 'id'), '')}` })

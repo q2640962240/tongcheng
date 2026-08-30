@@ -185,11 +185,96 @@ html, body, #app {
 }
 .el-button--primary:hover { filter: brightness(1.05); }
 
-/* Badge / Tag */
+/* Button 成功（绿色 — 高对比度，适合「通过/上架/新增」） */
+.el-button--success {
+  background: linear-gradient(135deg, #4ADE80 0%, #22C55E 55%, #16A34A 100%) !important;
+  border: none !important;
+  color: #FFFFFF !important;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(34,197,94,.30);
+}
+.el-button--success:hover { filter: brightness(1.08); }
+
+/* Button 警告（橙色 — 高对比度） */
+.el-button--warning {
+  background: linear-gradient(135deg, #FCD34D 0%, #F59E0B 55%, #D97706 100%) !important;
+  border: none !important;
+  color: #0B0F1A !important;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(245,158,11,.30);
+}
+.el-button--warning:hover { filter: brightness(1.08); }
+
+/* Button 危险（红色 — 高对比度） */
+.el-button--danger {
+  background: linear-gradient(135deg, #FCA5A5 0%, #EF4444 55%, #DC2626 100%) !important;
+  border: none !important;
+  color: #FFFFFF !important;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(239,68,68,.30);
+}
+.el-button--danger:hover { filter: brightness(1.08); }
+
+/* Button 默认（暗色磨砂） */
+.el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-link) {
+  background: var(--by-surface-2) !important;
+  border: 1px solid var(--by-border-2) !important;
+  color: var(--by-text-1) !important;
+}
+.el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-link):hover {
+  border-color: var(--by-gold) !important;
+  color: var(--by-gold-soft) !important;
+}
+
+/* Button info（蓝色） */
+.el-button--info {
+  background: linear-gradient(135deg, #7DD3FC 0%, #4FB8FF 55%, #0EA5E9 100%) !important;
+  border: none !important;
+  color: #0B0F1A !important;
+  font-weight: 700;
+}
+.el-button--info:hover { filter: brightness(1.08); }
+
+/* Link 按钮 */
+.el-button.is-link {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Badge / Tag — 按类型区分颜色，提升可识别度 */
 .el-tag {
+  border-width: 1px !important;
+  font-weight: 600;
+}
+.el-tag--success {
+  background: rgba(34,197,94,.18) !important;
+  border-color: rgba(34,197,94,.45) !important;
+  color: #4ADE80 !important;
+}
+.el-tag--warning {
+  background: rgba(245,158,11,.18) !important;
+  border-color: rgba(245,158,11,.45) !important;
+  color: #FCD34D !important;
+}
+.el-tag--danger {
+  background: rgba(239,68,68,.18) !important;
+  border-color: rgba(239,68,68,.45) !important;
+  color: #FCA5A5 !important;
+}
+.el-tag--info {
+  background: rgba(79,184,255,.18) !important;
+  border-color: rgba(79,184,255,.45) !important;
+  color: #7DD3FC !important;
+}
+.el-tag:not(.el-tag--success):not(.el-tag--warning):not(.el-tag--danger):not(.el-tag--info) {
   background: rgba(212,175,55,.15) !important;
   border: 1px solid rgba(212,175,55,.35) !important;
   color: var(--by-gold-soft) !important;
+}
+
+/* 表格斑马纹 — 提升行间可识别度 */
+.el-table tr.el-table__row--striped td.el-table__cell {
+  background: rgba(255,255,255,.025) !important;
 }
 
 /* Page title (通用页面标题) */

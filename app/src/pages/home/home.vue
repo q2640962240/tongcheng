@@ -320,17 +320,19 @@ const loadEliteInfo = async () => {
 const loadEliteUsers = async () => {
   eliteLoading.value = true
   try {
-    const params = { isElite: true, page: 1, pageSize: 12 }
+    const params = { isElite: 'true', page: 1, pageSize: 12 }
     if (city.value && city.value !== '全国') params.city = city.value
     const res = await guard(userApi.discover(params), null)
-    eliteUserList.value = toList(getPath(unwrap(res, null), 'list', []))
+    const data = unwrap(res, null)
+    const rows = toList(getPath(data, 'list', []) || getPath(data, 'rows', []) || getPath(data, 'items', []))
+    eliteUserList.value = rows
       .filter((u) => u && u.id)
       .map((u) => ({
         id: u.id,
         nickname: toStr(u.nickname, '精英用户'),
-        avatar: toStr(u.avatar || '', '/assets/avatar-provider-01.jpg', '/assets/avatar-provider-01.jpg'),
+        avatar: toStr(u.avatar || u.avatarUrl || '', '/static/sucai/profile-ziqing.jpg'),
         city: toStr(u.city || city.value || ''),
-        bio: toStr(u.bio || '欢迎认识我 ✨'),
+        bio: toStr(u.bio || u.intro || '欢迎认识我 ✨'),
         isElite: !!u.isElite
       }))
   } catch (_) { eliteUserList.value = [] }
