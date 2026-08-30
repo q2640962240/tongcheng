@@ -1,8 +1,8 @@
 FROM node:20-slim AS builder
-ENV TZ=Asia/Shanghai NODE_OPTIONS=--max-old-space-size=3072 npm_config_registry=https://registry.npmjs.org
+ENV TZ=Asia/Shanghai NODE_OPTIONS=--max-old-space-size=3072 npm_config_registry=https://registry.npmmirror.com
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm install --include=dev --no-audit --no-fund --legacy-peer-deps && npm cache clean --force 2>/dev/null || true && echo "--- uni CLI check ---" && ls node_modules/.bin/uni
+RUN npm install --include=dev --no-audit --no-fund --legacy-peer-deps && echo "--- uni CLI check ---" && ls node_modules/.bin/uni
 COPY . .
 RUN echo "--- required files check ---" && ls src/pages.json src/manifest.json vite.config.js index.html && echo "--- uni build:h5 ---" && npm run build:h5 && echo "--- done ---" && ls -la dist/build/h5/ | head -20
 
