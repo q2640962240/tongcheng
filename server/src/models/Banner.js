@@ -7,7 +7,7 @@ const Banner = sequelize.define('Banner', {
     allowNull: true
   },
   image: {
-    type: DataTypes.STRING(500),
+    type: DataTypes.TEXT,
     allowNull: false
   },
   link: {

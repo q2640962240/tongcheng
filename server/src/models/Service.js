@@ -23,7 +23,7 @@ const Service = sequelize.define('Service', {
     allowNull: true
   },
   coverImage: {
-    type: DataTypes.STRING(500),
+    type: DataTypes.TEXT,
     allowNull: true
   },
   price: {
