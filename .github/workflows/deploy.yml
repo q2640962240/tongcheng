@@ -192,21 +192,23 @@ jobs:
             else
               # OLD_SHA==NEW_SHA 时说明服务器已在最新 commit（可能是快速连续 push 触发两次 deploy，
               # 第一次已 reset 完成），或首次部署；此时必须全量 build 保证镜像同步最新代码
+              # 关键：不要 down 容器！可能只是临时问题，build 完 up -d 就行
               DIFF=""
               CHANGED_SERVER=true
               CHANGED_ADMIN=true
               CHANGED_H5=true
-              CHANGED_INFRA=true
+              CHANGED_INFRA=false
               echo "same commit or first deploy -> full build (OLD_SHA=$OLD_SHA NEW_SHA=$NEW_SHA)" | tee -a "$LOG"
             fi
 
             # 兜底：diff 为空（空 commit / amend / rebase force push）→ 全量 build
+            # 关键：不要 down 容器！空 commit 不可能涉及基础设施变更
             if [ "$CHANGED_SERVER" = "false" ] && [ "$CHANGED_ADMIN" = "false" ] && [ "$CHANGED_H5" = "false" ] && [ "$CHANGED_INFRA" = "false" ]; then
-              echo "diff empty (empty commit / force push) -> full build" | tee -a "$LOG"
+              echo "diff empty (empty commit / force push) -> full build NO-DOWN" | tee -a "$LOG"
               CHANGED_SERVER=true
               CHANGED_ADMIN=true
               CHANGED_H5=true
-              CHANGED_INFRA=true
+              CHANGED_INFRA=false
             fi
 
             FORCE="${{ github.event.inputs.FORCE_REBUILD }}"
