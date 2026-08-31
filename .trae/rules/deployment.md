@@ -1,4 +1,4 @@
-﻿# 白夜陪玩 — 部署规则 (DEPLOYMENT RULES)
+# 白夜陪玩 — 部署规则 (DEPLOYMENT RULES)
 
 > **任何对部署相关文件的修改前必须读此文件。所有"踩过的坑"均已记录，重复犯错 = 低级失误。**
 
@@ -119,35 +119,54 @@ chmod 600 ~/.ssh/authorized_keys ~/.ssh/github_actions_deploy
 
 ---
 
-## §6 deploy.yml v2 Smart Build
+## §6 deploy.yml v3 安全部署 (当前版本)
 
-### v2 优化: 30秒~3分钟快速部署
+### v3 四大安全规则 (踩坑总结，违反必宕机)
 
-移除的旧操作 (导致 15-30 分钟):
-  ✗ docker compose down -v (清空卷)
-  ✗ docker rmi -f baiye-server baiye-admin baiye-h5
-  ✗ docker system prune -af (清所有缓存)
-  ✗ --no-cache (强制从头构建)
+#### 规则 1: 禁止 set -eu -o pipefail
 
-新增的智能逻辑:
-  ✓ git diff OLD_SHA NEW_SHA 判断变更范围
-  ✓ CHANGED_SERVER/ADMIN/H5/INFRA 标志
-  ✓ 只 build 变化的服务
-  ✓ Docker 层缓存复用
-  ✓ docker image prune -f 只清悬空镜像
+`set -e` 是 v2 版快速失败的根因：任何命令返回非0（如 git fetch 网络抖动、grep 不匹配）
+都会导致脚本立即退出，35 秒内失败，容器可能已被 down 但没 up 回来。
 
-### 6 步流水线
-  [1/6] sync code         git fetch + reset --hard origin/main
-  [2/6] golden rules      4 项校验 (PASS>=4)
-  [3/6] smart diff        git diff -> BUILD PLAN
-  [4/6] build             只 build PLAN=true 的服务
-  [5/6] up -d + healthy   docker compose up -d
-  [6/6] HTTP verify       curl 4 端点
+v3 改为：不用 set -e，手动检查关键步骤退出码。
+
+#### 规则 2: 禁止 docker compose down
+
+`docker compose down` 是服务杀手：down 后如果 build 失败（OOM/apt 失败/npm 失败），
+容器永远不起来，服务器彻底宕机。
+
+v3 改为：只 build 新镜像 → docker compose up -d 自动滚动替换有新镜像的容器。
+旧容器保持运行直到新容器 ready，零停机。
+
+唯一例外：FORCE_REBUILD=true 时由用户手动承担风险。
+
+#### 规则 3: build 失败不中断
+
+build 失败时设 BUILD_FAIL=1 但继续执行 up -d，用旧镜像保持服务可用。
+verify 失败时执行兜底恢复（restart + up -d），不 exit 1，避免连环失败。
+
+#### 规则 4: deploy.yml 自身变更不触发 INFRA
+
+v2 中 deploy.yml 匹配 `^\.github/` 正则 → CHANGED_INFRA=true → down 容器。
+导致每次改 deploy.yml 都触发全量 down，恶性循环。
+
+v3 改为：CHANGED_INFRA 正则只匹配 nginx-docker.conf 和 docker-compose.yml，
+deploy.yml 自身变更不算 INFRA。
+
+### v3 七步流水线
+
+  [1/7] sync code         git fetch (重试3次) + reset + 证书保护/还原
+  [2/7] smart diff        git diff -> BUILD PLAN (INFRA只匹配nginx/compose)
+  [3/7] golden rules      WARN模式 (PASS>=3即可，不退出)
+  [4/7] system check      swap + 磁盘空间检查 (低则prune)
+  [5/7] smart build       只 build 变化的服务 (失败不中断)
+  [6/7] up -d + healthy   滚动更新 (不down旧容器)
+  [7/7] verify + recovery HTTP检查 (失败则restart+up兜底)
 
 ### 手动触发参数
   GIT_RESET_MODE (hard/mixed/keep)
-  ONLY_START (true=只 up -d)
-  FORCE_REBUILD (true=忽略 diff, 全量重建)
+  ONLY_START (true=只 up -d，跳过一切)
+  FORCE_REBUILD (true=忽略 diff, 全量重建+down)
 
 ### 日志
   tail -f /tmp/baiye-deploy.log
@@ -202,6 +221,16 @@ git add . && git commit -m "fix: x" && git push
 
 ## §10 FAQ
 
+Q: Actions 35秒快速失败?
+A: v2 的 set -eu -o pipefail 导致。v3 已移除，改为手动错误检查。
+
+Q: 部署后服务器 502/不可达?
+A: v2 的 docker compose down 导致。v3 改为 up -d 滚动更新，不 down 容器。
+
+Q: 改了 deploy.yml 后连环失败?
+A: v2 中 deploy.yml 匹配 ^\.github/ -> CHANGED_INFRA=true -> down。
+   v3 正则缩小为 nginx-docker.conf|docker-compose.yml，deploy.yml 自身不算 INFRA。
+
 Q: Actions "SSH deploy" 3 秒挂?
 A: SERVER_SSH_KEY 值不对。头尾两行一起粘。
 
@@ -214,11 +243,17 @@ A: HTTPS block 缺 /health location 或 HTTP 被 301 重定向。
 Q: server 一直 Unhealthy?
 A: seed.js 缺 sequelize.close() + process.exit(0)。
 
+Q: build 失败但服务还在?
+A: v3 设计：build 失败设 BUILD_FAIL=1 但继续 up -d 用旧镜像，不中断服务。
+
+Q: verify 失败但不报错?
+A: v3 设计：verify 失败执行兜底恢复 (restart + up -d)，不 exit 1，避免连环失败。
+
 Q: 部署很快 (30秒)?
-A: 无 --no-cache, Docker 层缓存生效, smart diff 只 build 变化的服务。
+A: Docker 层缓存生效, smart diff 只 build 变化的服务。
 
 Q: 想全量重建?
-A: Actions 手动触发 FORCE_REBUILD=true。
+A: Actions 手动触发 FORCE_REBUILD=true (会 down 容器)。
 
 Q: 想跳过 build?
 A: ONLY_START=true 或服务器 docker compose up -d。
@@ -245,4 +280,4 @@ SSH key           服务器 + GitHub Secrets -> §5
 密码/JWT          docker-compose.yml env   -> §0
 deploy 流程       .github/workflows/deploy.yml -> §6
 
-文档: v2.0 (2026-08-30) - 22+ Actions Run + v2 Smart Build
+文档: v3.0 (2026-08-31) - v3 安全部署 (no set-e, no down, auto recovery)
