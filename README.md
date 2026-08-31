@@ -627,10 +627,6 @@ FAIL > 0 时，脚本会把失败项的 body/code 都打印出来，按信息定
 
 * **原生 App 云打包发布清单（Android/iOS 双端证书 + 真机 12 条冒烟 + 市场资质）**：[docs/APP-PACKAGING-CHECKLIST.md](docs/APP-PACKAGING-CHECKLIST.md)
 
-* **AI 交接文档（当前状态 + 未完成事项 + 关键凭据 + 注意事项）**：[docs/HANDOVER.md](docs/HANDOVER.md)
-
-* **部署规则 v3（必读，踩坑总结）**：[.trae/rules/deployment.md](.trae/rules/deployment.md)
-
 * 规格与任务（v2 品牌升级 + 生产级 SDK/功能全量）：
 
   * [.trae/specs/spec-20260828-baiye-rebrand-feature-boost/](.trae/specs/spec-20260828-baiye-rebrand-feature-boost/)
