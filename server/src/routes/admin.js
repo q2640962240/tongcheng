@@ -1195,6 +1195,39 @@ router.post('/config/modules/:name/test', async (req, res, next) => {
         if (!values?.name) return fail(res, '应用名称必填')
         return success(res, { success: true }, `配置通过：应用名称=${values.name}`)
       }
+      case 'im': {
+        // IM 连通性 = 3 层测试：必填项齐全 → userSig 能签发 → 腾讯云 IM 控制台 public endpoints 可达
+        const need = ['sdkAppId', 'secretKey']
+        const missing = need.filter(k => !String(values?.[k] || '').trim())
+        if (missing.length) return fail(res, `IM 必填项未填写：${missing.join('、')}（请先填 SDKAppID + 密钥 Key）`)
+        const { genUserSig } = require('../utils/im')
+        try {
+          const testUserId = 'admin-test-user'
+          const sig = genUserSig({
+            sdkAppId: Number(values.sdkAppId),
+            userId: testUserId,
+            secretKey: String(values.secretKey),
+            expireSeconds: Math.min(60, Number(values.expireSeconds) || 60)
+          })
+          if (!sig || sig.length < 40) return fail(res, `签发自检失败：userSig 长度异常 len=${sig ? sig.length : 0}`)
+          const probe1 = await realTest('sdk console', () => probeHttp('https://console.cloud.tencent.com/im', { method: 'GET', timeoutMs: 8000 }))
+          const probe2 = await realTest('tim api', () => probeHttp('https://yun.tim.qq.com/', { method: 'GET', timeoutMs: 8000 }))
+          const took = (probe1.ms | 0) + (probe2.ms | 0)
+          if (!probe1.ok || !probe2.ok) {
+            return fail(res, `参数齐全但 IM 公网端点不通：console=${probe1.ok?'OK':'FAIL('+probe1.info+')'} / tim.qq.com=${probe2.ok?'OK':'FAIL('+probe2.info+')'}，请检查服务器出方向 443。`)
+          }
+          return success(res, {
+            success: true,
+            sdkAppId: String(values.sdkAppId),
+            userSigSigned: true,
+            userSigLen: sig.length,
+            expireSeconds: Math.min(60, Number(values.expireSeconds) || 60),
+            tookMs: took
+          }, `IM 自检通过：SDKAppID=${values.sdkAppId}，userSig 签发成功（len=${sig.length}），腾讯云端点可达 ≈${took}ms`)
+        } catch (e) {
+          return fail(res, `IM 自检异常：${(e && e.message ? e.message : String(e)).slice(0, 160)}`)
+        }
+      }
       default:
         return fail(res, `不支持的模块: ${name}`, 400)
     }

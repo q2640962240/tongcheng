@@ -40,6 +40,59 @@ router.get('/config', async (req, res, next) => {
 })
 
 /**
+ * GET /api/im/diag  — 排障专用（无需登录）
+ * 返回 IM 模块在服务端的当前视图：配置是否齐全、userSig 签发算法、核心字段长度。
+ * 用法：浏览器直接访问 https://zyb001.cn/api/im/diag 检查运营配置。
+ */
+router.get('/diag', async (req, res, next) => {
+  try {
+    const { cfg, ready } = await loadImCfg()
+    const result = {
+      module: 'im',
+      enabled: !!cfg.enabled,
+      ready,
+      sdkAppId: cfg.sdkAppId ? String(cfg.sdkAppId) : '',
+      sdkAppIdFilled: !!(cfg.sdkAppId && String(cfg.sdkAppId).trim()),
+      secretKeyFilled: !!(cfg.secretKey && String(cfg.secretKey).trim()),
+      secretKeyLen: cfg.secretKey ? String(cfg.secretKey).length : 0,
+      expireSeconds: Number(cfg.expireSeconds) || 0,
+      adminUserId: cfg.adminUserId || '',
+      cloudSecretIdFilled: !!(cfg.cloudSecretId && String(cfg.cloudSecretId).trim()),
+      cloudSecretKeyFilled: !!(cfg.cloudSecretKey && String(cfg.cloudSecretKey).trim()),
+      signatureAlgorithm: 'HMAC-SHA256 / TLV1-base64url JWS 风格（utils/im genUserSig）',
+      hint: ready
+        ? 'IM 核心密钥齐全，前端登录后会调用 /api/im/login 取 userSig 并登录 TIM。'
+        : (
+          !cfg.enabled
+            ? '未在配置中心启用 IM 模块：请在后台 配置中心 → 即时通信 IM 打开「启用 IM」开关。'
+            : 'IM 必填未填：请在 https://zyb001.cn/admin/ 配置中心 → 即时通信 IM 填入 SDKAppID + 密钥 Key，保存后点「测试连通性」验证。'
+        )
+    }
+    // 如果填齐全，顺带做一次 1 分钟有效期的签发自检（不把 userSig 回传，只返回长度/成功与否）
+    if (ready) {
+      try {
+        const { genUserSig } = require('../utils/im')
+        const sig = genUserSig({
+          sdkAppId: Number(cfg.sdkAppId),
+          userId: 'diag-probe-user',
+          secretKey: String(cfg.secretKey),
+          expireSeconds: 60
+        })
+        result.selfSignOk = true
+        result.userSigLen = sig ? sig.length : 0
+      } catch (e) {
+        result.selfSignOk = false
+        result.selfSignError = (e && e.message ? e.message : String(e)).slice(0, 160)
+      }
+    } else {
+      result.selfSignOk = false
+      result.selfSignError = 'skipped (核心密钥未填)'
+    }
+    success(res, result)
+  } catch (e) { next(e) }
+})
+
+/**
  * POST /api/im/login (authRequired)
  * 登录用户向业务服务器换取用于登录腾讯云 TIM SDK 的 UserSig
  * 响应:

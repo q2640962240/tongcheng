@@ -14,10 +14,14 @@
       <text class="search-placeholder">搜索</text>
     </view>
 
-    <!-- 状态提示条（告诉用户当前通道：腾讯云 IM / 自建 WS） -->
+    <!-- 状态提示条（告诉用户当前通道：腾讯云 IM / 自建 WS），并且对常见原因给出可操作的提示 -->
     <view v-if="showBanner" class="channel-banner" :class="{ ok: useTIM, bad: !useTIM }">
       <text class="banner-icon">{{ useTIM ? '✅' : '⚠️' }}</text>
-      <text class="banner-text">{{ useTIM ? '已连接：腾讯云 IM（多端同步 + 离线消息）' : `自建聊天模式：${fallbackReason || '实时可达，但离线不同步'}` }}</text>
+      <view class="banner-text-wrap">
+        <text class="banner-text">{{ useTIM ? '已连接：腾讯云 IM（多端同步 + 离线消息）' : '自建聊天模式（实时可达，但无多端同步、无离线推送）' }}</text>
+        <text v-if="!useTIM && fallbackReason" class="banner-reason">原因：{{ friendlyReason(fallbackReason) }}</text>
+        <text v-if="!useTIM && needConfigAdmin" class="banner-action">👉 请管理员登录 https://zyb001.cn/admin/ → 配置中心 → 即时通信 IM：① 打开「启用 IM」② 填入 SDKAppID + 密钥 Key → 保存 → 点「测试连通性」</text>
+      </view>
     </view>
 
     <!-- 会话列表（TIM + 自建统一数据模型） -->
@@ -89,6 +93,20 @@ const list = ref([])             // 统一会话数组
 const useTIM = ref(false)        // 是否使用腾讯云 IM
 const fallbackReason = ref('')   // 未使用 IM 的原因
 const showBanner = ref(true)
+
+const needConfigAdmin = computed(() => {
+  const r = (fallbackReason.value || '').toLowerCase()
+  return /密钥|sdkappid|secretkey|ready|未配置|未启用|im\s*配置/.test(r)
+})
+function friendlyReason(r) {
+  if (!r) return ''
+  if (/密钥未填|ready.*false|配置不齐全|缺密钥/.test(r)) return '管理后台 IM 模块「SDKAppID 或 密钥 Key」为空'
+  if (/未在服务端启用|enabled.*false|未启用/.test(r)) return '管理后台 IM 模块「启用 IM」开关为关闭'
+  if (/未登录|没有 token|getToken/.test(r)) return '请先登录后再使用 IM 消息'
+  if (/userSig|签发|签名/.test(r)) return '服务端 userSig 签发失败，请检查密钥正确性'
+  if (/TIM SDK 未安装|node_modules/.test(r)) return '打包未包含 TIM SDK，请管理员重建 H5/客户端'
+  return String(r).slice(0, 60)
+}
 
 let offs = []
 
@@ -339,6 +357,17 @@ onBeforeUnmount(() => {
 .channel-banner.bad { background: #fff7e6; color: #ad6800; }
 .banner-icon { font-size: 28rpx; }
 .banner-text { flex: 1; line-height: 1.4; }
+.banner-text-wrap { flex: 1; display: flex; flex-direction: column; gap: 6rpx; }
+.banner-reason { font-size: 22rpx; opacity: 0.9; }
+.banner-action {
+  display: block;
+  font-size: 22rpx;
+  padding: 8rpx 12rpx;
+  margin-top: 4rpx;
+  background: rgba(173, 104, 0, 0.08);
+  border-radius: 8rpx;
+  line-height: 1.5;
+}
 
 /* ========== 会话列表 ========== */
 .list-scroll { flex: 1; background: #ffffff; }
