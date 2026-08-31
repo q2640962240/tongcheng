@@ -386,6 +386,32 @@ function displayAvatar(fallback, m) {
   return (m && m.avatar) || fallback || '/static/avatar-user.png'
 }
 
+/* ========== TIM 错误码 → 友好提示 ========== */
+const TIM_ERR_MAP = {
+  '20009': '对端用户不存在，请先让对方打开一次聊天',
+  '20011': '消息内容过长',
+  '21005': '账号未登录或登录已过期',
+  '21006': '账号不在线，消息将离线推送',
+  '21007': '账号在其他设备登录（被踢下线）',
+  '21008': '网络连接已断开',
+  '21014': '用户签名过期，请重新登录',
+  '20002': '参数错误',
+  '20003': '用户ID格式不合法',
+  '20004': '用户签名无效'
+}
+function _timErrTip(reason) {
+  if (!reason) return '发送失败'
+  const codeMatch = String(reason).match(/(\d{4,6})/)
+  if (codeMatch && TIM_ERR_MAP[codeMatch[1]]) return TIM_ERR_MAP[codeMatch[1]]
+  // 包含 "userSig" / "illegal" / "login" 关键词的通用判断
+  const lower = String(reason).toLowerCase()
+  if (lower.includes('illegal') || lower.includes('usersig')) return '登录凭证无效，请退出重新登录'
+  if (lower.includes('login')) return '未登录 IM，请退出后重新登录'
+  if (lower.includes('network')) return '网络连接异常，请检查网络'
+  if (lower.includes('offline')) return '对方离线，消息将在其上线后送达'
+  return `发送失败：${String(reason).slice(0, 40)}`
+}
+
 /* ========== 滚动到底部 ========== */
 function scrollToBottom(forceAnchor = false) {
   nextTick(() => {
@@ -540,7 +566,12 @@ const onSendText = async () => {
     if (r.ok) {
       messages.value.splice(idx, 1, { ...r.message, status: 'success' })
     } else {
-      messages.value[idx] = { ...temp, status: 'failed', _failReason: r.reason }
+      const failReason = r.reason || '发送失败'
+      messages.value[idx] = { ...temp, status: 'failed', _failReason: failReason }
+      // TIM 错误码友好提示
+      const tip = _timErrTip(failReason)
+      uni.showToast({ title: tip, icon: 'none', duration: 2500 })
+      console.warn('[chat] TIM send fail:', failReason)
     }
     scrollToBottom(true)
   } else {
