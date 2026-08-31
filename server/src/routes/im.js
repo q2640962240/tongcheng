@@ -59,7 +59,8 @@ router.get('/diag', async (req, res, next) => {
       adminUserId: cfg.adminUserId || '',
       cloudSecretIdFilled: !!(cfg.cloudSecretId && String(cfg.cloudSecretId).trim()),
       cloudSecretKeyFilled: !!(cfg.cloudSecretKey && String(cfg.cloudSecretKey).trim()),
-      signatureAlgorithm: '标准 JWT(HS256) 三片段：TLS.xxx 扁平 5 字段（新版 SDK 必需）+ Tencent 嵌套对象（老版兼容）+ nbf(now-60) 时钟容错',
+      signatureAlgorithm: '官方 TLSSigAPIv2(HMAC-SHA256 + zlib.deflate + 自定义 base64url 转义 *-_)：sigDoc{6 TLS.* 字段含 TLS.sig} → JSON → deflate → base64 escape',
+      payloadFormat: 'sigDoc = {TLS.ver:"2.0", TLS.identifier, TLS.sdkappid, TLS.time, TLS.expire, TLS.sig=HMAC("TLS.k:v\\n"拼接文本, secretKey)}',
       hint: ready
         ? 'IM 核心密钥齐全，前端登录后会调用 /api/im/login 取 userSig 并登录 TIM。'
         : (

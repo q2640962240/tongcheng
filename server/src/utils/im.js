@@ -1,103 +1,226 @@
 /**
  * 腾讯云即时通信 IM (TIM) 服务端工具集
  *
- * 功能：
- *   1. genUserSig(userId) — 使用标准 JWT (HS256) 签发 UserSig，兼容 TIM SDK v2.10+（新版 SDK 只认扁平 TLS.xxx 字段）
- *   2. base64url 工具
+ * 本文件严格按照腾讯云官方 tencentyun/tls-sig-api-v2-node（TLSSigAPIv2.js v2）
+ * 原版算法实现，零第三方依赖（只用 Node 内置 crypto + zlib）。
+ * 官方源码参考: https://github.com/tencentyun/tls-sig-api-v2-node/blob/master/TLSSigAPIv2.js
  *
- * 注意：
- *   - 本实现使用纯 Node.js crypto，不依赖任何第三方包，生产可直接使用。
- *   - 签发格式：标准 JWT = base64url(header) + "." + base64url(payload) + "." + base64url(HS256_signature)
- *   - 兼容策略：payload 同时写入【新版 SDK 必需的扁平 TLS.xxx 字段 5 项】+【老版嵌套 Tencent 对象】，向前向后双保险。
- *   - 新增 nbf: now-60，容忍服务器与腾讯云 UTC 时钟偏差 ≤60 秒（避免"signature not valid yet"类错误）。
+ * 一、算法核心差异（之前踩的坑）：
+ *   错误做法：标准 JWT 三片段 = base64url(header) + "." + base64url(payload) + "." + base64url(HMAC)
+ *   正确做法：sigDoc JSON → zlib.deflateSync 压缩 → base64 → 自定义字符转义 (TLSSigAPIv2 规范)
+ *     自定义转义表:  '+'  →  '*'
+ *                    '/'  →  '-'
+ *                    '='  →  '_'
+ *   其中 sigDoc 内含 6 个 TLS.* 字段：
+ *       'TLS.ver'        = "2.0"
+ *       'TLS.identifier' = userId (字符串)
+ *       'TLS.sdkappid'   = SDKAppID (数字)
+ *       'TLS.time'       = currTime (签发时 unix 秒戳)
+ *       'TLS.expire'     = expireSeconds (持续有效秒数, 最大 180 天=15552000)
+ *       'TLS.sig'        = _hmacsha256( "TLS.identifier:xxx\nTLS.sdkappid:xxx\nTLS.time:xxx\nTLS.expire:xxx\n" , secretKey )
+ *
+ * 二、HMAC 输入是 "key:value\n" 换行拼接的纯文本（不是 JSON），签名结果做 base64（不是 base64url）
+ * 三、最终 UserSig 长度一般为 200~400，首字符通常为字母或数字（base64 压缩后）。
  */
+
 const crypto = require('crypto')
+const zlib = require('zlib')
 
-function base64UrlEncode(buf) {
-  if (typeof buf === 'string') buf = Buffer.from(buf, 'utf8')
-  return buf
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '')
-}
-
-function base64UrlDecode(str) {
-  const pad = str.length % 4 === 0 ? '' : '='.repeat(4 - (str.length % 4))
-  const base64 = (str + pad).replace(/-/g, '+').replace(/_/g, '/')
-  return Buffer.from(base64, 'base64')
+// ============================================================
+// 工具函数：base64 + TLSSigAPIv2 自定义转义（严格与官方一致）
+// ============================================================
+function _newBuffer(fill, encoding) {
+  return Buffer.from ? Buffer.from(fill, encoding) : Buffer.alloc(fill, encoding)
 }
 
 /**
- * 签发 UserSig（标准 JWT HS256 — 新版腾讯云 IM SDK 唯一识别格式）
+ * 官方 TLSSigAPIv2 自定义 base64url 转义：
+ *   '+' → '*',   '/' → '-',   '=' → '_'
+ * 注意：这与标准 base64url (+→-, /→_, =移除) 完全不同！
+ */
+function _b64Escape(str) {
+  return str
+    .replace(/\+/g, '*')
+    .replace(/\//g, '-')
+    .replace(/=/g, '_')
+}
+function _b64Unescape(str) {
+  return (str + Array(5 - (str.length % 4 || 4)))
+    .replace(/_/g, '=')
+    .replace(/-/g, '/')
+    .replace(/\*/g, '+')
+}
+function _b64Encode(strOrBuf) {
+  const buf = typeof strOrBuf === 'string' ? _newBuffer(strOrBuf) : strOrBuf
+  return buf.toString('base64')
+}
+function _b64UrlEncode(strOrBuf) {
+  return _b64Escape(_b64Encode(strOrBuf))
+}
+
+// ============================================================
+// _hmacsha256：按照官方约定的 "key:value\n" 文本计算签名
+// ============================================================
+function _hmacsha256({ sdkAppId, identifier, currTime, expire, base64UserBuf, secretKey }) {
+  let content = `TLS.identifier:${identifier}\n`
+  content += `TLS.sdkappid:${sdkAppId}\n`
+  content += `TLS.time:${currTime}\n`
+  content += `TLS.expire:${expire}\n`
+  if (base64UserBuf != null) {
+    content += `TLS.userbuf:${base64UserBuf}\n`
+  }
+  const hmac = crypto.createHmac('sha256', String(secretKey))
+  hmac.update(content, 'utf8')
+  return hmac.digest('base64')
+}
+
+// ============================================================
+// 公开 API
+// ============================================================
+
+/**
+ * 签发 UserSig（严格按腾讯云 TLSSigAPIv2 官方算法）
  *
- * 新版 IM SDK（v2.10+ / tim-js-sdk / tim-wx-sdk）验证 UserSig 时 payload 必须包含
- * 扁平前缀字段（注意大小写严格匹配 SDK 内部解析）：
- *     TLS.ver        = "2.0"                    [必填，固定字符串]
- *     TLS.identifier = 业务 userId              [必填，字符串]
- *     TLS.sdkappid   = 数字 SDKAppID            [必填，Number]
- *     TLS.expire     = 持续有效秒数 expireSeconds [必填，Number，最大 180 天 = 15552000]
- *     TLS.time       = 签发时 unix 秒戳          [必填，当前时间]
- * 为了兼容可能仍在使用老版签名格式的边缘场景，同步写入嵌套 Tencent 对象作为双保险。
- *
- * @param {Object} options
- * @param {number|string} options.sdkAppId  IM 应用 SDKAppID
- * @param {string}        options.userId    用户 UserID（兼容 IM 限制：≤32 bytes，允许 a-z/A-Z/0-9/_/-）
- * @param {string}        options.secretKey IM 密钥 Key
- * @param {number}       [options.expireSeconds=15552000]  过期秒数，默认 180 天（IM 官方上限 180 天 = 15552000）
- * @returns {string} userSig  — 标准三片段 JWT：xxx.yyy.zzz
+ * @param {Object}  opts
+ * @param {number|string} opts.sdkAppId      IM 应用 SDKAppID
+ * @param {string}        opts.userId        用户 UserID (≤32 bytes, a-z/A-Z/0-9/_/-)
+ * @param {string}        opts.secretKey     IM 密钥 Key
+ * @param {number}       [opts.expireSeconds=15552000] 过期秒数，上限 180 天=15552000
+ * @returns {string} userSig — 官方格式：zlib-deflate(sigDocJSON) → base64 → 自定义转义
  */
 function genUserSig({ sdkAppId, userId, secretKey, expireSeconds = 15552000 }) {
   if (!sdkAppId || !userId || !secretKey) {
     throw new Error('[IM genUserSig] sdkAppId / userId / secretKey 必须全部提供')
   }
-  const rawExp = Number(expireSeconds) || 15552000
-  // 安全钳制：超过 IM 官方上限 180 天=15552000 秒时，自动截断到上限（SDK 会拒绝超上限签名）
-  const safeExp = Math.min(Math.max(60, rawExp), 15552000)
-  const now = Math.floor(Date.now() / 1000)
-  const expireAt = now + safeExp
-
-  // header: 标准 JWT + HS256（与腾讯云所有版本 SDK 一致）
-  const header = { alg: 'HS256', typ: 'JWT' }
-
-  // payload: 【TLS 扁平字段（新版 SDK 必需）】 + 【Tencent 嵌套对象（老版兼容）】 + 【JWT 标准字段】
-  const sdkIdNum = Number(sdkAppId)
+  const sdkAppIdNum = Number(sdkAppId)
   const uidStr = String(userId)
-  const payload = {
-    // ========== 新版 IM SDK (v2.10+) 必需要求：TLS.xxx 扁平字段 5 项（缺任一直接判 illegal）==========
+  // 注意：不能用 ||，否则 expireSeconds=0 会被当成"未传"而走默认值
+  const numExp = Number(expireSeconds)
+  const rawExp = (expireSeconds === undefined || expireSeconds === null || Number.isNaN(numExp))
+    ? 15552000
+    : numExp
+  const safeExp = Math.min(Math.max(60, rawExp), 15552000) // 钳制 60s ~ 180 天
+  const currTime = Math.floor(Date.now() / 1000)
+
+  // 1. 构造 sigDoc
+  const sigDoc = {
     'TLS.ver': '2.0',
     'TLS.identifier': uidStr,
-    'TLS.sdkappid': sdkIdNum,
-    'TLS.expire': safeExp,           // 注意：是"持续有效期秒数"，不是时间戳！
-    'TLS.time': now,
-
-    // ========== 老版 Tencent SDK (v1.x 格式) 嵌套对象 — 向前兼容 ==========
-    Tencent: {
-      Account: uidStr,
-      UserBuf: '',
-      SdkAppId: sdkIdNum,
-      Expire: safeExp,
-      Time: now
-    },
-
-    // ========== 标准 JWT 字段（可选但带上更稳，容忍 NTP 偏差）==========
-    iat: now,                        // JWT 签发时间
-    exp: expireAt,                   // JWT 到期时间戳（与 TLS.expire 语义不同：exp 是时间戳）
-    nbf: Math.max(0, now - 60),      // not-before：允许 60 秒服务器时钟偏差（与腾讯云 UTC 不同步的常见坑）
-    iss: 'baiye-server'              // 签发方标识（自定义，可忽略）
+    'TLS.sdkappid': sdkAppIdNum,
+    'TLS.time': currTime,
+    'TLS.expire': safeExp
   }
 
-  const headerB64 = base64UrlEncode(JSON.stringify(header))
-  const payloadB64 = base64UrlEncode(JSON.stringify(payload))
-  const signingInput = `${headerB64}.${payloadB64}`
-  const hmac = crypto.createHmac('sha256', String(secretKey))
-  hmac.update(signingInput)
-  const sigB64 = base64UrlEncode(hmac.digest())
-  return `${headerB64}.${payloadB64}.${sigB64}`
+  // 2. 计算 HMAC 签名（签名对象是 key:value\n 文本，不是 JSON）
+  const sig = _hmacsha256({
+    sdkAppId: sdkAppIdNum,
+    identifier: uidStr,
+    currTime,
+    expire: safeExp,
+    base64UserBuf: null,
+    secretKey
+  })
+  sigDoc['TLS.sig'] = sig
+
+  // 3. JSON 序列化 → zlib deflate 压缩 → base64 → 官方自定义转义
+  const jsonBuf = _newBuffer(JSON.stringify(sigDoc))
+  const compressed = zlib.deflateSync(jsonBuf)
+  const compressedB64 = _b64Encode(compressed)
+  return _b64Escape(compressedB64)
+}
+
+/**
+ * 签发 PrivateMapKey（TRTC 进房权限控制票据，可选功能，按需调用）
+ * 当开启「启动权限密钥」开关后才需要，普通 IM 聊天无需使用。
+ */
+function genPrivateMapKey({ sdkAppId, userId, secretKey, expireSeconds, roomId, privilegeMap }) {
+  const sdkAppIdNum = Number(sdkAppId)
+  const uidStr = String(userId)
+  const numExp = Number(expireSeconds)
+  const rawExp = (expireSeconds === undefined || expireSeconds === null || Number.isNaN(numExp))
+    ? 15552000
+    : numExp
+  const safeExp = Math.min(Math.max(60, rawExp), 15552000)
+  const currTime = Math.floor(Date.now() / 1000)
+  const roomNum = Number(roomId) || 0
+  const privNum = Number(privilegeMap) || 255
+  const accountType = 0
+
+  const uidLen = uidStr.length
+  const totalLen = 1 + 2 + uidLen + 20 // cVer(1) + wAccountLen(2) + buffAccount(N) + dwSdkAppid(4) + dwAuthId(4) + dwExpTime(4) + dwPrivilegeMap(4) + dwAccountType(4)
+  const userBuf = Buffer.alloc(totalLen)
+  let off = 0
+  userBuf[off++] = 0 // cVer: 0 = 无字符串房间号
+  userBuf[off++] = (uidLen & 0xFF00) >> 8
+  userBuf[off++] = uidLen & 0x00FF
+  for (let i = 0; i < uidLen; i++) userBuf[off++] = uidStr.charCodeAt(i) & 0xFF
+  // dwSdkAppid
+  userBuf[off++] = (sdkAppIdNum & 0xFF000000) >> 24
+  userBuf[off++] = (sdkAppIdNum & 0x00FF0000) >> 16
+  userBuf[off++] = (sdkAppIdNum & 0x0000FF00) >> 8
+  userBuf[off++] = sdkAppIdNum & 0x000000FF
+  // dwAuthId (roomId)
+  userBuf[off++] = (roomNum & 0xFF000000) >> 24
+  userBuf[off++] = (roomNum & 0x00FF0000) >> 16
+  userBuf[off++] = (roomNum & 0x0000FF00) >> 8
+  userBuf[off++] = roomNum & 0x000000FF
+  // dwExpTime: now + expire
+  const expAbs = currTime + safeExp
+  userBuf[off++] = (expAbs & 0xFF000000) >> 24
+  userBuf[off++] = (expAbs & 0x00FF0000) >> 16
+  userBuf[off++] = (expAbs & 0x0000FF00) >> 8
+  userBuf[off++] = expAbs & 0x000000FF
+  // dwPrivilegeMap
+  userBuf[off++] = (privNum & 0xFF000000) >> 24
+  userBuf[off++] = (privNum & 0x00FF0000) >> 16
+  userBuf[off++] = (privNum & 0x0000FF00) >> 8
+  userBuf[off++] = privNum & 0x000000FF
+  // dwAccountType
+  userBuf[off++] = (accountType & 0xFF000000) >> 24
+  userBuf[off++] = (accountType & 0x00FF0000) >> 16
+  userBuf[off++] = (accountType & 0x0000FF00) >> 8
+  userBuf[off++] = accountType & 0x000000FF
+
+  const sigDoc = {
+    'TLS.ver': '2.0',
+    'TLS.identifier': uidStr,
+    'TLS.sdkappid': sdkAppIdNum,
+    'TLS.time': currTime,
+    'TLS.expire': safeExp
+  }
+  const base64UserBuf = _b64Encode(userBuf)
+  sigDoc['TLS.userbuf'] = base64UserBuf
+  sigDoc['TLS.sig'] = _hmacsha256({
+    sdkAppId: sdkAppIdNum,
+    identifier: uidStr,
+    currTime,
+    expire: safeExp,
+    base64UserBuf,
+    secretKey
+  })
+  return _b64Escape(_b64Encode(zlib.deflateSync(_newBuffer(JSON.stringify(sigDoc)))))
+}
+
+// ============================================================
+// 自检工具：解密 userSig 返回 payload（只用于服务端排障，SDK 不需要）
+// ============================================================
+function inspectUserSig(userSig) {
+  try {
+    const compressedB64 = _b64Unescape(String(userSig || ''))
+    const compressed = _newBuffer(compressedB64, 'base64')
+    const jsonBuf = zlib.inflateSync(compressed)
+    return JSON.parse(jsonBuf.toString('utf8'))
+  } catch (e) {
+    return { error: (e && e.message) || String(e) }
+  }
 }
 
 module.exports = {
   genUserSig,
-  base64UrlEncode,
-  base64UrlDecode
+  genPrivateMapKey,
+  inspectUserSig,
+  // 工具函数暴露方便测试
+  _b64Escape,
+  _b64Unescape,
+  _hmacsha256
 }
