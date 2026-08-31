@@ -1,4 +1,4 @@
-FROM hub.rat.dev/library/node:20-slim AS builder
+FROM node:20-slim AS builder
 ENV TZ=Asia/Shanghai NODE_OPTIONS=--max-old-space-size=3072 npm_config_registry=https://registry.npmmirror.com
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -6,7 +6,7 @@ RUN npm install --include=dev --no-audit --no-fund --legacy-peer-deps && echo "-
 COPY . .
 RUN echo "--- required files check ---" && ls src/pages.json src/manifest.json vite.config.js index.html && echo "--- uni build:h5 ---" && npm run build:h5 && echo "--- done ---" && ls -la dist/build/h5/ | head -20
 
-FROM hub.rat.dev/library/nginx:1.27-alpine
+FROM nginx:1.27-alpine
 ENV TZ=Asia/Shanghai
 RUN set -eu; mkdir -p /etc/nginx /usr/share/nginx/html /var/cache/nginx /var/run /var/log/nginx
 COPY --from=builder /app/dist/build/h5 /usr/share/nginx/html

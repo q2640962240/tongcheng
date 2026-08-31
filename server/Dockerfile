@@ -1,10 +1,10 @@
-FROM hub.rat.dev/library/node:20-slim AS builder
+FROM node:20-slim AS builder
 ENV TZ=Asia/Shanghai npm_config_registry=https://registry.npmmirror.com
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm install --omit=dev --no-audit --no-fund --legacy-peer-deps
 
-FROM hub.rat.dev/library/node:20-slim
+FROM node:20-slim
 ENV TZ=Asia/Shanghai NODE_ENV=production PORT=3000 HOST=0.0.0.0
 WORKDIR /app
 # 阿里云 ECS 出口阻断 deb.debian.org:80，改用 HTTP 阿里云镜像 + 旧式 sources.list
