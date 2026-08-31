@@ -221,6 +221,7 @@ module.exports = {
   set,
   setModule,
   clearCache,
+  coerceValue,
   ENV_DEFAULTS,
   // 对外暴露，方便管理后台的重置接口按模块失效缓存
   _cache: cache
