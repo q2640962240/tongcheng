@@ -312,22 +312,54 @@ class TIMManager {
     catch (e) { return { ok: false, reason: e && e.message } }
   }
 
-  /** 发送文本消息 */
-  async sendText(toUserId, text) {
+  /**
+   * 为指定 userId 自动创建腾讯云 IM 账号
+   * 解决 AI 用户/新用户从未登录导致的 20009 用户不存在问题
+   * 用临时 TIM 实例登录对端账号触发自动创建，不影响当前登录状态
+   */
+  async ensurePeer(userId) {
+    const uid = String(userId)
+    if (!uid) return { ok: false, reason: '无效 userId' }
+    if (this._peerCache && this._peerCache.has(uid)) return { ok: true, cached: true }
+
+    try {
+      const r = await request({ url: '/im/login', method: 'POST', data: { userId: uid } })
+      if (!r || !r.data || !r.data.userSig) return { ok: false, reason: '获取对端 userSig 失败' }
+
+      const tmpTim = this.TIM.create({ SDKAppID: Number(r.data.sdkAppId) || this.sdkAppId, oversea: false })
+      await tmpTim.login({ userID: uid, userSig: r.data.userSig })
+      await tmpTim.logout()
+      tmpTim.destroy && tmpTim.destroy()
+
+      if (!this._peerCache) this._peerCache = new Set()
+      this._peerCache.add(uid)
+      return { ok: true }
+    } catch (e) {
+      console.warn('[im] ensurePeer fail', uid, e)
+      return { ok: false, reason: (e && e.message) || 'ensurePeer 失败' }
+    }
+  }
+
+  /** 发送文本消息（内置 20009 自动重试） */
+  async sendText(toUserId, text, _retried) {
     const r = await this.ensureReady()
     if (!r.ok) return r
     try {
       const convID = `C2C${toUserId}`
-      const msg = this.tim.createTextMessage({ to: toUserId, conversationType: 'C2C', payload: { text: String(text) } })
+      const msg = this.tim.createTextMessage({ to: String(toUserId), conversationType: 'C2C', payload: { text: String(text) } })
       const res = await this.tim.sendMessage(msg)
       const sent = this._normalizeMsg(res.data && res.data.message ? res.data.message : msg)
-      // 写入 cache
       const arr = this.messageCache.get(convID) || []
       arr.push(sent)
       this.messageCache.set(convID, arr)
       return { ok: true, message: sent }
     } catch (e) {
-      return { ok: false, reason: e && e.message }
+      const code = (e && e.code) || 0
+      if (code === 20009 && !_retried) {
+        const br = await this.ensurePeer(toUserId)
+        if (br.ok) return this.sendText(toUserId, text, true)
+      }
+      return { ok: false, reason: (e && e.message) || String(e), code }
     }
   }
 
