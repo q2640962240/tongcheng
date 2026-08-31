@@ -200,6 +200,15 @@ jobs:
               echo "same commit or first deploy -> full build (OLD_SHA=$OLD_SHA NEW_SHA=$NEW_SHA)" | tee -a "$LOG"
             fi
 
+            # 兜底：diff 为空（空 commit / amend / rebase force push）→ 全量 build
+            if [ "$CHANGED_SERVER" = "false" ] && [ "$CHANGED_ADMIN" = "false" ] && [ "$CHANGED_H5" = "false" ] && [ "$CHANGED_INFRA" = "false" ]; then
+              echo "diff empty (empty commit / force push) -> full build" | tee -a "$LOG"
+              CHANGED_SERVER=true
+              CHANGED_ADMIN=true
+              CHANGED_H5=true
+              CHANGED_INFRA=true
+            fi
+
             FORCE="${{ github.event.inputs.FORCE_REBUILD }}"
             [ "$FORCE" = "true" ] && { CHANGED_SERVER=true; CHANGED_ADMIN=true; CHANGED_H5=true; CHANGED_INFRA=true; echo "FORCE_REBUILD=true -> all dirty"; }
 
