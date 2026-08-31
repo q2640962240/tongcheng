@@ -12,8 +12,7 @@ function isBcryptHash(v) {
 const Admin = sequelize.define('Admin', {
   username: {
     type: DataTypes.STRING(50),
-    allowNull: false,
-    unique: true
+    allowNull: false
   },
   password: {
     type: DataTypes.STRING(200),
@@ -40,7 +39,7 @@ const Admin = sequelize.define('Admin', {
 }, {
   tableName: 'admins',
   indexes: [
-
+    { unique: true, fields: ['username'], name: 'uniq_admin_username' }
   ]
 })
 

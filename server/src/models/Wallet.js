@@ -4,8 +4,7 @@ const { DataTypes } = require('sequelize')
 const Wallet = sequelize.define('Wallet', {
   userId: {
     type: DataTypes.BIGINT.UNSIGNED,
-    allowNull: false,
-    unique: true
+    allowNull: false
   },
   diamond: {
     type: DataTypes.BIGINT,
@@ -29,7 +28,9 @@ const Wallet = sequelize.define('Wallet', {
   }
 }, {
   tableName: 'wallets',
-  indexes: []
+  indexes: [
+    { unique: true, fields: ['user_id'], name: 'uniq_wallet_user_id' }
+  ]
 })
 
 module.exports = Wallet

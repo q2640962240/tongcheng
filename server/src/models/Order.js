@@ -4,8 +4,7 @@ const { DataTypes } = require('sequelize')
 const Order = sequelize.define('Order', {
   orderNo: {
     type: DataTypes.STRING(32),
-    allowNull: true,
-    unique: true
+    allowNull: true
   },
   userId: {
     type: DataTypes.BIGINT.UNSIGNED,
@@ -78,6 +77,7 @@ const Order = sequelize.define('Order', {
 }, {
   tableName: 'orders',
   indexes: [
+    { unique: true, fields: ['order_no'], name: 'uniq_order_no' },
     { fields: ['user_id'] },
     { fields: ['provider_id'] },
     { fields: ['service_id'] },

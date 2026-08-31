@@ -4,8 +4,7 @@ const { DataTypes } = require('sequelize')
 const User = sequelize.define('User', {
   phone: {
     type: DataTypes.STRING(20),
-    allowNull: false,
-    unique: true
+    allowNull: false
   },
   passwordHash: {
     type: DataTypes.STRING(255),
@@ -66,8 +65,7 @@ const User = sequelize.define('User', {
   },
   inviteCode: {
     type: DataTypes.STRING(20),
-    allowNull: true,
-    unique: true
+    allowNull: true
   },
   inviterId: {
     type: DataTypes.BIGINT.UNSIGNED,
@@ -89,6 +87,8 @@ const User = sequelize.define('User', {
 }, {
   tableName: 'users',
   indexes: [
+    { unique: true, fields: ['phone'], name: 'uniq_user_phone' },
+    { unique: true, fields: ['invite_code'], name: 'uniq_user_invite_code' },
     { fields: ['city'] },
     { fields: ['status'] },
     { fields: ['is_elite'] },

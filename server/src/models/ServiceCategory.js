@@ -12,7 +12,6 @@ const ServiceCategory = sequelize.define('ServiceCategory', {
   key: {
     type: DataTypes.STRING(64),
     allowNull: false,
-    unique: true,
     comment: '分类英文/短横线唯一标识'
   },
   name: {
@@ -84,7 +83,7 @@ const ServiceCategory = sequelize.define('ServiceCategory', {
     { fields: ['parent_key'] },
     { fields: ['visible'] },
     { fields: ['sort'] },
-    { fields: ['key'], unique: true }
+    { fields: ['key'], unique: true, name: 'uniq_service_category_key' }
   ]
 })
 

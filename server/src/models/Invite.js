@@ -8,8 +8,7 @@ const Invite = sequelize.define('Invite', {
   },
   inviteeId: {
     type: DataTypes.BIGINT.UNSIGNED,
-    allowNull: true,
-    unique: true
+    allowNull: true
   },
   inviteeGender: {
     type: DataTypes.TINYINT,
@@ -26,6 +25,7 @@ const Invite = sequelize.define('Invite', {
 }, {
   tableName: 'invites',
   indexes: [
+    { unique: true, fields: ['invitee_id'], name: 'uniq_invite_invitee_id' },
     { fields: ['inviter_id'] },
     { fields: ['status'] }
   ]

@@ -17,8 +17,7 @@ const EliteOrder = sequelize.define('EliteOrder', {
   },
   outTradeNo: {
     type: DataTypes.STRING(64),
-    allowNull: true,
-    unique: true
+    allowNull: true
   },
   transactionId: {
     type: DataTypes.STRING(128),
@@ -48,6 +47,7 @@ const EliteOrder = sequelize.define('EliteOrder', {
 }, {
   tableName: 'elite_orders',
   indexes: [
+    { unique: true, fields: ['out_trade_no'], name: 'uniq_elite_order_out_trade_no' },
     { fields: ['user_id'] },
     { fields: ['status'] },
     { fields: ['paid_at'] }
