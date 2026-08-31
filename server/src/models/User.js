@@ -16,7 +16,7 @@ const User = sequelize.define('User', {
     defaultValue: '用户'
   },
   avatar: {
-    type: DataTypes.STRING(500),
+    type: DataTypes.TEXT,
     allowNull: true
   },
   gender: {
