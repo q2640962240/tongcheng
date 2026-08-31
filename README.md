@@ -660,3 +660,5 @@ node scripts/rebrand-baiye.js --check
 node scripts/rebrand-baiye.js          # 实际执行
 ```
 
+
+<!-- DEPLOY RECOVERY 2026-08-31 13:34 -->
