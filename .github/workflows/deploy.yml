@@ -105,10 +105,10 @@ jobs:
             fi
 
             # --- git fetch（容错：网络抖动重试 3 次）---
+            # 阿里云 ECS 无法直连 GitHub，使用 ghfast.top 镜像代理
+            MIRROR_URL="https://ghfast.top/https://github.com/q2640962240/tongcheng.git"
             OU=$(git remote get-url origin 2>/dev/null || true)
-            [ "$OU" = "git@github.com:q2640962240/tongcheng.git" ] || git remote set-url origin git@github.com:q2640962240/tongcheng.git
-            mkdir -p ~/.ssh
-            grep -q github.com ~/.ssh/known_hosts 2>/dev/null || ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null || true
+            [ "$OU" = "$MIRROR_URL" ] || git remote set-url origin "$MIRROR_URL"
             OLD_SHA=$(git rev-parse HEAD 2>/dev/null || echo 0000000)
 
             FETCH_OK=0

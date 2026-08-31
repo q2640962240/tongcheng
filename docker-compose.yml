@@ -2,7 +2,7 @@ name: baiye
 
 services:
   mysql:
-    image: mysql:8.0
+    image: docker.1ms.run/library/mysql:8.0
     container_name: baiye-mysql
     restart: always
     environment:
@@ -22,7 +22,7 @@ services:
     networks: [back]
 
   redis:
-    image: redis:7-alpine
+    image: docker.1ms.run/library/redis:7-alpine
     container_name: baiye-redis
     restart: always
     environment:
@@ -115,7 +115,7 @@ services:
     networks: [front]
 
   gateway:
-    image: nginx:1.27-alpine
+    image: docker.1ms.run/library/nginx:1.27-alpine
     container_name: baiye-gateway
     restart: always
     depends_on:
