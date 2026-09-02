@@ -20,17 +20,8 @@ export default defineConfig({
     }
   },
   build: {
-    cssCodeSplit: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          // vue 由 uni-app 运行时外部提供，不可放入 manualChunks
-          // chat-uikit-uniapp 缺少标准 package 入口字段，HBuilderX commonjs resolver 无法解析
-          'vue-vendor': ['pinia', 'vue-i18n'],
-          'tUIKit': ['@tencentcloud/chat']
-        }
-      }
-    },
+    // manualChunks 会触发代码分割，与 HBuilderX App 打包的 IIFE 格式不兼容
+    // H5 部署由 Docker 构建，无需额外分包配置
     minify: 'esbuild'
   },
   esbuild: {
