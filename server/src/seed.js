@@ -456,6 +456,36 @@ async function ensureBanners({ transaction }) {
   return created
 }
 
+/**
+ * 批量把业务用户（含 AI 虚拟大神）导入腾讯云 IM（account_import）。
+ * 幂等：已存在的 IM 账号重复导入只会更新昵称/头像。
+ * 仅在「配置中心 → 即时通信 IM」填了 cloudSecretId/cloudSecretKey 时才真实调用，否则跳过。
+ */
+async function importAllUsersToIM() {
+  try {
+    const { importIMAccount } = require('./utils/im')
+    const { getModuleConfig } = require('./utils/config')
+    const cfg = await getModuleConfig('im')
+    if (!cfg || !cfg.enabled || !cfg.cloudSecretId || !cfg.cloudSecretKey) {
+      console.log('  💬  腾讯云 IM 账号导入：跳过（未启用，或未填 cloudSecretId/cloudSecretKey）')
+      return
+    }
+    const users = await User.findAll({ where: { status: 1 } })
+    let imported = 0
+    let failed = 0
+    for (const u of users) {
+      const r = await importIMAccount({ cfg, userId: u.id, nick: u.nickname || '', faceUrl: u.avatar || '' })
+      if (r && r.action === 'import' && !(r.result && r.result.error)) imported++
+      else failed++
+      // 轻微限流，避免请求过快触发 IM 频控
+      await new Promise((res) => setTimeout(res, 120))
+    }
+    console.log(`  💬  腾讯云 IM 账号导入：共 ${users.length} 位，成功 ${imported} 位，失败/跳过 ${failed} 位`)
+  } catch (e) {
+    console.warn('  💬  腾讯云 IM 账号导入失败（不阻塞启动）：', (e && e.message) || String(e))
+  }
+}
+
 async function seed() {
   console.log('')
   console.log('🌱 白夜后端 · 生产级数据初始化')
@@ -493,6 +523,8 @@ async function seed() {
     await ensureAiPosts({ transaction: undefined })
     await ensureBanners({ transaction: undefined })
   }
+  // 事务/写入全部完成后再做 IM 账号导入（需读最新数据，且不纳入事务；失败不阻塞启动）
+  await importAllUsersToIM()
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   console.log('🎉 初始化完成!')
   console.log('📌 下一步: 登录管理后台 → 配置中心 → 填写 短信/支付/OSS/推送 等真实参数')

@@ -89,7 +89,7 @@
           <view class="m-icon-wrap aurora"><text class="m-icon">✏️</text></view>
           <text class="m-label">发布服务</text>
         </view>
-        <view class="module-item" @tap="onNavWithLogin('/pages/chat-list/chat-list')">
+        <view class="module-item" @tap="onGoMessage">
           <view class="m-icon-wrap"><text class="m-icon">💬</text></view>
           <text class="m-label">消息中心</text>
         </view>
@@ -285,6 +285,11 @@ const onCustomerService = async () => {
   }
 }
 
+const onGoMessage = () => {
+  if (!requireLogin()) return
+  uni.switchTab({ url: '/TUIKit/components/TUIConversation/index' })
+}
+
 const onMyServices = () => onNavWithLogin('/pages/my-services/my-services')
 const onTransactions = () => onNavWithLogin('/pages/transactions/transactions')
 
@@ -316,8 +321,7 @@ onShow(() => {
 .header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 $by-page-pad-x; height: $by-topbar-h; position: sticky; top: 0;
-  background: color.adjust($by-bg, $alpha: 0.96);
-  backdrop-filter: blur(20rpx);
+  background: $by-bg;
   border-bottom: 1rpx solid $by-border; z-index: 10;
 }
 .title { font-size: 36rpx; font-weight: 700; color: $by-text-1; }

@@ -65,7 +65,8 @@ export const orderApi = {
   confirm: (id) => put(`/orders/${id}/confirm`),
   review: (id, data) => post(`/orders/${id}/review`, data),
   getReview: (id) => get(`/orders/${id}/review`),
-  serviceReviews: (id, params) => get(`/orders/${id}/reviews`, params)
+  serviceReviews: (id, params) => get(`/orders/${id}/reviews`, params),
+  refund: (id, reason) => post('/orders/' + id + '/refund', { reason })
 }
 
 // ==================== 聊天 ====================
@@ -186,4 +187,6 @@ export default {
   group: groupApi,
   banner: bannerApi,
   elite: eliteApi,
+  region: regionApi,
+  location: locationApi,
 }

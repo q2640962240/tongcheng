@@ -37,8 +37,8 @@ router.post('/sms-dnd', async (req, res, next) => {
     const user = await User.findByPk(req.userId)
     if (!user) return fail(res, '用户不存在', 404)
     // 存到用户扩展字段（简单实现，可改为独立 Settings 表）
-    const meta = user.meta || {}
-    meta.smsDnd = !!enabled
+    // 注意：必须传新对象，原地修改同一引用 Sequelize 检测不到变更，meta 已存在时写入会丢失
+    const meta = { ...(user.meta || {}), smsDnd: !!enabled }
     await user.update({ meta })
     success(res, { enabled: meta.smsDnd }, '设置已更新')
   } catch (err) { next(err) }
@@ -76,9 +76,10 @@ router.post('/notify', async (req, res, next) => {
     if (!['post', 'group'].includes(type)) return fail(res, '通知类型不合法')
     const user = await User.findByPk(req.userId)
     if (!user) return fail(res, '用户不存在', 404)
-    const meta = user.meta || {}
-    meta.notification = (meta.notification && typeof meta.notification === 'object') ? meta.notification : {}
-    meta.notification[type] = !!enabled
+    const oldMeta = user.meta || {}
+    const notification = { ...((oldMeta.notification && typeof oldMeta.notification === 'object') ? oldMeta.notification : {}) }
+    notification[type] = !!enabled
+    const meta = { ...oldMeta, notification }
     await user.update({ meta })
     success(res, { type, enabled: !!enabled, notification: meta.notification }, '设置已更新')
   } catch (err) { next(err) }
@@ -99,8 +100,7 @@ router.post('/cancel-account', async (req, res, next) => {
     }
 
     // 软删除：标记为注销状态
-    const meta = user.meta || {}
-    meta.cancelRequestedAt = new Date().toISOString()
+    const meta = { ...(user.meta || {}), cancelRequestedAt: new Date().toISOString() }
     await user.update({
       status: 0,
       meta

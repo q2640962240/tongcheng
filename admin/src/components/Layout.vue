@@ -159,6 +159,7 @@ const isCollapse = ref(false)
 const flatMenuItems = [
   { path: '/dashboard', title: '仪表盘', icon: 'Odometer' },
   { path: '/users', title: '用户管理', icon: 'User' },
+  { path: '/chat-records', title: '聊天记录', icon: 'ChatLineRound' },
   { path: '/orders', title: '订单管理', icon: 'List' },
   { path: '/invite', title: '邀请管理', icon: 'Share' },
   { path: '/content', title: '内容管理', icon: 'Document' },

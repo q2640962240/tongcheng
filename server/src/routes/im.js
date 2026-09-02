@@ -10,7 +10,7 @@ const router = require('express').Router()
 const { success, fail } = require('../utils/response')
 const { auth } = require('../middleware/auth')
 const { getModuleConfig } = require('../utils/config')
-const { genUserSig } = require('../utils/im')
+const { genUserSig, importIMAccount, importIMAccountV4 } = require('../utils/im')
 const { User } = require('../models')
 
 /**
@@ -111,6 +111,18 @@ router.post('/login', auth, async (req, res, next) => {
     const userId = String(req.user && req.user.id ? req.user.id : (req.userId || ''))
     if (!userId) return fail(res, '未登录', 401)
 
+    // 幂等同步本人 TIM 账号（昵称/头像），不阻塞 userSig 下发。
+    // account_import 对已存在账号直接更新资料，解决会话头只显示 userID 的问题。
+    User.findByPk(userId).then((user) => {
+      if (!user) return
+      importIMAccountV4({
+        cfg,
+        userId,
+        nick: user.nickname || '',
+        faceUrl: user.avatar || ''
+      }).catch(() => {})
+    }).catch(() => {})
+
     const expireSeconds = Number(cfg.expireSeconds) || 15552000
     const sdkAppId = Number(cfg.sdkAppId)
     const userSig = genUserSig({
@@ -146,6 +158,10 @@ router.post('/account-import', auth, async (req, res, next) => {
     const user = await User.findByPk(req.user?.id || req.userId)
     if (!user) return fail(res, '用户不存在', 404)
 
+    // TIM 头像字段限 500 字节且不支持 data: 内联图，超限时置空避免 40601
+    const rawFace = String(user.avatar || '')
+    const faceUrl = (!rawFace || /^data:/i.test(rawFace) || Buffer.byteLength(rawFace, 'utf8') > 500) ? '' : rawFace
+
     if (!cfg.cloudSecretId || !cfg.cloudSecretKey) {
       // 未配置云 API 密钥：跳过真实 REST，但仍然返回业务层面成功
       return success(res, {
@@ -153,7 +169,7 @@ router.post('/account-import', auth, async (req, res, next) => {
         reason: 'IM cloudSecretId/cloudSecretKey 未配置，跳过账号导入；首次 TIM.login 会自动导入非黑名单账号。',
         userId: String(user.id),
         nick: user.nickname || '',
-        faceUrl: user.avatar || ''
+        faceUrl
       })
     }
 
@@ -172,7 +188,7 @@ router.post('/account-import', auth, async (req, res, next) => {
         Content: JSON.stringify({
           UserID: String(user.id),
           Nick: user.nickname || '',
-          FaceUrl: user.avatar || ''
+          FaceUrl: faceUrl
         })
       }
     })
@@ -328,5 +344,35 @@ async function callCloudApi({ cfg, service, version, action, region, payload }) 
     req.end()
   })
 }
+
+/**
+ * POST /api/im/batch-import (管理员)
+ * 批量把业务用户（含 AI 虚拟大神）导入腾讯云 IM，管理员手动触发。
+ * 鉴权：x-admin-token 头部（admin_ 前缀，与 admin 后台一致）。
+ */
+router.post('/batch-import', async (req, res, next) => {
+  try {
+    const token = req.headers['x-admin-token']
+    if (!token || !String(token).startsWith('admin_')) {
+      return fail(res, '管理员令牌无效', 401)
+    }
+    const { cfg } = await loadImCfg()
+    if (!cfg.enabled) return fail(res, 'IM 未启用', 503)
+    if (!cfg.cloudSecretId || !cfg.cloudSecretKey) {
+      return fail(res, 'IM cloudSecretId/cloudSecretKey 未配置，无法账号导入（请在配置中心填写）', 503)
+    }
+    const users = await User.findAll({ where: { status: 1 } })
+    let imported = 0
+    const errors = []
+    for (const u of users) {
+      const r = await importIMAccount({ cfg, userId: u.id, nick: u.nickname || '', faceUrl: u.avatar || '' })
+      if (r && r.action === 'import' && !(r.result && r.result.error)) imported++
+      else if (r && r.result && r.result.error) errors.push({ userId: u.id, error: r.result.error })
+      // 轻微限流，避免请求过快触发 IM 频控
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+    success(res, { total: users.length, imported, failed: errors.length, errors: errors.slice(0, 20) }, `批量导入完成：成功 ${imported}/${users.length}`)
+  } catch (e) { next(e) }
+})
 
 module.exports = router

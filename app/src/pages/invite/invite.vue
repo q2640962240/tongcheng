@@ -155,7 +155,7 @@ onShow(loadData)
 .header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 24rpx; height: 88rpx; position: sticky; top: 0;
-  background: rgba(255,255,255,0.95); backdrop-filter: blur(20rpx);
+  background: #fffbeb;
   border-bottom: 2rpx solid #e5e5e5; z-index: 10;
 }
 .back { font-size: 56rpx; line-height: 1; }
@@ -207,7 +207,7 @@ onShow(loadData)
 .footer-cta {
   position: fixed; bottom: 0; left: 0; right: 0; padding: 24rpx 32rpx;
   padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-  background: rgba(255,255,255,0.95); backdrop-filter: blur(20rpx);
+  background: rgba(255,255,255,0.95);
   border-top: 2rpx solid #e5e5e5;
 }
 .footer-btn {

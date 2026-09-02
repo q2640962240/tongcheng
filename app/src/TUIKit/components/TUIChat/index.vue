@@ -102,11 +102,55 @@ import TUIChatConfig from './config';
 import { onLoad, onUnload } from '@dcloudio/uni-app';
 import { initChat, logout } from './entry-chat-only.ts';
 
+/**
+ * H5 高度链修复：
+ * uni-app H5 中 uni-page-body 的高度是 auto（由内容撑开），而官方样式
+ * `.chat { height: 100% }` 需要父级为确定高度才能解析，否则整页塌缩成内容高度、
+ * 消息列表被压扁（视觉上即"组件扭曲"）。这里显式给整条父链设置 height:100%。
+ */
+const H5_LAYOUT_SELECTORS = ['uni-app', 'uni-page', 'uni-page-wrapper', 'uni-page-body'];
+function applyH5LayoutFix() {
+  // #ifdef H5
+  try {
+    document.documentElement.style.height = '100%';
+    document.body.style.height = '100%';
+    H5_LAYOUT_SELECTORS.forEach((sel) => {
+      const el = document.querySelector(sel);
+      if (el) {
+        el.style.height = '100%';
+        el.style.minHeight = '0';
+      }
+    });
+    const pageBody = document.querySelector('uni-page-body');
+    if (pageBody) pageBody.style.background = '#ffffff';
+  } catch (_) { /* ignore */ }
+  // #endif
+}
+function resetH5LayoutFix() {
+  // #ifdef H5
+  try {
+    document.documentElement.style.height = '';
+    document.body.style.height = '';
+    H5_LAYOUT_SELECTORS.forEach((sel) => {
+      const el = document.querySelector(sel);
+      if (el) {
+        el.style.height = '';
+        el.style.minHeight = '';
+      }
+    });
+    const pageBody = document.querySelector('uni-page-body');
+    if (pageBody) pageBody.style.background = '';
+  } catch (_) { /* ignore */ }
+  // #endif
+}
+
 onLoad((options) => {
+  applyH5LayoutFix();
   initChat(options);
 });
 
 onUnload(() => {
+  resetH5LayoutFix();
   // Whether logout is decided by yourself  when the page is unloaded. The default is false.
   logout(false).then(() => {
     // Handle success result from promise.then when you set true.

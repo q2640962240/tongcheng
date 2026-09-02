@@ -192,6 +192,57 @@ async function _callAiWithFallback(aiUser, messages, lastContent) {
 /** 会话 ID：两个用户 ID 排序后拼接 */
 const sessionId = (a, b) => [Number(a), Number(b)].sort((x, y) => x - y).join('-')
 
+// ============================================================
+// 腾讯云 IM 桥接：自建通道（HTTP/WS）保存的消息，在 IM 启用时
+// 同时经老版 REST(v4) 转发到腾讯 IM，保证使用官方 TUIKit 的接收方实时收到。
+// 反向（TIM 发出的消息）由前端 /chat/im-sync 回报，无需在此转发。
+// ============================================================
+const _imImportedUsers = new Set()
+
+async function _loadImCfg() {
+  try {
+    const { getModuleConfig } = require('../utils/config')
+    const cfg = await getModuleConfig('im')
+    if (cfg && cfg.enabled && cfg.sdkAppId && cfg.secretKey) return cfg
+  } catch (_) {}
+  return null
+}
+
+async function _ensureImAccount(imCfg, userId, nick, faceUrl) {
+  const key = String(userId)
+  if (_imImportedUsers.has(key)) return
+  try {
+    const { importIMAccountV4 } = require('../utils/im')
+    const r = await importIMAccountV4({ cfg: imCfg, userId: key, nick, faceUrl })
+    if (r && (r.ActionStatus === 'OK' || r.noop)) _imImportedUsers.add(key)
+  } catch (e) {
+    console.warn('[IM] account_import fail:', key, e && e.message)
+  }
+}
+
+/**
+ * 把一条业务消息经腾讯云 IM 以发送者身份转发给接收者（仅文本；媒体转占位文本）
+ */
+async function forwardToIM(fromUserId, toUserId, type, content) {
+  try {
+    const imCfg = await _loadImCfg()
+    if (!imCfg) return
+    const sender = await User.findByPk(fromUserId)
+    await _ensureImAccount(imCfg, fromUserId, sender && sender.nickname, sender && sender.avatar)
+    const text = type === 'text' ? String(content)
+      : type === 'image' ? '[图片]'
+      : type === 'voice' ? '[语音]'
+      : String(content)
+    const { sendIMC2CTextV4 } = require('../utils/im')
+    const r = await sendIMC2CTextV4({ cfg: imCfg, fromUserId, toUserId, text })
+    if (r && r.ActionStatus !== 'OK' && !r.noop) {
+      console.warn('[IM-forward] fail:', r.ErrorCode, r.ErrorInfo)
+    }
+  } catch (e) {
+    console.warn('[IM-forward] error:', e && e.message)
+  }
+}
+
 /** 会话列表 */
 router.get('/sessions', auth, async (req, res, next) => {
   try {
@@ -319,11 +370,93 @@ async function tryAiAutoReply({ app, senderId, aiUser, lastContent }) {
       body: bodyPreview,
       extras: { type: 'im', sessionId: sid, senderId: aiUser.id }
     }).catch(() => {})
+
+    // 腾讯云 IM 代发：使用官方 TUIKit 的接收方只能从 TIM 收到消息，
+    // 用老版 REST(v4，仅需 SDKAppID+密钥) 以 AI 用户身份把回复发过去
+    try {
+      const imCfg = await _loadImCfg()
+      if (imCfg) {
+        await _ensureImAccount(imCfg, aiUser.id, aiUser.nickname, aiUser.avatar)
+        const { sendIMC2CTextV4 } = require('../utils/im')
+        const r = await sendIMC2CTextV4({
+          cfg: imCfg,
+          fromUserId: aiUser.id,
+          toUserId: senderId,
+          text: aiReply.slice(0, 2000)
+        })
+        if (r && r.ActionStatus === 'OK') {
+          console.info('[AI-AUTO-REPLY] delivered via IM REST')
+        } else if (r && !r.noop) {
+          console.warn('[AI-AUTO-REPLY] IM REST fail:', r.ErrorCode, r.ErrorInfo)
+        }
+      }
+    } catch (e) {
+      console.warn('[AI-AUTO-REPLY] IM deliver error:', e && e.message)
+    }
   } catch (e) {
     // AI 回复失败不往外抛，避免影响前端主消息
     console.warn('[AI-AUTO-REPLY] failed:', e && e.message ? e.message : String(e))
   }
 }
+
+/**
+ * POST /chat/im-sync
+ * 前端经腾讯云 TIM（官方 TUIKit）发出的消息回报到这里：
+ *   - 落库维护会话列表/历史（90s 内同内容去重，防止重复回报）
+ *   - 推送给可能处于自建 WS 通道的接收方
+ *   - 对方是 AI 用户时触发自动回复（回复经 IM REST 代发）
+ * 注意：消息已经由 TIM 投递给接收方，这里不再 forwardToIM。
+ */
+router.post('/im-sync', auth, async (req, res, next) => {
+  try {
+    const body = req.body || {}
+    const receiverId = Number(body.to) || null
+    const type = body.type === 'image' || body.type === 'voice' || body.type === 'file' ? body.type : 'text'
+    const content = String(body.content || '')
+    if (!receiverId || !content) return fail(res, '参数不完整')
+
+    const other = await User.findByPk(receiverId)
+    if (!other) return fail(res, '用户不存在', 404)
+
+    // 去重：同一发送者 90 秒内发给同一接收者的相同内容视为重复回报
+    const dup = await Message.findOne({
+      where: {
+        senderId: req.userId,
+        receiverId,
+        type,
+        content,
+        createdAt: { [Op.gte]: new Date(Date.now() - 90 * 1000) }
+      }
+    })
+    let message
+    if (dup) {
+      message = dup
+    } else {
+      message = await Message.create({
+        sessionId: sessionId(req.userId, receiverId),
+        senderId: req.userId,
+        receiverId,
+        type,
+        content,
+        isRead: false
+      })
+      // 接收方可能在自建 WS 聊天页（Socket.IO），推一份；若对方在官方 TUIKit 页，WS 未连接，无副作用
+      if (req.app.get('io')) {
+        req.app.get('io').to(`user_${receiverId}`).emit('message', message.toJSON())
+      }
+      // AI 用户触发自动回复
+      if (type === 'text' && other.userType === 'ai') {
+        setImmediate(() => tryAiAutoReply({
+          app: req.app,
+          senderId: req.userId,
+          aiUser: other,
+          lastContent: content
+        }))
+      }
+    }
+    success(res, message, '同步成功')
+  } catch (err) { next(err) }
+})
 
 /** 发送消息（HTTP 备用通道；实时消息走 WebSocket） */
 router.post('/', auth, async (req, res, next) => {
@@ -353,6 +486,9 @@ router.post('/', auth, async (req, res, next) => {
       req.app.get('io').to(`user_${receiverId}`).emit('message', message.toJSON())
     }
 
+    // 腾讯云 IM 转发：接收方若使用官方 TUIKit，只能通过 TIM 收消息（异步，不阻塞）
+    setImmediate(() => forwardToIM(req.userId, receiverId, type, content))
+
     // 离线推送（接收方不在线时收到推送通知）
     const sender = await User.findByPk(req.userId)
     const senderName = sender ? sender.nickname : '新消息'
@@ -379,3 +515,7 @@ router.post('/', auth, async (req, res, next) => {
 })
 
 module.exports = router
+// WebSocket 通道（app.js）复用同一套 AI 自动回复，保证 WS 发消息也能触发
+module.exports.tryAiAutoReply = tryAiAutoReply
+// WebSocket 通道（app.js）复用腾讯云 IM 转发，保证官方 TUIKit 接收方能收到
+module.exports.forwardToIM = forwardToIM

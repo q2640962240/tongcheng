@@ -416,6 +416,8 @@ const loadData = async () => {
   }
 }
 
+onMounted(loadData)
+
 const onToggleStatus = async (row) => {
   try {
     await ElMessageBox.confirm(`确认${row.status === 1 ? '封禁' : '解封'}用户 ${row.nickname}?`, '提示', { type: 'warning' })

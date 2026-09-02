@@ -3,15 +3,7 @@
  * 自动注入 token、统一错误处理
  */
 import { getToken, removeToken } from './auth'
-
-const BASE_URL = (() => {
-  // #ifdef H5
-  return '/api'
-  // #endif
-  // #ifndef H5
-  return 'http://localhost:3000/api'
-  // #endif
-})()
+import { getCurrentBaseURL } from './request'
 
 /**
  * 解析上传响应
@@ -51,7 +43,7 @@ export const uploadFile = (filePath, name = 'file') => {
   return new Promise((resolve, reject) => {
     const token = getToken()
     uni.uploadFile({
-      url: BASE_URL + '/upload',
+      url: getCurrentBaseURL() + '/upload',
       filePath,
       name,
       header: token ? { Authorization: `Bearer ${token}` } : {},
@@ -75,7 +67,7 @@ export const uploadFileTo = (path, filePath, name = 'file', formData = {}) => {
   return new Promise((resolve, reject) => {
     const token = getToken()
     uni.uploadFile({
-      url: BASE_URL + path,
+      url: getCurrentBaseURL() + path,
       filePath,
       name,
       formData,

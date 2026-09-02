@@ -41,7 +41,7 @@
 | 金色描边卡片 | `app/src/App.vue` L88-96 `.by-card-gold` | `border: 2rpx solid rgba(212,175,55,.5); box-shadow: 0 10rpx 30rpx rgba(212,175,55,.25);` |
 | Banner 轮播 | `app/src/pages/home/home.vue` L35-58 `<swiper>` + `.banner-item` | `background: $by-gradient-aurora;` + 覆盖渐变遮罩层 + `.banner-card` 毛玻璃 |
 | 人物头像叠层 | `home.vue` `.banner-avatar-wrap` | 圆形 `border-radius: 50%` + `border: 4rpx solid $by-gold` + 左侧绝对定位 |
-| 金边 CTA 按钮 | `home.vue` `.banner-cta` | `background: linear-gradient(180deg, $by-gold 0%, $by-gold-soft 100%); color: $by-bg-primary;` |
+| 金边 CTA 按钮 | `home.vue` `.banner-cta` | `background: linear-gradient(180deg, $by-gold 0%, $by-gold-soft 100%); color: $by-bg;` |
 
 **验证方法**：
 1. 启动移动端 `npm run dev:h5` → 首页
@@ -66,7 +66,7 @@
 | 金色下划线 | `discover.vue` `.tab-item.active::after` | `content: ''; width: 60%; height: 6rpx; background: $by-gold; border-radius: 3rpx; position: absolute; bottom: 0; left: 20%;` |
 | 红点角标 | `discover.vue` `.tab-badge` | `position: absolute; top: -4rpx; right: -10rpx; width: 16rpx; height: 16rpx; background: #ef4444; border-radius: 50%;`（红包专区 Tab 默认挂红点） |
 | 卡片流间距 | `discover.vue` `.list-wrap` | `padding: 16rpx; gap: 16rpx;` + 每张卡片 `border-radius: 16rpx;` |
-| 空状态 | `discover.vue` `.empty-state` | 插画 `<text class="emoji">🌌</text>` + 文案 `$by-text-muted` 色 + 「去看看」按钮 |
+| 空状态 | `discover.vue` `.empty-state` | 插画 `<text class="emoji">🌌</text>` + 文案 `$by-text-mute` 色 + 「去看看」按钮 |
 
 **验证方法**：
 1. 进入「发现」页 → 依次点 4 个 Tab
@@ -88,7 +88,7 @@
 | 提取点 | 实现位置 | 代码片段 / 方法 |
 |---|---|---|
 | 金 E 徽章 | `app/src/pages/elite-pay/elite-pay.vue` L50-65 `.elite-badge` | `width: 200rpx; height: 200rpx; border-radius: 50%; background: linear-gradient(135deg, $by-gold 0%, $by-gold-soft 100%); border: 6rpx solid rgba(255,255,255,.2); box-shadow: 0 0 60rpx rgba(212,175,55,.5);` + 中央金色描边 E 字 |
-| 6 项权益竖排 | `elite-pay.vue` L80-130 `.rights-list` + `.right-item` | 每项图标 64rpx + flex 布局 + 副标题 `$by-text-muted` |
+| 6 项权益竖排 | `elite-pay.vue` L80-130 `.rights-list` + `.right-item` | 每项图标 64rpx + flex 布局 + 副标题 `$by-text-mute` |
 | 3 大平台保证 | `elite-pay.vue` `.guarantee-block` | 浅金背景 `rgba(212,175,55,.08)` + 圆角 16 + 盾牌 iconfont 前缀 |
 | 为什么付费可折叠 | `elite-pay.vue` L160-180 `.why-pay` + `@toggle` | `<view class="arrow" :class="{rotated: expanded}">▾</view>` + CSS `transform: rotate(180deg)` 动画 |
 | 底部大 CTA | `elite-pay.vue` `.pay-btn-wrap` + `.pay-btn` | `position: fixed; bottom: 0; left: 0; right: 0; padding: 24rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));` 渐变按钮 + 副文案「7 天无理由退款 · 终身有效」 |
@@ -139,7 +139,7 @@
 | 提取点 | 实现位置 | 代码片段 / 方法 |
 |---|---|---|
 | 渐变毛玻璃头图 | `app/src/pages/profile/profile.vue` L35-55 `.profile-header` | `background: linear-gradient(135deg, rgba(123,97,255,.3), rgba(181,123,255,.2)), $by-bg-secondary; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);` |
-| 金 E 徽章（头像角） | `profile.vue` `.avatar .e-badge` + `v-if="userInfo.isElite"` | `position: absolute; right: -6rpx; bottom: -6rpx; width: 44rpx; height: 44rpx; border-radius: 50%; background: $by-gold; color: $by-bg-primary; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 3rpx solid $by-bg-primary;` |
+| 金 E 徽章（头像角） | `profile.vue` `.avatar .e-badge` + `v-if="userInfo.isElite"` | `position: absolute; right: -6rpx; bottom: -6rpx; width: 44rpx; height: 44rpx; border-radius: 50%; background: $by-gold; color: $by-bg; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 3rpx solid $by-bg;` |
 | VIP / 性别标签 | `profile.vue` `.name-row` | 昵称后 `<text class="vip-tag" v-if="isElite">精英</text>`（金边金底金字） + `<text class="gender male">♂</text>`（蓝 / 粉色） |
 | 钱包三列 | `profile.vue` `.wallet-row` | 3 个 `.wallet-cell` flex:1 等分；数字 `font-size: 40rpx; font-weight: 700; color: $by-gold;` |
 | 精英入口 CTA | `profile.vue` `.elite-cta` 位于钱包下方 | 未开通：渐变卡片 + 立即开通；已开通：金卡「查看精英权益」→ 跳 elite-pay 页 |
@@ -189,10 +189,10 @@
 
 | 提取点 | 实现位置 | 代码片段 / 方法 |
 |---|---|---|
-| 头像 + 昵称行 | `app/src/pages/discover/discover.vue` `.post-card .post-head` | flex 布局，`.ava { width: 80rpx; height: 80rpx; border-radius: 50%; border: 3rpx solid rgba(212,175,55,.5); }` + `.nickname { color:$by-text-primary; font-weight: 600; font-size: 28rpx; }` + `.city { color: $by-text-muted; font-size: 22rpx; }` |
-| 正文 3 行截断 | `discover.vue` `.post-text` | `font-size: 28rpx; line-height: 1.6; color: $by-text-primary; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;` + 超过 3 行显示 `展开`（toggle `expanded` 状态） |
+| 头像 + 昵称行 | `app/src/pages/discover/discover.vue` `.post-card .post-head` | flex 布局，`.ava { width: 80rpx; height: 80rpx; border-radius: 50%; border: 3rpx solid rgba(212,175,55,.5); }` + `.nickname { color:$by-text-1; font-weight: 600; font-size: 28rpx; }` + `.city { color: $by-text-mute; font-size: 22rpx; }` |
+| 正文 3 行截断 | `discover.vue` `.post-text` | `font-size: 28rpx; line-height: 1.6; color: $by-text-1; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;` + 超过 3 行显示 `展开`（toggle `expanded` 状态） |
 | 9 图缩略 | `discover.vue` `.post-images` | `grid-template-columns: repeat(3, 1fr); gap: 6rpx;` 图片 `aspect-ratio: 1; object-fit: cover; border-radius: 12rpx;` + 单图时特殊类 `.post-images.single img { aspect-ratio: 16/9; grid-column: 1 / -1; }` |
-| 底部操作栏 | `discover.vue` `.post-actions` | 3 栏 flex:1，`.action-item { display: flex; align-items: center; justify-content: center; gap: 8rpx; color: $by-text-muted; font-size: 24rpx; } .action-item.liked { color: #ef4444; }`（点赞后红色爱心） |
+| 底部操作栏 | `discover.vue` `.post-actions` | 3 栏 flex:1，`.action-item { display: flex; align-items: center; justify-content: center; gap: 8rpx; color: $by-text-mute; font-size: 24rpx; } .action-item.liked { color: #ef4444; }`（点赞后红色爱心） |
 | 举报入口 ··· | `discover.vue` `.more-btn` + `@click` | 右上角三个点 → `uni.showActionSheet({ itemList: ['举报该动态', '不感兴趣', '复制内容'] })` → 举报 → 跳反馈页并自动填入动态 ID |
 
 **验证方法**：
@@ -220,8 +220,8 @@
 | 金边 Modal | `chat.vue` `<view class="guard-mask" v-if="showGuardModal">` + `.guard-card` | `.guard-card { width: 80%; max-width: 640rpx; background: $by-bg-secondary; border: 3rpx solid rgba(212,175,55,.6); border-radius: 24rpx; box-shadow: 0 20rpx 60rpx rgba(212,175,55,.3); padding: 40rpx; }` |
 | E 徽章 | `chat.vue` `.guard-card .big-e` | 同素材 3，尺寸 140rpx，居中显示 |
 | 3 条权益勾 | `chat.vue` `.guard-tips` | 每条前缀 ✅ emoji + 28rpx 正文，3 行 |
-| 双按钮 | `chat.vue` `.guard-btns` | flex row gap 24rpx，`.btn-secondary { flex:1; border: 2rpx solid $by-border; color: $by-text-muted; border-radius: 999rpx; padding: 20rpx; }` / `.btn-primary { flex: 1.6; background: $by-gradient-gold; color: $by-bg-primary; border-radius: 999rpx; padding: 20rpx; font-weight: 700; }` |
-| × 关闭 | `chat.vue` `.close-x` | 右上角绝对定位 44×44rpx，`font-size: 36rpx; color: $by-text-muted;` → 点击设置 `showGuardModal=false` |
+| 双按钮 | `chat.vue` `.guard-btns` | flex row gap 24rpx，`.btn-secondary { flex:1; border: 2rpx solid $by-border; color: $by-text-mute; border-radius: 999rpx; padding: 20rpx; }` / `.btn-primary { flex: 1.6; background: $by-gradient-gold; color: $by-bg; border-radius: 999rpx; padding: 20rpx; font-weight: 700; }` |
+| × 关闭 | `chat.vue` `.close-x` | 右上角绝对定位 44×44rpx，`font-size: 36rpx; color: $by-text-mute;` → 点击设置 `showGuardModal=false` |
 
 **验证方法**：
 1. 用 13800000004（非精英）登录 → 消息列表 → 点击 13800000001（精英）→ 首次发送输入内容 → 发送
@@ -275,7 +275,7 @@
 | 💎 钻石图标 | `recharge.vue` `.diamond-icon` | 自定义 CSS 钻石图形（或 SVG base64）+ `width: 72rpx; height: 72rpx; border: 3rpx solid $by-gold; border-radius: 50%; background: linear-gradient(135deg, #e0f2fe 0%, #93c5fd 100%); display:flex;align-items:center;justify-content:center;` |
 | 红字赠送角标 | `recharge.vue` `.bonus-tag` | `position: absolute; top: 12rpx; right: 12rpx; background: rgba(239,68,68,.12); color: #ef4444; font-size: 20rpx; padding: 4rpx 12rpx; border-radius: 999rpx; font-weight: 600;` + `v-if="pack.bonus"` |
 | 金色选中态 | `recharge.vue` `.pack-card.selected` | `.pack-card.selected { border-color: transparent; background-image: linear-gradient($by-bg-card, $by-bg-card), $by-gradient-gold; background-origin: border-box; background-clip: padding-box, border-box; box-shadow: 0 10rpx 30rpx rgba(212,175,55,.3); transform: translateY(-4rpx); }` 渐变描边技巧 |
-| 选中 ✓ 角标 | `recharge.vue` `.selected-mark` | `position: absolute; top: -6rpx; right: -6rpx; width: 44rpx; height: 44rpx; border-radius: 50%; background: $by-gold; color: $by-bg-primary; display:flex;align-items:center;justify-content:center; font-weight: 900; border: 3rpx solid $by-bg-primary;` + `v-if="selected"` |
+| 选中 ✓ 角标 | `recharge.vue` `.selected-mark` | `position: absolute; top: -6rpx; right: -6rpx; width: 44rpx; height: 44rpx; border-radius: 50%; background: $by-gold; color: $by-bg; display:flex;align-items:center;justify-content:center; font-weight: 900; border: 3rpx solid $by-bg;` + `v-if="selected"` |
 
 **验证方法**：
 1. 我的 → 钻石余额 → 充值 → 进入充值页
@@ -292,15 +292,15 @@
 
 | 变量名 | 值 | 使用场景（对应素材 #）|
 |---|---|---|
-| `$by-bg-primary` | `#0b0f1a` 午夜蓝底 | 所有页面 body 背景（#1~#10 全）|
+| `$by-bg` | `#0b0f1a` 午夜蓝底 | 所有页面 body 背景（#1~#10 全）|
 | `$by-bg-secondary` | `#141a2d` 深蓝次底 | 卡片 / TabBar 底色（#1 #2 #5 #7 #8）|
 | `$by-bg-card` | `#1a2238` 卡片蓝 | 动态卡片 / 充值卡 / 权益卡（#3 #5 #7 #10）|
 | `$by-gold` | `#d4af37` 主金 | 按钮 / 选中 / E 徽章主色（#1 #3 #5 #6 #8 #9 #10）|
 | `$by-gold-soft` | `#f5d583` 软金 | 金色渐变终点 / 弱高亮（#1 #3 #6 #9 #10）|
 | `$by-gradient-gold` | `linear-gradient(180deg, $by-gold, $by-gold-soft)` | CTA 按钮渐变（#3 #6 #8 #10）|
 | `$by-gradient-aurora` | `linear-gradient(135deg, #7b61ff, #b57bff, #ff9fc5)` | 极光渐变 Banner / 封面 / 选中描边（#1 #2 #5 #6 #9）|
-| `$by-text-primary` | `#f5f5f7` | 昵称 / 正文 / 标题（#2 #4 #5 #7 #10）|
-| `$by-text-muted` | `#9ca3af` 辅助灰 | 时间 / 城市 / 副文案（#2 #5 #7 #8）|
+| `$by-text-1` | `#f5f7ff` | 昵称 / 正文 / 标题（#2 #4 #5 #7 #10）|
+| `$by-text-mute` | `#4a5476` 辅助灰 | 时间 / 城市 / 副文案（#2 #5 #7 #8）|
 | `$by-border` | `rgba(255,255,255,0.08)` | 细边框 / 分割线（#2 #7 #10）|
 
 ---

@@ -184,8 +184,8 @@
           v-for="item in recommendList"
           :key="item.id"
           :item="item"
-          @tap="onCardTap"
-          @contact="onContact"
+          @tap="onCardTap(item)"
+          @contact="onContact(item)"
         />
       </view>
 
@@ -391,10 +391,10 @@ onMounted(() => tryAutoLocate())
 const onSearch = () => uni.navigateTo({ url: '/pages/search/search' })
 const onNavDiscover = () => uni.navigateTo({ url: '/pages/discover/discover' })
 const onPickCity = () => uni.navigateTo({ url: '/pages/city/city' })
-const onMessage = () => uni.navigateTo({ url: '/pages/chat-list/chat-list' })
+const onMessage = () => uni.switchTab({ url: '/TUIKit/components/TUIConversation/index' })
 const onBannerTap = (b) => {
   if (!b.link) return
-  if (b.link.startsWith('http')) return uni.navigateTo({ url: '/pages/webview?url=' + encodeURIComponent(b.link) })
+  if (b.link.startsWith('http')) return uni.navigateTo({ url: '/pages/webview/webview?url=' + encodeURIComponent(b.link) })
   uni.navigateTo({ url: b.link })
 }
 const onQuickTap = (q) => {

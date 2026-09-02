@@ -68,7 +68,7 @@ function chooseImage() {
 }
 function removeImage(i) { images.value.splice(i, 1); }
 async function onSubmit() {
-  if (!userStore.isLogin) {
+  if (!userStore.isLoggedIn) {
     uni.showToast({ title: '请先登录', icon: 'none' });
     setTimeout(() => uni.navigateTo({ url: '/pages/login/login' }), 600);
     return;

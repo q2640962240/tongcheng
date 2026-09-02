@@ -43,6 +43,8 @@ export const useUserStore = defineStore('user', {
       // 已有登录态 → 异步触发 TIM SDK init + login（让用户被自动导入 IM）
       if (this.token && this.user && this.user.id) {
         setTimeout(() => kickOffTUIInit(), 500)
+        // 异步刷新最新用户信息（含 isElite/认证状态），避免管理后台通过精英后前端状态不同步
+        this.fetchProfile().catch(() => {})
       }
     },
 
@@ -57,6 +59,8 @@ export const useUserStore = defineStore('user', {
       setUser(user || {})
       // 登录成功 → 异步触发 TIM SDK init + login
       setTimeout(() => { _tuiInitPromise = null; kickOffTUIInit() }, 300)
+      // 登录成功 → 挂载全局消息提醒（角标 + 震动）
+      import('../utils/msgNotify').then((m) => m.setupGlobalMsgNotify()).catch(() => {})
       return res.data
     },
 
@@ -71,6 +75,8 @@ export const useUserStore = defineStore('user', {
       setUser(user || {})
       // 登录成功 → 异步触发 TIM SDK init + login
       setTimeout(() => { _tuiInitPromise = null; kickOffTUIInit() }, 300)
+      // 登录成功 → 挂载全局消息提醒（角标 + 震动）
+      import('../utils/msgNotify').then((m) => m.setupGlobalMsgNotify()).catch(() => {})
       return res.data
     },
 
@@ -97,6 +103,7 @@ export const useUserStore = defineStore('user', {
 
     /** 退出登录 */
     async logout() {
+      try { const m = await import('../utils/msgNotify'); m.teardownGlobalMsgNotify() } catch (_) {}
       await logoutTUILogin()
       removeToken()
       this.token = ''

@@ -77,6 +77,8 @@
       <view v-if="order.status === 'serving' && isProvider" class="act-btn primary" @tap="onConfirm">完成服务</view>
       <view v-if="order.status === 'completed' && !isProvider" class="act-btn primary" @tap="onReview">{{ hasReviewed ? '查看评价' : '写评价' }}</view>
       <view v-if="['pending', 'paid'].includes(order.status) && !isProvider" class="act-btn ghost" @tap="onCancel">取消订单</view>
+      <!-- 买家在 paid / serving 状态下可申请退款 -->
+      <view v-if="['paid', 'serving'].includes(order.status) && !isProvider" class="act-btn refund" @tap="onRefund">申请退款</view>
       <view v-if="order.status === 'refunding'" class="act-btn ghost" @tap="onContactService">联系客服</view>
     </view>
   </view>
@@ -122,6 +124,7 @@ const hasActions = computed(() => {
   if (s === 'serving' && isProvider.value) return true
   if (s === 'completed' && !isProvider.value) return true
   if (['pending', 'paid'].includes(s) && !isProvider.value) return true
+  if (['paid', 'serving'].includes(s) && !isProvider.value) return true
   if (s === 'refunding') return true
   return false
 })
@@ -134,7 +137,7 @@ const loadOrder = async (id) => {
     if (order.value.status === 'completed' && !isProvider.value) {
       try {
         const rv = await orderApi.getReview(id)
-        hasReviewed.value = !!rv.data
+        hasReviewed.value = !!(rv.data && rv.data.hasReview)
       } catch (e) {}
     }
   } catch (e) {}
@@ -190,6 +193,26 @@ const onCancel = () => {
   })
 }
 
+const onRefund = () => {
+  uni.showModal({
+    title: '申请退款',
+    content: '确定要申请退款吗？退款将原路返回您的账户。',
+    confirmColor: '#EF4444',
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          await orderApi.refund(order.value.id, '用户主动申请退款')
+          uni.showToast({ title: '退款申请已提交', icon: 'success' })
+          loadOrder(order.value.id)
+        } catch (e) {
+          const msg = (e && e.data && e.data.message) || '退款申请失败，请联系客服'
+          uni.showToast({ title: msg, icon: 'none' })
+        }
+      }
+    }
+  })
+}
+
 const onChat = () => {
   const otherId = isProvider.value ? order.value.userId : order.value.providerId
   uni.navigateTo({ url: `/pages/chat/chat?userId=${otherId}` })
@@ -232,40 +255,44 @@ onLoad((q) => {
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #fffbeb; padding: 32rpx; padding-bottom: 200rpx; }
+.page { min-height: 100vh; background: $by-bg; padding: 32rpx; padding-bottom: 200rpx; }
 .banner {
-  background: linear-gradient(135deg, #ffd60a 0%, #ffcc00 100%); color: #171717;
+  background: $by-gradient-gold; color: $by-text-1;
   border-radius: 32rpx; padding: 40rpx 32rpx; margin-bottom: 24rpx;
   display: flex; flex-direction: column; gap: 8rpx;
 }
-.banner.refunding { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); color: #ffffff; }
-.banner.refunded, .banner.cancelled { background: linear-gradient(135deg, #737373 0%, #a3a3a3 100%); color: #ffffff; }
+.banner.refunding { background: linear-gradient(135deg, $by-warning 0%, #fbbf24 100%); color: $by-text-1; }
+.banner.refunded, .banner.cancelled { background: linear-gradient(135deg, $by-text-3 0%, #a3a3a3 100%); color: $by-text-1; }
 .banner-status { font-size: 40rpx; font-weight: 700; }
 .banner-desc { font-size: 26rpx; opacity: 0.8; }
-.card { background: #ffffff; border-radius: 24rpx; padding: 32rpx; margin-bottom: 24rpx; }
-.card-title { font-size: 30rpx; font-weight: 600; color: #171717; margin-bottom: 24rpx; display: block; }
+.card { background: $by-surface; border-radius: 24rpx; padding: 32rpx; margin-bottom: 24rpx; border: 1rpx solid $by-border; }
+.card-title { font-size: 30rpx; font-weight: 600; color: $by-text-1; margin-bottom: 24rpx; display: block; }
 .service-row { display: flex; gap: 20rpx; }
-.cover { width: 120rpx; height: 120rpx; border-radius: 16rpx; background: #f5f5f5; }
+.cover { width: 120rpx; height: 120rpx; border-radius: 16rpx; background: $by-surface-2; }
 .service-meta { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 12rpx; }
-.service-title { font-size: 30rpx; font-weight: 600; color: #171717; }
-.service-price { font-size: 26rpx; color: #ef4444; }
+.service-title { font-size: 30rpx; font-weight: 600; color: $by-text-1; }
+.service-price { font-size: 26rpx; color: $by-error; }
 .user-row { display: flex; gap: 20rpx; align-items: center; }
-.avatar { width: 96rpx; height: 96rpx; border-radius: 9999rpx; background: #f5f5f5; }
+.avatar { width: 96rpx; height: 96rpx; border-radius: 9999rpx; background: $by-surface-2; }
 .user-meta { flex: 1; display: flex; flex-direction: column; gap: 8rpx; }
 .user-name-row { display: flex; align-items: center; gap: 12rpx; }
-.user-name { font-size: 30rpx; font-weight: 600; color: #171717; }
-.elite-badge { background: #ffd60a; color: #171717; font-size: 20rpx; font-weight: 600; padding: 2rpx 12rpx; border-radius: 9999rpx; }
-.user-action { font-size: 26rpx; color: #0ea5e9; align-self: flex-start; }
-.detail-row { display: flex; justify-content: space-between; padding: 16rpx 0; border-bottom: 2rpx solid #fafafa; &:last-child { border-bottom: none; } }
-.d-label { font-size: 28rpx; color: #737373; }
-.d-value { font-size: 28rpx; color: #171717; }
-.d-value.amount { font-weight: 700; color: #ef4444; }
-.actions { position: fixed; left: 32rpx; right: 32rpx; bottom: 48rpx; display: flex; gap: 16rpx; }
+.user-name { font-size: 30rpx; font-weight: 600; color: $by-text-1; }
+.elite-badge { background: $by-gold; color: #0B0F1A; font-size: 20rpx; font-weight: 600; padding: 2rpx 12rpx; border-radius: 9999rpx; }
+.user-action { font-size: 26rpx; color: $by-aurora-b; align-self: flex-start; }
+.detail-row { display: flex; justify-content: space-between; padding: 16rpx 0; border-bottom: 2rpx solid $by-border; &:last-child { border-bottom: none; } }
+.d-label { font-size: 28rpx; color: $by-text-3; }
+.d-value { font-size: 28rpx; color: $by-text-1; }
+.d-value.amount { font-weight: 700; color: $by-error; }
+.actions { position: fixed; left: 32rpx; right: 32rpx; bottom: calc(48rpx + env(safe-area-inset-bottom)); display: flex; gap: 16rpx; flex-wrap: wrap; }
 .act-btn {
-  flex: 1; height: 96rpx; border-radius: 9999rpx; display: flex; align-items: center; justify-content: center;
+  flex: 1; min-width: 0; height: 96rpx; border-radius: 9999rpx; display: flex; align-items: center; justify-content: center;
   font-size: 30rpx; font-weight: 600;
-  &.primary { background: #ffd60a; color: #171717; }
-  &.ghost { background: #ffffff; color: #525252; border: 2rpx solid #e5e5e5; }
+  &.primary { background: $by-gradient-gold; color: #0B0F1A; }
+  &.ghost { background: $by-surface; color: $by-text-2; border: 2rpx solid $by-border; }
+  &.refund {
+    background: transparent; color: $by-error;
+    border: 2rpx solid rgba(239,68,68,0.4);
+  }
   &:active { opacity: 0.85; }
 }
 </style>

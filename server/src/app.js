@@ -215,7 +215,7 @@ async function startApp() {
     // 发送消息
     socket.on('message', async (data, ack) => {
       try {
-        const { Message } = require('./models')
+        const { Message, User } = require('./models')
         const { receiverId, type = 'text', content, duration } = data
         if (!receiverId || !content) {
           if (ack) ack({ ok: false, message: '参数不完整' })
@@ -233,6 +233,30 @@ async function startApp() {
         // 推送给接收方
         io.to(`user_${receiverId}`).emit('message', msg.toJSON())
         if (ack) ack({ ok: true, data: msg.toJSON() })
+
+        // 同步转发到腾讯云 IM，保证使用官方 TUIKit 的接收方也能收到（异步，不阻塞）
+        setImmediate(() => {
+          try {
+            const { forwardToIM } = require('./routes/chat')
+            forwardToIM(socket.userId, receiverId, type, content)
+          } catch (e) {
+            console.warn('[WS] forwardToIM error:', e.message)
+          }
+        })
+
+        // AI 用户：与 HTTP 通道一致触发自动回复（异步，不阻塞 ack）
+        if (type === 'text') {
+          const other = await User.findByPk(receiverId)
+          if (other && other.userType === 'ai') {
+            const { tryAiAutoReply } = require('./routes/chat')
+            setImmediate(() => tryAiAutoReply({
+              app,
+              senderId: socket.userId,
+              aiUser: other,
+              lastContent: content
+            }))
+          }
+        }
       } catch (err) {
         console.error('[WS] message error:', err)
         if (ack) ack({ ok: false, message: err.message })

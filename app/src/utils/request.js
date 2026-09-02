@@ -82,18 +82,25 @@ const DEFAULT_DEV_LAN_IP = '192.168.1.8'
  *     修复：同时匹配 'h5' 和 'web'，并额外引入 location.host 浏览器宿主兜底 —— 只要有 window.location，一律视为 H5。
  */
 function detectPlatform() {
-  // 先看环境是不是浏览器宿主
+  // ① 打包的 App（APP-PLUS）有全局 plus 对象 —— 必须最先判断，否则会被下面的 window 兜底误判成 h5
   try {
-    if (typeof window !== 'undefined' && window && typeof window.location !== 'undefined') {
-      return 'h5'
+    if (typeof plus !== 'undefined' && plus) {
+      return 'app'
     }
   } catch (e) { /* ignore */ }
+  // ② uniPlatform 明确判断：web/h5 为 H5，其余（app/mp-weixin 等）原样返回
   try {
     if (typeof uni !== 'undefined' && uni.getSystemInfoSync) {
       const info = uni.getSystemInfoSync()
       const p = String(info && info.uniPlatform || '').toLowerCase()
       if (p === 'web' || p === 'h5') return 'h5'
-      return p || 'h5'
+      if (p) return p
+    }
+  } catch (e) { /* ignore */ }
+  // ③ 兜底：浏览器宿主（H5）
+  try {
+    if (typeof window !== 'undefined' && window && typeof window.location !== 'undefined') {
+      return 'h5'
     }
   } catch (e) { /* ignore */ }
   return 'h5'

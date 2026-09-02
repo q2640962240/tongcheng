@@ -5,6 +5,9 @@
     @touchstart="handleTouchStart"
     @touchend="handleTouchEnd"
   >
+    <div v-if="!convReady" class="tui-conversation-loading">
+      消息服务连接中…
+    </div>
     <ConversationHeader>
       <TUISearch searchType="global" />
     </ConversationHeader>
@@ -25,7 +28,9 @@ import TUISearch from '../TUISearch/index.vue';
 import ConversationList from './conversation-list/index.vue';
 import ConversationHeader from './conversation-header/index.vue';
 import ConversationNetwork from './conversation-network/index.vue';
-import { onHide } from '@dcloudio/uni-app';
+import { onLoad, onShow, onHide } from '@dcloudio/uni-app';
+import { initConversation } from './entry-conversation';
+import { refreshMsgBadge } from '../../../utils/msgNotify';
 // #ifdef MP-WEIXIN
 // uniapp packaged mini-programs are integrated by default, and the default initialization entry file is imported here
 // TUIChatKit init needs to be encapsulated because uni vue2 will report an error when compiling H5 directly through conditional compilation
@@ -33,6 +38,37 @@ import './entry.ts';
 // #endif
 
 const emits = defineEmits(['handleSwitchConversation']);
+
+const convReady = ref(true);
+
+const H5_LAYOUT_SELECTORS = ['uni-app', 'uni-page', 'uni-page-wrapper', 'uni-page-body'];
+function applyH5LayoutFix() {
+  // #ifdef H5
+  try {
+    document.documentElement.style.height = '100%';
+    document.body.style.height = '100%';
+    H5_LAYOUT_SELECTORS.forEach((sel) => {
+      const el = document.querySelector(sel);
+      if (el) {
+        el.style.height = '100%';
+        el.style.minHeight = '0';
+      }
+    });
+    const pageBody = document.querySelector('uni-page-body');
+    if (pageBody) pageBody.style.background = '#ffffff';
+  } catch (_) { /* ignore */ }
+  // #endif
+}
+
+onLoad(() => {
+  applyH5LayoutFix();
+  initConversation().then((ok) => { convReady.value = ok; });
+});
+
+onShow(() => {
+  // 从聊天页返回时刷新角标（非 tab 页时 removeTabBarBadge 不生效，这里在 tab 页重新计算）
+  try { refreshMsgBadge(); } catch (_) { /* ignore */ }
+});
 
 const totalUnreadCount = ref(0);
 const headerRef = ref<typeof ConversationHeader>();

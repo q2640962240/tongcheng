@@ -44,14 +44,14 @@ router.get('/', optionalAuth, async (req, res, next) => {
       }
       where[Op.or] = ors
     }
-    let { count: total, rows } = await Group.findAndCountAll({
+    // 城市走模糊匹配，无法用 SQL 精确表达，因此全量取出后内存过滤再分页
+    const allRows = await Group.findAll({
       where,
-      order: [['hot', 'DESC'], ['id', 'DESC']],
-      limit: pageSize,
-      offset
+      order: [['hot', 'DESC'], ['id', 'DESC']]
     })
-    rows = rows.filter(g => matchCity(g.city))
-    total = rows.length
+    const filtered = allRows.filter(g => matchCity(g.city))
+    const total = filtered.length
+    const rows = filtered.slice(offset, offset + pageSize)
     const userIds = [...new Set(rows.map(g => g.userId))]
     const users = await User.findAll({ where: { id: { [Op.in]: userIds } } })
     const userMap = Object.fromEntries(users.map(u => [u.id, {

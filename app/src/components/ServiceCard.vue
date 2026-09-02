@@ -39,11 +39,12 @@ const onContact = () => emit('contact', props.item)
   display: flex;
   align-items: center;
   gap: 24rpx;
-  background: #ffffff;
+  background: $by-surface;
+  border: 1rpx solid $by-border;
   border-radius: 32rpx;
   padding: 24rpx;
   margin-bottom: 24rpx;
-  box-shadow: 0 2rpx 4rpx rgba(23, 23, 23, 0.05);
+  box-shadow: $by-shadow-1;
 
   &:active { transform: scale(0.99); }
 }
@@ -52,7 +53,7 @@ const onContact = () => emit('contact', props.item)
   height: 128rpx;
   border-radius: 32rpx;
   flex-shrink: 0;
-  background: #f5f5f5;
+  background: $by-bg-soft;
 }
 .info {
   flex: 1;
@@ -70,7 +71,7 @@ const onContact = () => emit('contact', props.item)
 .name {
   font-size: 30rpx;
   font-weight: 600;
-  color: #171717;
+  color: $by-text-1;
 }
 .tags {
   display: flex;
@@ -83,13 +84,13 @@ const onContact = () => emit('contact', props.item)
   font-size: 20rpx;
   font-weight: 500;
 }
-.tag-pink { background: #fce7f3; color: #f472b6; }
-.tag-purple { background: #f3e8ff; color: #a855f7; }
-.tag-blue { background: #e0f2fe; color: #0ea5e9; }
-.tag-yellow { background: #fff9c4; color: #b45309; }
+.tag-pink { background: color.adjust($by-aurora-b, $alpha: -0.82); color: $by-aurora-b; }
+.tag-purple { background: color.adjust($by-aurora-a, $alpha: -0.82); color: $by-aurora-a; }
+.tag-blue { background: color.adjust($by-aurora-c, $alpha: -0.82); color: $by-aurora-c; }
+.tag-yellow { background: color.adjust($by-gold, $alpha: -0.82); color: $by-gold-soft; }
 .desc {
   font-size: 26rpx;
-  color: #737373;
+  color: $by-text-3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -102,20 +103,21 @@ const onContact = () => emit('contact', props.item)
 .amount {
   font-size: 32rpx;
   font-weight: 700;
-  color: #ef4444;
+  color: $by-error;
 }
 .unit {
   font-size: 22rpx;
-  color: #737373;
+  color: $by-text-2;
 }
 .cta {
   flex-shrink: 0;
-  background: #ffd60a;
-  color: #171717;
+  background: $by-gradient-gold;
+  color: $by-bg;
   font-size: 26rpx;
   font-weight: 600;
   padding: 16rpx 28rpx;
   border-radius: 9999rpx;
   white-space: nowrap;
+  box-shadow: $by-shadow-1;
 }
 </style>

@@ -203,6 +203,28 @@ router.put('/:id/cancel', auth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+/** 用户申请退款 */
+router.post('/:id/refund', auth, async (req, res, next) => {
+  try {
+    const order = await Order.findByPk(req.params.id)
+    if (!order) return fail(res, '订单不存在', 404)
+    if (order.userId !== req.userId) return fail(res, '无权操作', 403)
+    if (!['paid', 'serving'].includes(order.status)) return fail(res, '当前状态不可退款')
+    await order.update({ status: 'refunding' })
+
+    // 通知服务者：用户申请退款
+    notifyUser(order.providerId, 'order:refund', {
+      orderId: order.id, orderNo: order.orderNo, serviceTitle: order.serviceTitle
+    }, {
+      title: '退款申请',
+      body: `用户申请退款「${order.serviceTitle}」，请及时处理`,
+      extras: { type: 'order', orderId: order.id, action: 'refunding' }
+    })
+
+    success(res, null, '退款申请已提交')
+  } catch (err) { next(err) }
+})
+
 /** 服务者确认开始服务 */
 router.put('/:id/start', auth, async (req, res, next) => {
   try {
@@ -237,8 +259,9 @@ router.put('/:id/confirm', auth, async (req, res, next) => {
     await order.update({ status: 'completed', completedAt: new Date().toISOString() })
 
     // 结算服务者收入（平台抽成 20%，服务者得 80%）
+    // 注意：order.amount 单位是星币（1 星币 = 10 分，充值 1 元 = 10 星币），转分需 ×10 而非 ×100
     const PLATFORM_RATE = 0.2
-    const providerIncome = Math.floor(order.amount * 100 * (1 - PLATFORM_RATE)) // 星币转分
+    const providerIncome = Math.floor(order.amount * 10 * (1 - PLATFORM_RATE))
     const providerWallet = await Wallet.findOne({ where: { userId: order.providerId } })
     if (providerWallet) {
       await providerWallet.update({ income: providerWallet.income + providerIncome })
@@ -256,7 +279,7 @@ router.put('/:id/confirm', auth, async (req, res, next) => {
     // 邀请分红：邀请人获消费金额 10%（用户为消费者）
     const inviteeLink = await Invite.findOne({ where: { inviteeId: order.userId } })
     if (inviteeLink) {
-      const reward = Math.floor(order.amount * 100 * 0.1)
+      const reward = Math.floor(order.amount * 10 * 0.1)
       if (reward > 0) {
         await inviteeLink.update({ totalReward: inviteeLink.totalReward + reward })
         const inviterWallet = await Wallet.findOne({ where: { userId: inviteeLink.inviterId } })

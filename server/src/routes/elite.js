@@ -357,13 +357,12 @@ router.post('/user/contact', auth, async (req, res, next) => {
     if (!me) return fail(res, '用户不存在', 404)
     if (!me.isElite) return fail(res, '开通精英后可联系 TA', 402)
     const today = new Date().toDateString()
-    const meta = me.meta || {}
+    const oldMeta = me.meta || {}
     let count = 0
-    if (meta.contactDay === today) count = meta.contactCount || 0
+    if (oldMeta.contactDay === today) count = oldMeta.contactCount || 0
     if (count >= 50) return fail(res, '今日联系次数已达上限（50 次）', 429)
     count += 1
-    meta.contactDay = today
-    meta.contactCount = count
+    const meta = { ...oldMeta, contactDay: today, contactCount: count }
     await me.update({ meta })
     success(res, { allowed: true, todayUsed: count, todayLeft: 50 - count }, '可联系')
   } catch (e) { next(e) }

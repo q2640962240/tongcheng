@@ -16,10 +16,9 @@
     "@dcloudio/uni-components": "3.0.0-alpha-5020520260824002",
     "@dcloudio/uni-h5": "3.0.0-alpha-5020520260824002",
     "@dcloudio/uni-mp-weixin": "3.0.0-alpha-5020520260824002",
+    "@tencentcloud/chat": "^3.6.7",
     "@tencentcloud/chat-uikit-uniapp": "^3.2.0",
     "pinia": "^2.1.7",
-    "tim-js-sdk": "^2.27.6",
-    "tim-wx-sdk": "^2.27.6",
     "vue": "^3.4.21",
     "vue-i18n": "^9.1.9"
   },

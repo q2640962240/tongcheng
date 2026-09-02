@@ -215,7 +215,7 @@ import { ref, watch, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { serviceApi, postApi, groupApi, userApi } from '../../api'
 import {
-  toList, toStr, toNum, toObj, unwrap, unwrapPage, guard,
+  toList, toStr, toNum, toObj, toBool, unwrap, unwrapPage, guard,
   getPath, avatarUrl, coverUrl, pickTags, formatTime, truncate,
   debounce, requireLogin, requireElite, safeMap, pickCity
 } from '@/utils/fallback'
@@ -278,7 +278,7 @@ const loadServices = async (reset = false) => {
   if (reset) { servicePage.value = 1; serviceList.value = []; serviceHasMore.value = true }
   const kw = toStr(keyword.value, '').trim()
   const pageResp = await guard(
-    unwrapPage(serviceApi.list({ page: toNum(servicePage.value, 1), pageSize: 10, keyword: kw }), { list: [], total: 0 }),
+    serviceApi.list({ page: toNum(servicePage.value, 1), pageSize: 10, keyword: kw }).then((r) => unwrapPage(r, { list: [], total: 0 })),
     { list: [], total: 0 }
   )
   const { list: rawList, total } = toObj(pageResp, { list: [], total: 0 })
@@ -304,7 +304,7 @@ const loadUsers = async (reset = false) => {
   if (reset) { userPage.value = 1; userList.value = [] }
   const kw = toStr(keyword.value, '').trim()
   const pageResp = await guard(
-    unwrapPage(userApi.discover({ page: toNum(userPage.value, 1), pageSize: 15, keyword: kw }), { list: [], total: 0 }),
+    userApi.discover({ page: toNum(userPage.value, 1), pageSize: 15, keyword: kw }).then((r) => unwrapPage(r, { list: [], total: 0 })),
     { list: [], total: 0 }
   )
   const { list: rawList } = toObj(pageResp, { list: [], total: 0 })
@@ -328,7 +328,7 @@ const loadPosts = async (reset = false) => {
   if (reset) { postPage.value = 1; postList.value = [] }
   const kw = toStr(keyword.value, '').trim()
   const pageResp = await guard(
-    unwrapPage(postApi.list({ page: toNum(postPage.value, 1), pageSize: 10, keyword: kw }), { list: [], total: 0 }),
+    postApi.list({ page: toNum(postPage.value, 1), pageSize: 10, keyword: kw }).then((r) => unwrapPage(r, { list: [], total: 0 })),
     { list: [], total: 0 }
   )
   const { list: rawList } = toObj(pageResp, { list: [], total: 0 })
@@ -360,7 +360,7 @@ const loadGroups = async (reset = false) => {
   if (reset) { groupPage.value = 1; groupList.value = [] }
   const kw = toStr(keyword.value, '').trim()
   const pageResp = await guard(
-    unwrapPage(groupApi.list({ page: toNum(groupPage.value, 1), pageSize: 10, keyword: kw }), { list: [], total: 0 }),
+    groupApi.list({ page: toNum(groupPage.value, 1), pageSize: 10, keyword: kw }).then((r) => unwrapPage(r, { list: [], total: 0 })),
     { list: [], total: 0 }
   )
   const { list: rawList } = toObj(pageResp, { list: [], total: 0 })
@@ -471,7 +471,7 @@ onMounted(loadHistory)
 .search-header {
   position: sticky; top: 0; z-index: 20;
   padding: 60rpx 24rpx 20rpx;
-  background: linear-gradient(180deg, $by-bg-soft 0%, color.adjust($by-bg-soft, $alpha: 0.88) 80%, transparent 100%);
+  background: linear-gradient(180deg, $by-bg-soft 0%, rgba($by-bg-soft, 0.88) 80%, transparent 100%);
   display: flex; align-items: center; gap: 16rpx;
 }
 .back-btn {
@@ -482,7 +482,7 @@ onMounted(loadHistory)
 .search-bar {
   flex: 1; display: flex; align-items: center; gap: 12rpx;
   height: 72rpx; padding: 0 24rpx;
-  background: $by-card-bg; border: 1rpx solid $by-border;
+  background: $by-surface; border: 1rpx solid $by-border;
   border-radius: 9999rpx;
 }
 .s-icon { font-size: 28rpx; }
@@ -492,14 +492,14 @@ onMounted(loadHistory)
 }
 .s-clear {
   padding: 6rpx 12rpx; border-radius: 9999rpx;
-  background: $by-soft-card; color: $by-text-3; font-size: 22rpx;
+  background: $by-bg-soft; color: $by-text-3; font-size: 22rpx;
 }
 .submit-btn {
   padding: 0 28rpx; height: 68rpx; line-height: 68rpx;
   border-radius: 9999rpx;
-  background: $by-gradient-gold; color: #0B0F1A;
+  background: $by-gradient-gold; color: $by-bg;
   font-weight: 700; font-size: 28rpx;
-  box-shadow: $by-shadow-gold;
+  box-shadow: $by-shadow-1;
 }
 
 .tabs-bar {
@@ -524,7 +524,7 @@ onMounted(loadHistory)
 .idle, .result { padding: 20rpx 24rpx 40rpx; }
 .card-wrap + .card-wrap { margin-top: 24rpx; }
 .card {
-  background: $by-card-bg; border: 1rpx solid $by-border;
+  background: $by-surface; border: 1rpx solid $by-border;
   border-radius: 20rpx; padding: 28rpx;
 }
 .head-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18rpx; }
@@ -535,11 +535,11 @@ onMounted(loadHistory)
 .chip {
   padding: 12rpx 24rpx;
   border-radius: 9999rpx;
-  background: $by-soft-card;
-  color: $by-text-2;
+  background: $by-bg-soft;
+  color: $by-text-3;
   border: 1rpx solid $by-border;
   font-size: 26rpx;
-  &:active { background: color.adjust($by-gold, $alpha: 0.12); color: $by-gold; }
+  &:active { background: color.adjust($by-gold, $alpha: -0.88); color: $by-gold; }
 }
 
 .hot-list { display: flex; flex-direction: column; }
@@ -551,16 +551,16 @@ onMounted(loadHistory)
 }
 .hot-rank {
   width: 40rpx; text-align: center; font-weight: 800; font-size: 28rpx; color: $by-text-3;
-  &.r-1 { color: #ff4d4f; }
-  &.r-2 { color: #ff7a45; }
-  &.r-3 { color: #ffa940; }
+  &.r-1 { color: #DC2626; }
+  &.r-2 { color: #EA580C; }
+  &.r-3 { color: #D97706; }
 }
 .hot-text { flex: 1; color: $by-text-1; font-size: 28rpx; }
 .hot-num { color: $by-text-3; font-size: 22rpx; }
 .hot-tag {
   font-size: 20rpx; padding: 4rpx 10rpx; border-radius: 8rpx; font-weight: 700;
-  &.hot { background: rgba(255,77,79,0.1); color: #ff4d4f; }
-  &.new { background: color.adjust($by-aurora-purple, $alpha: 0.16); color: $by-aurora-purple; }
+  &.hot { background: rgba(220,38,38,0.10); color: #DC2626; }
+  &.new { background: color.adjust($by-aurora-a, $alpha: -0.88); color: $by-aurora-a; }
 }
 
 /* ---- 服务结果 ---- */
@@ -569,7 +569,7 @@ onMounted(loadHistory)
   padding: 20rpx;
   margin-bottom: 20rpx;
 }
-.svc-cover { width: 180rpx; height: 180rpx; border-radius: 16rpx; background: $by-soft-card; }
+.svc-cover { width: 180rpx; height: 180rpx; border-radius: 16rpx; background: $by-bg-soft; }
 .svc-body { flex: 1; display: flex; flex-direction: column; gap: 8rpx; }
 .svc-title-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16rpx; }
 .svc-title { flex: 1; font-weight: 700; color: $by-text-1; font-size: 30rpx; line-height: 1.35; }
@@ -580,10 +580,10 @@ onMounted(loadHistory)
 .svc-tags { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 6rpx; }
 .t-tag {
   padding: 6rpx 16rpx; border-radius: 9999rpx; font-size: 22rpx;
-  &.tc-0 { background: rgba(212,175,55,0.12); color: $by-gold; }
-  &.tc-1 { background: rgba(123,97,255,0.12); color: $by-aurora-purple; }
-  &.tc-2 { background: rgba(59,130,246,0.12); color: #3b82f6; }
-  &.tc-3 { background: rgba(236,72,153,0.12); color: #ec4899; }
+  &.tc-0 { background: color.adjust($by-gold, $alpha: -0.88); color: $by-gold; }
+  &.tc-1 { background: color.adjust($by-aurora-a, $alpha: -0.88); color: $by-aurora-a; }
+  &.tc-2 { background: color.adjust($by-aurora-c, $alpha: -0.88); color: $by-aurora-c; }
+  &.tc-3 { background: color.adjust($by-aurora-b, $alpha: -0.88); color: $by-aurora-b; }
 }
 
 /* ---- 用户结果 ---- */
@@ -591,7 +591,7 @@ onMounted(loadHistory)
   display: flex; gap: 20rpx; align-items: center;
   padding: 20rpx; margin-bottom: 20rpx;
 }
-.u-av { width: 110rpx; height: 110rpx; border-radius: 50%; background: $by-soft-card; }
+.u-av { width: 110rpx; height: 110rpx; border-radius: 50%; background: $by-bg-soft; }
 .u-body { flex: 1; display: flex; flex-direction: column; gap: 6rpx; }
 .u-top { display: flex; align-items: center; gap: 10rpx; }
 .u-name { font-weight: 700; color: $by-text-1; font-size: 30rpx; }
@@ -599,19 +599,19 @@ onMounted(loadHistory)
 .u-tags { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 4rpx; }
 .tag {
   padding: 4rpx 12rpx; border-radius: 8rpx; font-size: 22rpx; font-weight: 600;
-  &.tag-yellow { background: rgba(212,175,55,0.14); color: $by-gold; }
-  &.tag-success { background: rgba(16,185,129,0.14); color: #10b981; }
+  &.tag-yellow { background: color.adjust($by-gold, $alpha: -0.86); color: $by-gold; }
+  &.tag-success { background: color.adjust($by-success, $alpha: -0.86); color: $by-success; }
 }
 .u-btn {
   padding: 12rpx 24rpx; border-radius: 9999rpx;
-  background: $by-gradient-aurora;
+  background: linear-gradient(135deg, $by-aurora-a 0%, $by-aurora-b 100%);
   color: #fff; font-size: 24rpx; font-weight: 700;
 }
 
 /* ---- 动态结果 ---- */
 .post-row { padding: 20rpx; margin-bottom: 20rpx; }
 .post-head { display: flex; gap: 14rpx; align-items: center; margin-bottom: 14rpx; }
-.p-av { width: 70rpx; height: 70rpx; border-radius: 50%; background: $by-soft-card; }
+.p-av { width: 70rpx; height: 70rpx; border-radius: 50%; background: $by-bg-soft; }
 .p-info { flex: 1; }
 .p-top { display: flex; align-items: center; gap: 10rpx; }
 .p-name { font-weight: 700; color: $by-text-1; font-size: 26rpx; }
@@ -621,7 +621,7 @@ onMounted(loadHistory)
 .p-imgs.img-col-1 { grid-template-columns: 1fr; }
 .p-imgs.img-col-2 { grid-template-columns: repeat(2, 1fr); }
 .p-imgs.img-col-3 { grid-template-columns: repeat(3, 1fr); }
-.p-img { width: 100%; aspect-ratio: 1/1; border-radius: 10rpx; background: $by-soft-card; }
+.p-img { width: 100%; aspect-ratio: 1/1; border-radius: 10rpx; background: $by-bg-soft; }
 
 /* ---- 组局结果 ---- */
 .group-row { padding: 20rpx; margin-bottom: 20rpx; display: flex; gap: 20rpx; }
@@ -631,9 +631,9 @@ onMounted(loadHistory)
 .g-status-row { display: flex; align-items: center; gap: 10rpx; }
 .g-status {
   padding: 4rpx 12rpx; border-radius: 8rpx; font-size: 22rpx; font-weight: 700;
-  &.status-open { background: rgba(16,185,129,0.12); color: #10b981; }
-  &.status-full { background: rgba(234,179,8,0.12); color: #eab308; }
-  &.status-closed, &.status-canceled { background: rgba(148,163,184,0.12); color: #94a3b8; }
+  &.status-open { background: rgba(34,197,94,0.12); color: #22C55E; }
+  &.status-full { background: rgba(245,158,11,0.12); color: #F59E0B; }
+  &.status-closed, &.status-canceled { background: color.adjust($by-text-3, $alpha: -0.88); color: $by-text-3; }
 }
 .g-title { font-weight: 700; color: $by-text-1; font-size: 30rpx; }
 .g-meta-row { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 4rpx; }

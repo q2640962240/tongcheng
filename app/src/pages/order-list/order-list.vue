@@ -59,13 +59,18 @@
         <text class="empty-text">暂无订单</text>
         <text class="empty-sub">去发现更多精彩服务吧</text>
       </view>
+      <!-- 分页加载状态 -->
+      <view v-if="list.length > 0" class="load-more">
+        <text v-if="loading && !isRefresh" class="load-text">加载更多...</text>
+        <text v-if="!hasMore && list.length > 0" class="load-text no-more">没有更多了</text>
+      </view>
     </view>
   </view>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
+import { onShow, onPullDownRefresh, onReachBottom } from '@dcloudio/uni-app'
 import { orderApi } from '../../api'
 import {
   guard, unwrapPage, safeMap, getPath, toStr, toNum, toObj,
@@ -76,6 +81,10 @@ const loading = ref(false)
 const list = ref([])
 const role = ref('user')
 const status = ref('')
+const page = ref(1)
+const pageSize = 20
+const hasMore = ref(true)
+const isRefresh = ref(false)
 
 const statusMap = {
   pending: '待支付', paid: '已支付', serving: '服务中',
@@ -101,24 +110,39 @@ const normalizeOrder = (raw) => {
   }
 }
 
-const loadData = async () => {
+const loadData = async (append = false) => {
   loading.value = true
+  // 追加模式下记录当前页码，失败时回退
+  const currentPage = page.value
   try {
     const pageData = await guard(
-      orderApi.list({ role: role.value, status: status.value, page: 1, pageSize: 50 })
+      orderApi.list({ role: role.value, status: status.value, page: page.value, pageSize })
         .then(r => unwrapPage(r, { list: [], total: 0 })),
       { list: [], total: 0 }
     )
-    list.value = safeMap(pageData.list, normalizeOrder)
+    const normalized = safeMap(pageData.list, normalizeOrder)
+    if (append) {
+      list.value = [...list.value, ...normalized]
+    } else {
+      list.value = normalized
+    }
+    hasMore.value = normalized.length >= pageSize
   } catch (_) {
-    list.value = []
+    if (!append) {
+      list.value = []
+    } else {
+      // 追加模式请求失败，回退页码
+      page.value = currentPage
+    }
+    hasMore.value = false
   } finally {
     loading.value = false
+    isRefresh.value = false
   }
 }
 
-const switchRole = (r) => { role.value = r; loadData() }
-const switchStatus = (s) => { status.value = s; loadData() }
+const switchRole = (r) => { role.value = r; page.value = 1; loadData() }
+const switchStatus = (s) => { status.value = s; page.value = 1; loadData() }
 
 const onDetail = (o) => {
   const id = toStr(getPath(o, 'id'), '')
@@ -184,10 +208,17 @@ const onCancel = (o) => {
   })
 }
 
-onShow(loadData)
+onShow(() => { page.value = 1; loadData() })
 onPullDownRefresh(async () => {
+  isRefresh.value = true
+  page.value = 1
   await loadData()
   uni.stopPullDownRefresh()
+})
+onReachBottom(() => {
+  if (!hasMore.value || loading.value) return
+  page.value++
+  loadData(true)
 })
 </script>
 
@@ -340,4 +371,9 @@ onPullDownRefresh(async () => {
 .empty-icon { font-size: 96rpx; position: relative; z-index: 1; }
 .empty-text { font-size: 30rpx; color: $by-text-1; font-weight: 600; position: relative; z-index: 1; }
 .empty-sub { font-size: 24rpx; color: $by-text-3; position: relative; z-index: 1; }
+
+/* Load more */
+.load-more { padding: 32rpx 0; text-align: center; }
+.load-text { font-size: 24rpx; color: $by-text-3; }
+.no-more { opacity: 0.6; }
 </style>

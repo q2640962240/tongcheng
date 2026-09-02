@@ -76,6 +76,28 @@
       }
     },
     {
+      "path": "TUIKit/components/TUIChat/index",
+      "style": {
+        "navigationBarTitleText": "聊天",
+        "navigationStyle": "custom",
+        "backgroundColor": "#0B0F1A",
+        "app-plus": {
+          "background": "#0B0F1A"
+        }
+      }
+    },
+    {
+      "path": "TUIKit/components/TUIConversation/index",
+      "style": {
+        "navigationBarTitleText": "消息",
+        "navigationStyle": "custom",
+        "backgroundColor": "#0B0F1A",
+        "app-plus": {
+          "background": "#0B0F1A"
+        }
+      }
+    },
+    {
       "path": "pages/chat-list/chat-list",
       "style": {
         "navigationBarTitleText": "消息"
@@ -176,6 +198,12 @@
       }
     },
     {
+      "path": "pages/group/publish",
+      "style": {
+        "navigationBarTitleText": "发起组局"
+      }
+    },
+    {
       "path": "pages/elite-pay/elite-pay",
       "style": {
         "navigationBarTitleText": "开通精英",
@@ -193,6 +221,19 @@
       "path": "pages/city/city",
       "style": {
         "navigationBarTitleText": "选择城市"
+      }
+    },
+    {
+      "path": "pages/reset-password/reset-password",
+      "style": {
+        "navigationBarTitleText": "重置密码",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/webview/webview",
+      "style": {
+        "navigationBarTitleText": ""
       }
     }
   ],
@@ -224,7 +265,7 @@
         "selectedIconPath": "static/tab/discover-active.png"
       },
       {
-        "pagePath": "pages/chat-list/chat-list",
+        "pagePath": "TUIKit/components/TUIConversation/index",
         "text": "消息",
         "iconPath": "static/tab/message.png",
         "selectedIconPath": "static/tab/message-active.png"

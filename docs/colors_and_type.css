@@ -1,3 +1,15 @@
+/* ============================================================
+ * ⚠️ DEPRECATED — 此文件已废弃
+ * ============================================================
+ * 白夜 (BaiYe) 的设计 token 体系已迁移至：
+ *   app/src/theme-baiye.scss  →  $by-* SCSS 变量
+ *   app/src/uni.scss          →  全局自动注入 $by-* 变量
+ *
+ * 本文件中的 --companion-* CSS 变量为旧版命名，不再维护。
+ * 新开发请统一使用 $by-bg / $by-gold / $by-text-1 等 $by-* token。
+ * 参考文档：docs/BRAND-REFERENCE.md「设计 Token 统一索引」章节。
+ * ============================================================ */
+
 /* companion-play-app design tokens */
 
 :root {

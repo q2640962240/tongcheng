@@ -516,7 +516,6 @@ onLoad((q) => {
   position: absolute; top: calc(env(safe-area-inset-top) + 24rpx); left: 24rpx;
   width: 72rpx; height: 72rpx; border-radius: $by-radius-pill;
   background: color.adjust(#000000, $alpha: 0.5);
-  backdrop-filter: blur(10rpx);
   color: $by-text-1; font-size: 48rpx;
   display: flex; align-items: center; justify-content: center;
 }
@@ -708,7 +707,6 @@ onLoad((q) => {
   border-top: 1rpx solid $by-border;
   display: flex; align-items: center; justify-content: space-between;
   z-index: 100;
-  backdrop-filter: blur(20rpx);
   &.disabled .bottom-btn {
     background: $by-soft-card !important;
     color: $by-text-muted !important;

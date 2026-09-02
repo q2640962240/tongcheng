@@ -21,6 +21,7 @@
           <Avatar
             useSkeletonAnimation
             :url="message.avatar || ''"
+            :border-radius="'50%'"
             :style="{flex: '0 0 auto'}"
           />
           <main
@@ -380,7 +381,7 @@ function openReadUserPanel() {
       }
 
       .content-in {
-        background: #fbfbfb;
+        background: #fff;
         border-radius: 0 10px 10px;
       }
 

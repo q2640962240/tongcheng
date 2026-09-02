@@ -472,8 +472,8 @@ function checkManifest() {
   await generateAppIcon(180, path.join(APP_PLUS, 'icon-180.png'));
   await generateAppIcon(1024, path.join(APP_PLUS, 'icon-1024.png'));
 
-  // 3) TabBar (4×2) — 白夜 4 Tab
-  const TAB_SZ = 81;
+  // 3) TabBar (4×2) — 白夜 4 Tab，144px 覆盖 3x 高分屏
+  const TAB_SZ = 144;
   for (const [k, f] of [
     ['home', 'home'], ['home-active','home'],
     ['discover', 'discover'], ['discover-active','discover'],

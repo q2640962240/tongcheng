@@ -193,7 +193,7 @@ router.get('/:id', async (req, res, next) => {
   try {
     const service = await Service.findByPk(req.params.id)
     if (!service) return fail(res, '服务不存在', 404)
-    await Service.increment(service.id, 'viewCount', 1)
+    await service.increment('viewCount')
     const provider = await User.findByPk(service.providerId)
     success(res, {
       ...service.toJSON(),

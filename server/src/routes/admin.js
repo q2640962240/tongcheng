@@ -1567,4 +1567,80 @@ router.delete('/service-categories/:key', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+/** 聊天记录：会话列表（可按 userId 过滤），含参与者信息与最近一条消息 */
+router.get('/chat-sessions', async (req, res, next) => {
+  try {
+    const userId = Number(req.query.userId) || 0
+    const where = userId
+      ? { [Op.or]: [{ senderId: userId }, { receiverId: userId }] }
+      : {}
+    const msgs = await Message.findAll({ where, order: [['createdAt', 'DESC']] })
+    const map = new Map()
+    for (const m of msgs) {
+      if (!map.has(m.sessionId)) map.set(m.sessionId, { count: 0, lastMessage: m })
+      map.get(m.sessionId).count++
+    }
+    const ids = new Set()
+    for (const sid of map.keys()) {
+      for (const part of String(sid).split('-')) {
+        const n = Number(part)
+        if (n) ids.add(n)
+      }
+    }
+    const users = ids.size ? await User.findAll({ where: { id: [...ids] } }) : []
+    const um = {}
+    for (const u of users) um[u.id] = { id: u.id, nickname: u.nickname, avatar: u.avatar, userType: u.userType }
+    const list = [...map.entries()].map(([sid, v]) => {
+      const [a, b] = String(sid).split('-').map(Number)
+      const last = v.lastMessage
+      return {
+        sessionId: sid,
+        count: v.count,
+        participants: [um[a], um[b]].filter(Boolean),
+        lastMessage: {
+          id: last.id,
+          type: last.type,
+          content: String(last.content || '').slice(0, 100),
+          senderId: last.senderId,
+          createdAt: last.createdAt
+        }
+      }
+    })
+    success(res, { list })
+  } catch (err) { next(err) }
+})
+
+/** 聊天记录：指定会话的消息列表（按时间正序，分页） */
+router.get('/chat-messages/:sessionId', async (req, res, next) => {
+  try {
+    const sessionId = String(req.params.sessionId || '').replace(/[^0-9-]/g, '')
+    if (!sessionId) return fail(res, '会话 ID 无效')
+    const page = Math.max(1, Number(req.query.page) || 1)
+    const pageSize = Math.min(200, Math.max(1, Number(req.query.pageSize) || 50))
+    const { count, rows } = await Message.findAndCountAll({
+      where: { sessionId },
+      order: [['createdAt', 'ASC']],
+      limit: pageSize,
+      offset: (page - 1) * pageSize
+    })
+    const ids = new Set()
+    for (const m of rows) { ids.add(m.senderId); ids.add(m.receiverId) }
+    const users = ids.size ? await User.findAll({ where: { id: [...ids] } }) : []
+    const um = {}
+    for (const u of users) um[u.id] = { id: u.id, nickname: u.nickname, avatar: u.avatar, userType: u.userType }
+    success(res, {
+      total: count,
+      list: rows.map((m) => ({
+        id: m.id,
+        type: m.type,
+        content: m.content,
+        senderId: m.senderId,
+        receiverId: m.receiverId,
+        sender: um[m.senderId] || { id: m.senderId, nickname: `用户${m.senderId}` },
+        createdAt: m.createdAt
+      }))
+    })
+  } catch (err) { next(err) }
+})
+
 module.exports = router

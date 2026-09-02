@@ -102,7 +102,7 @@ onMounted(async () => {
 function goBack() { uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/home' }) }); }
 async function onPay() {
   if (paying.value) return;
-  if (!userStore.isLogin) {
+  if (!userStore.isLoggedIn) {
     uni.showToast({ title: '请先登录', icon: 'none' });
     setTimeout(() => uni.navigateTo({ url: '/pages/login/login' }), 600);
     return;
@@ -187,7 +187,7 @@ async function onPay() {
 
 .pay-bar {
   position: fixed; left: 0; right: 0; bottom: 0;
-  padding: 20rpx 32rpx 32rpx; background: $by-bg-soft;
+  padding: 20rpx 32rpx calc(32rpx + env(safe-area-inset-bottom)); background: $by-bg-soft;
   display: flex; justify-content: space-between; align-items: center;
   border-top: 1rpx solid rgba(212,175,55,.12);
   &__label { color: $by-text-muted; font-size: 24rpx; margin-right: 12rpx; }

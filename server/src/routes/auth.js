@@ -7,6 +7,22 @@ const { signToken, signRefreshToken } = require('../middleware/auth')
 const { success, fail } = require('../utils/response')
 const sms = require('../utils/sms')
 const config = require('../config')
+const { importIMAccount } = require('../utils/im')
+const { getModuleConfig } = require('../utils/config')
+
+/** 异步把用户导入腾讯云 IM（不阻塞登录返回，失败静默） */
+async function importUserToIM(user) {
+  try {
+    const cfg = await getModuleConfig('im')
+    if (!cfg || !cfg.enabled) return
+    await importIMAccount({
+      cfg,
+      userId: user.id,
+      nick: user.nickname || '',
+      faceUrl: user.avatar || ''
+    })
+  } catch (_) { /* 导入失败不影响登录 */ }
+}
 
 // 短信发送频控：同一 IP 每分钟 1 次，每小时 10 次
 const smsLimiter = rateLimit({
@@ -48,6 +64,8 @@ async function doLoginResponse(res, user, extraMeta = {}) {
   const token = signToken(user.id)
   const refreshToken = signRefreshToken(user.id)
   await user.update({ lastLoginAt: new Date().toISOString() })
+  // 登录/注册成功后异步导入 IM 账号（fire-and-forget，不阻塞登录返回）
+  importUserToIM(user)
   success(res, {
     token,
     refreshToken,

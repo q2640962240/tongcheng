@@ -292,22 +292,22 @@
           <text class="act-more">更多 ›</text>
         </view>
         <view class="act-grid">
-          <view class="act-item ai-1">
+          <view class="act-item ai-1" @tap="onComingSoon">
             <text class="act-emoji">📣</text>
             <text class="act-label">新人专享礼</text>
             <text class="act-reward">领 100 钻石</text>
           </view>
-          <view class="act-item ai-2">
+          <view class="act-item ai-2" @tap="onComingSoon">
             <text class="act-emoji">🎁</text>
             <text class="act-label">邀请好友</text>
             <text class="act-reward">返 20% 佣金</text>
           </view>
-          <view class="act-item ai-3">
+          <view class="act-item ai-3" @tap="onComingSoon">
             <text class="act-emoji">🎯</text>
             <text class="act-label">每日任务</text>
             <text class="act-reward">最高 50 钻</text>
           </view>
-          <view class="act-item ai-4">
+          <view class="act-item ai-4" @tap="onComingSoon">
             <text class="act-emoji">🏆</text>
             <text class="act-label">周榜争霸</text>
             <text class="act-reward">实物大奖</text>
@@ -500,7 +500,7 @@ const loadPosts = async (reset = false) => {
     if (reset) { postsPage.value = 1; postsList.value = []; postsHasMore.value = true }
     const params = { page: toNum(postsPage.value, 1), pageSize: 10 }
     if (toStr(rangeText.value) === '附近' && toStr(cityText.value)) params.city = toStr(cityText.value)
-    const pageResp = await guard(unwrapPage(postApi.list(params), { list: [], total: 0 }), null)
+    const pageResp = await guard(postApi.list(params).then((r) => unwrapPage(r, { list: [], total: 0 })), null)
     if (pageResp === null || pageResp === undefined) throw new Error('empty response')
     const pr = toObj(pageResp, { list: [], total: 0 })
     const rawList = toList(getPath(pr, 'list'))
@@ -548,7 +548,7 @@ const loadGroups = async (reset = false) => {
     if (city && city !== '全国') params.city = city
     const cat = toStr(groupCats[toNum(groupCatIdx.value, 0)], '')
     if (cat && cat !== '全部') params.category = toStr(catMap[cat], cat)
-    const pageResp = await guard(unwrapPage(groupApi.list(params), { list: [], total: 0 }), null)
+    const pageResp = await guard(groupApi.list(params).then((r) => unwrapPage(r, { list: [], total: 0 })), null)
     if (pageResp === null || pageResp === undefined) throw new Error('empty response')
     const pr = toObj(pageResp, { list: [], total: 0 })
     const rawList = toList(getPath(pr, 'list'))
@@ -593,7 +593,7 @@ const loadFinder = async () => {
       city: toStr(cityText.value) === '全国' ? '' : toStr(cityText.value)
     }
     if (toStr(genderText.value) === '小姐姐') params.gender = 2
-    const pageResp = await guard(unwrapPage(userApi.discover(params), { list: [], total: 0 }), null)
+    const pageResp = await guard(userApi.discover(params).then((r) => unwrapPage(r, { list: [], total: 0 })), null)
     if (pageResp === null || pageResp === undefined) throw new Error('empty response')
     const pr = toObj(pageResp, { list: [], total: 0 })
     const rawList = toList(getPath(pr, 'list'))
@@ -629,6 +629,12 @@ watch([groupCityIdx, groupCatIdx], debounce(() => loadGroups(true), 180))
 onShow(async () => {
   // onShow 时：异步流水线解析城市 + 首次展示并行加载当前 tab 所需资源
   const bootTasks = [readCity(), updateSignState()]
+  try {
+    if (uni.getStorageSync('group.dirty')) {
+      uni.removeStorageSync('group.dirty')
+      bootTasks.push(loadGroups(true))
+    }
+  } catch (_) {}
   if (toStr(currentTab.value) === 'posts' && postsList.value.length === 0) bootTasks.push(loadPosts(true))
   if (toStr(currentTab.value) === 'groups' && groupsList.value.length === 0) bootTasks.push(loadGroups(true))
   if (toStr(currentTab.value) === 'finder' && finderList.value.length === 0) bootTasks.push(loadFinder())
@@ -680,7 +686,7 @@ const goPublishFilter = () => {
 const goElite = () => uni.navigateTo({ url: '/pages/elite-pay/elite-pay' })
 const goCreateGroup = () => {
   if (!requireElite()) return
-  uni.navigateTo({ url: '/pages/post/publish?mode=group' })
+  uni.navigateTo({ url: '/pages/group/publish' })
 }
 const goGroupDetail = (g) => uni.navigateTo({ url: `/pages/group/detail?id=${toStr(getPath(g, 'id'), '')}` })
 const goPostDetail = (p) => uni.navigateTo({ url: `/pages/group/detail?id=${toStr(getPath(p, 'id'), '')}&mode=post` })
@@ -752,6 +758,7 @@ const onSign = async () => {
   signLoading.value = false
 }
 const onRainRemind = () => uni.showToast({ title: toStr('已开启开播提醒'), icon: 'none' })
+const onComingSoon = () => uni.showToast({ title: toStr('即将上线，敬请期待'), icon: 'none' })
 </script>
 
 <style lang="scss" scoped>

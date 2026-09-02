@@ -1,1 +1,0 @@
-$tokens=$null;$errs=$null;[void][System.Management.Automation.Language.Parser]::ParseFile('d:\tongcheng\companion-play-app\deploy\zip-source.ps1',[ref]$tokens,[ref]$errs); if ($errs.Count -eq 0) { Write-Host "PARSE OK" -ForegroundColor Green } else { $errs | ForEach-Object { Write-Host ("LINE {0}: {1}" -f $_.Extent.StartLineNumber,$_.Message) -ForegroundColor Red } }

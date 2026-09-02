@@ -215,10 +215,259 @@ function inspectUserSig(userSig) {
   }
 }
 
+// ============================================================
+// 服务端 REST 调用（账号导入 / 单发消息），需要腾讯云 API 密钥
+//   cloudSecretId / cloudSecretKey 来自「配置中心 → 即时通信 IM」
+//   （注意：区别于签发 UserSig 用的 secretKey，两者是不同的密钥）
+// ============================================================
+
+/**
+ * TC3-HMAC-SHA256 签名 + HTTPS 请求，调用腾讯云 IM 的 InvokeRESTAPI（账号导入/单发消息等）。
+ * 未配置 cloudSecretId/cloudSecretKey 时返回 { noop:true } 而不发真实请求。
+ */
+function callImCloudApi({ cfg, service, action, region, payload }) {
+  const SecretId = String((cfg && cfg.cloudSecretId) || '').trim()
+  const SecretKey = String((cfg && cfg.cloudSecretKey) || '').trim()
+  if (!SecretId || !SecretKey) {
+    return Promise.resolve({ noop: true, reason: 'IM cloudSecretId/cloudSecretKey 未配置，跳过服务端 REST 调用' })
+  }
+
+  const https = require('https')
+  const now = new Date()
+  const date = now.toISOString().slice(0, 10)
+  const timestamp = Math.floor(now.getTime() / 1000)
+  const host = `${service}.tencentcloudapi.com`
+  const httpRequestMethod = 'POST'
+  const canonicalUri = '/'
+  const canonicalQuerystring = ''
+  const ct = 'application/json; charset=utf-8'
+  const payloadStr = JSON.stringify(payload || {})
+
+  const hashedPayload = crypto.createHash('sha256').update(payloadStr).digest('hex')
+  const canonicalHeaders = `content-type:${ct}\nhost:${host}\nx-tc-action:${action.toLowerCase()}\n`
+  const signedHeaders = 'content-type;host;x-tc-action'
+  const canonicalRequest = [httpRequestMethod, canonicalUri, canonicalQuerystring, canonicalHeaders, signedHeaders, hashedPayload].join('\n')
+
+  const algorithm = 'TC3-HMAC-SHA256'
+  const credentialScope = `${date}/${service}/tc3_request`
+  const hashedCR = crypto.createHash('sha256').update(canonicalRequest).digest('hex')
+  const stringToSign = [algorithm, String(timestamp), credentialScope, hashedCR].join('\n')
+
+  const hmacSha256 = (key, data) => crypto.createHmac('sha256', key).update(data, 'utf8').digest()
+  const secretDate = hmacSha256(Buffer.from(`TC3${SecretKey}`, 'utf8'), date)
+  const secretService = hmacSha256(secretDate, service)
+  const secretSigning = hmacSha256(secretService, 'tc3_request')
+  const signature = crypto.createHmac('sha256', secretSigning).update(stringToSign, 'utf8').digest('hex')
+
+  const authorization = [
+    `${algorithm} Credential=${SecretId}/${credentialScope}`,
+    `SignedHeaders=${signedHeaders}`,
+    `Signature=${signature}`
+  ].join(', ')
+
+  const headers = {
+    'Host': host,
+    'Content-Type': ct,
+    'X-TC-Action': action,
+    'X-TC-Timestamp': String(timestamp),
+    'X-TC-Version': '2024-09-02',
+    'X-TC-Region': region || '',
+    'Authorization': authorization,
+    'Content-Length': Buffer.byteLength(payloadStr, 'utf8')
+  }
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: host,
+      port: 443,
+      path: '/',
+      method: 'POST',
+      headers,
+      timeout: 10000
+    }, (res) => {
+      const chunks = []
+      res.on('data', (c) => chunks.push(c))
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')))
+        } catch (e) {
+          reject(new Error(`IM REST 响应非 JSON: ${Buffer.concat(chunks).toString('utf8').slice(0, 200)}`))
+        }
+      })
+    })
+    req.on('error', reject)
+    req.on('timeout', () => { req.destroy(new Error('IM REST 调用超时')) })
+    req.write(payloadStr)
+    req.end()
+  })
+}
+
+/**
+ * TIM 头像字段(Tag_Profile_IM_Image)限长 500 字节且无法渲染 data: 内联图。
+ * 本项目种子头像为 SVG data URI，直接导入会报 ErrorCode 40601 导致
+ * 整个 account_import 失败（连昵称也写不进去），这里统一清洗。
+ */
+function _safeFaceUrl(u) {
+  const s = String(u || '').trim()
+  if (!s) return ''
+  if (/^data:/i.test(s)) return ''
+  return Buffer.byteLength(s, 'utf8') > 500 ? '' : s
+}
+
+/**
+ * 导入单个用户账号到腾讯云 IM（account_import）。
+ * 幂等：腾讯云 IM 对已存在的账号重复导入会直接成功（更新昵称/头像）。
+ * @param {Object} opts
+ * @param {Object} opts.cfg          IM 模块配置（含 sdkAppId / cloudSecretId / cloudSecretKey / imRegion）
+ * @param {string|number} opts.userId  业务用户 ID
+ * @param {string} [opts.nick]      昵称
+ * @param {string} [opts.faceUrl]   头像
+ * @returns {Promise<{action:'import'|'noop', userId?:string, result?:object, reason?:string}>}
+ */
+async function importIMAccount({ cfg, userId, nick, faceUrl }) {
+  if (!cfg || !cfg.cloudSecretId || !cfg.cloudSecretKey) {
+    return { action: 'noop', reason: 'IM cloudSecretId/cloudSecretKey 未配置，跳过账号导入' }
+  }
+  try {
+    const result = await callImCloudApi({
+      cfg,
+      service: 'ims',
+      action: 'InvokeRESTAPI',
+      region: cfg.imRegion || 'ap-guangzhou',
+      payload: {
+        Service: 'im_open_login_svc',
+        Cmd: 'account_import',
+        ClientIp: '',
+        ApiIp: '',
+        SDKAppID: Number(cfg.sdkAppId),
+        Content: JSON.stringify({
+          UserID: String(userId),
+          Nick: nick || '',
+          FaceUrl: _safeFaceUrl(faceUrl)
+        })
+      }
+    })
+    return { action: 'import', userId: String(userId), result }
+  } catch (e) {
+    return { action: 'import', userId: String(userId), result: { error: (e && e.message) || String(e) } }
+  }
+}
+
+// ============================================================
+// 老版 IM REST（v4 签名）：只需 SDKAppID + 密钥 Key（无需腾讯云 API 密钥）
+//   URL: https://console.tim.qq.com/v4/{service}/{cmd}
+//        ?sdkappid=&identifier=&usersig=&random=&contenttype=json
+//   usersig 即 TLSSigAPIv2 为 identifier 签发的 UserSig（短有效期即可）
+// ============================================================
+
+/**
+ * 调用老版 IM REST v4 接口
+ * @param {Object} opts
+ * @param {Object} opts.cfg        IM 模块配置（sdkAppId / secretKey）
+ * @param {string} opts.identifier 操作者 UserID（须与 usersig 一致）
+ * @param {string} opts.service    例如 openim / im_open_login_svc
+ * @param {string} opts.cmd        例如 sendmsg / account_import
+ * @param {Object} opts.body       JSON 请求体
+ * @returns {Promise<Object>}      腾讯返回 JSON（含 ActionStatus/ErrorCode/ErrorInfo）
+ */
+function callImRestV4({ cfg, identifier, service, cmd, body }) {
+  if (!cfg || !cfg.sdkAppId || !cfg.secretKey) {
+    return Promise.resolve({ noop: true, reason: 'IM 未启用或 SDKAppID/密钥未配置' })
+  }
+  const usersig = genUserSig({
+    sdkAppId: Number(cfg.sdkAppId),
+    userId: String(identifier),
+    secretKey: String(cfg.secretKey),
+    expireSeconds: 600
+  })
+  const random = Math.floor(Math.random() * 0x7fffffff)
+  const qs = [
+    `sdkappid=${encodeURIComponent(Number(cfg.sdkAppId))}`,
+    `identifier=${encodeURIComponent(String(identifier))}`,
+    `usersig=${encodeURIComponent(usersig)}`,
+    `random=${random}`,
+    'contenttype=json'
+  ].join('&')
+  const payloadStr = JSON.stringify(body || {})
+  const hostname = 'console.tim.qq.com'
+  const path = `/v4/${service}/${cmd}?${qs}`
+
+  return new Promise((resolve, reject) => {
+    const req = require('https').request({
+      hostname,
+      port: 443,
+      path,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Length': Buffer.byteLength(payloadStr, 'utf8')
+      },
+      timeout: 10000
+    }, (res) => {
+      const chunks = []
+      res.on('data', (c) => chunks.push(c))
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')))
+        } catch (e) {
+          reject(new Error(`IM v4 REST 响应非 JSON: ${Buffer.concat(chunks).toString('utf8').slice(0, 200)}`))
+        }
+      })
+    })
+    req.on('error', reject)
+    req.on('timeout', () => { req.destroy(new Error('IM v4 REST 调用超时')) })
+    req.write(payloadStr)
+    req.end()
+  })
+}
+
+/**
+ * 老版 REST 账号导入（保证用户在腾讯云 IM 中存在，发消息不报 20009/20003）
+ */
+function importIMAccountV4({ cfg, userId, nick, faceUrl }) {
+  return callImRestV4({
+    cfg,
+    identifier: String((cfg && cfg.adminUserId) || 'administrator'),
+    service: 'im_open_login_svc',
+    cmd: 'account_import',
+    body: {
+      UserID: String(userId),
+      Nick: nick || '',
+      FaceUrl: _safeFaceUrl(faceUrl)
+    }
+  })
+}
+
+/**
+ * 老版 REST 以 fromUserId 身份单发一条文本消息给 toUserId
+ * 注意：v4 REST 的 identifier 必须是应用管理员账号（60010），
+ * 真实发送者通过请求体 From_Account 指定。
+ */
+function sendIMC2CTextV4({ cfg, fromUserId, toUserId, text }) {
+  return callImRestV4({
+    cfg,
+    identifier: String((cfg && cfg.adminUserId) || 'administrator'),
+    service: 'openim',
+    cmd: 'sendmsg',
+    body: {
+      SyncOtherMachine: 2,
+      From_Account: String(fromUserId),
+      To_Account: String(toUserId),
+      MsgRandom: Math.floor(Math.random() * 0x7fffffff),
+      MsgBody: [{ MsgType: 'TIMTextElem', MsgContent: { Text: String(text) } }]
+    }
+  })
+}
+
 module.exports = {
   genUserSig,
   genPrivateMapKey,
   inspectUserSig,
+  importIMAccount,
+  callImCloudApi,
+  callImRestV4,
+  importIMAccountV4,
+  sendIMC2CTextV4,
   // 工具函数暴露方便测试
   _b64Escape,
   _b64Unescape,

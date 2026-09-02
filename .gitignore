@@ -45,6 +45,15 @@ server/data/*.json
 server/data-test/*.json
 !server/data-test/.gitkeep
 
+# ---------- 部署产物 & 证书数据（服务器运行时生成，不进仓库） ----------
+deploy/artifacts/
+deploy/certbot/
+
+# ---------- 审查/调试临时文件 ----------
+.tmp_*
+__review_*
+*.tmp
+
 # ---------- 缓存 & 系统文件 ----------
 .cache/
 .temp/

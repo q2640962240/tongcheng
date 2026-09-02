@@ -158,7 +158,7 @@ onPullDownRefresh(async () => { await loadData(); uni.stopPullDownRefresh() })
 .footer-cta {
   position: fixed; bottom: 0; left: 0; right: 0;
   padding: 24rpx 32rpx; padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-  background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(20rpx);
+  background: rgba(255, 255, 255, 0.95);
   border-top: 2rpx solid #e5e5e5;
 }
 .footer-btn {

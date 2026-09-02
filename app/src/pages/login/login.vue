@@ -447,7 +447,6 @@ const onSavePwd = async () => {
 .modal-mask {
   position: absolute; inset: 0;
   background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
 }
 .modal-card {
   position: absolute;

@@ -107,7 +107,7 @@ function applyAndroidThemeSystemUI() {
 
 /** 延迟 + 重试几次，确保在页面 webview 真正 ready 后还能生效（防止页面覆盖） */
 function scheduleApplySystemUI() {
-  const times = [0, 200, 600, 1200]
+  const times = [0, 600]
   times.forEach((t) => {
     setTimeout(() => {
       try { applyAndroidThemeSystemUI() } catch (_) {}
@@ -120,6 +120,11 @@ export default {
     // 应用启动：检查登录状态
     const userStore = useUserStore()
     userStore.restoreSession()
+
+    // 已登录 → 挂载全局消息提醒（角标 + 震动）；内部 ensureTUILogin 幂等
+    if (userStore.isLoggedIn) {
+      import('./utils/msgNotify').then((m) => m.setupGlobalMsgNotify()).catch(() => {})
+    }
 
     // #ifdef APP-PLUS
     if (typeof plus !== 'undefined') {
@@ -204,7 +209,6 @@ page {
   border-radius: $by-radius-lg;
   padding: 24rpx;
   box-shadow: $by-shadow-2;
-  backdrop-filter: blur(20px);
   &::before {
     content: "";
     position: absolute; inset: 0;
@@ -248,7 +252,7 @@ page {
 .btn-aurora::after { border: none; }
 
 .btn-outline {
-  background: transparent;
+  background: rgba(255,255,255,.04);
   color: $by-text-1;
   border: 2rpx solid $by-border-strong;
   border-radius: $by-radius-pill;
@@ -256,7 +260,6 @@ page {
   font-weight: 500;
   font-size: 30rpx;
   text-align: center;
-  backdrop-filter: blur(10px);
   transition: all .15s ease;
   &:active { background: rgba(255,255,255,.06); }
 }

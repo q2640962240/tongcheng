@@ -46,7 +46,6 @@ router.get('/', optionalAuth, async (req, res, next) => {
       for (const k of kws) {
         const like = `%${k}%`
         ors.push({ text: { [Op.like]: like } })
-        ors.push({ tags: { [Op.like]: like } })
       }
       where[Op.or] = ors
     }
@@ -55,15 +54,15 @@ router.get('/', optionalAuth, async (req, res, next) => {
       const prefix = cityRaw.replace(/市$/, '').replace(/区$/, '').replace(/县$/, '')
       where[Op.and] = (where[Op.and] || []).concat([{ city: { [Op.like]: `${prefix}%` } }])
     }
-    let { count: total, rows } = await Post.findAndCountAll({
+    // 城市走模糊匹配，SQL 仅做前缀初筛，需全量取出后内存过滤再分页
+    const allRows = await Post.findAll({
       where,
-      order: [['top', 'DESC'], ['id', 'DESC']],
-      limit: pageSize,
-      offset
+      order: [['top', 'DESC'], ['id', 'DESC']]
     })
     // 补充 cityVariants 过滤（兼容历史不带"市"的数据和空城市）
-    rows = rows.filter(p => matchCity(p.city))
-    total = rows.length
+    const filtered = allRows.filter(p => matchCity(p.city))
+    const total = filtered.length
+    const rows = filtered.slice(offset, offset + pageSize)
     const userIds = [...new Set(rows.map(p => p.userId))]
     const users = await User.findAll({ where: { id: { [Op.in]: userIds } } })
     const userMap = Object.fromEntries(users.map(u => [u.id, {

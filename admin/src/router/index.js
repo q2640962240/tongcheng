@@ -26,6 +26,12 @@ const routes = [
         meta: { title: '用户管理', icon: 'User' }
       },
       {
+        path: 'chat-records',
+        name: 'ChatRecords',
+        component: () => import('../views/chat/ChatRecords.vue'),
+        meta: { title: '聊天记录', icon: 'ChatLineRound' }
+      },
+      {
         path: 'services',
         name: 'Services',
         component: () => import('../views/services/Services.vue'),

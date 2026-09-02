@@ -120,6 +120,7 @@ import TUIChatEngine, {
   IConversationModel,
 } from '@tencentcloud/chat-uikit-engine-lite';
 import { TUIGlobal, isIOS, addLongPressListener } from '@tencentcloud/universal-api';
+import { TUILogin } from '@tencentcloud/tui-core-lite';
 import Icon from '../../common/Icon.vue';
 import Avatar from '../../common/Avatar/index.vue';
 import ActionsMenu from '../actions-menu/index.vue';
@@ -247,6 +248,13 @@ const getActionsMenuPosition = (event: Event, index: number) => {
 const enterConversationChat = (conversationID: string) => {
   emits('handleSwitchConversation', conversationID);
   TUIConversationService.switchConversation(conversationID);
+  // 进入会话即清该会话未读：确保返回列表后红点/角标回落（不完全依赖 SDK 自动时机）
+  try {
+    const chat = (TUILogin.getContext() as any)?.chat;
+    if (chat && typeof chat.setMessageRead === 'function') {
+      chat.setMessageRead({ conversationID }).catch(() => { /* ignore */ });
+    }
+  } catch (_) { /* ignore */ }
 };
 
 function addLongPressHandler() {

@@ -173,7 +173,7 @@ async function onJoin() {
     uni.showToast({ title: '组局已关闭/已满', icon: 'none' });
     return;
   }
-  if (!userStore.isLogin) {
+  if (!userStore.isLoggedIn) {
     uni.showToast({ title: '请先登录', icon: 'none' });
     setTimeout(() => uni.navigateTo({ url: '/pages/login/login' }), 600);
     return;
@@ -208,15 +208,14 @@ async function onJoin() {
 .page-group { min-height: 100vh; background: $by-bg; color: $by-text-1; padding-bottom: 180rpx; }
 .hero {
   height: 560rpx; position: relative;
-  background: linear-gradient(160deg, $by-aurora-purple 0%, $by-aurora-pink 45%, $by-gold 140%);
+  background: linear-gradient(160deg, $by-aurora-a 0%, $by-aurora-b 45%, $by-gold 140%);
   &__cover { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 48rpx 32rpx; }
-  &__mask { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, rgba(11,15,26,.85) 100%); }
+  &__mask { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, rgba($by-bg, .65) 100%); }
   &__title { position: relative; font-size: 48rpx; font-weight: 800; color: #fff; letter-spacing: 1rpx; }
   &__meta { position: relative; margin-top: 20rpx; display: flex; gap: 16rpx; flex-wrap: wrap; }
   &__tag {
     padding: 8rpx 20rpx; border-radius: 999rpx;
     background: rgba(255,255,255,.18); color: #fff; font-size: 22rpx;
-    backdrop-filter: blur(6px);
   }
 }
 .container { padding: 0 24rpx; margin-top: -40rpx; position: relative; }
@@ -228,30 +227,30 @@ async function onJoin() {
 .row {
   display: flex; justify-content: space-between; align-items: center;
   padding: 14rpx 0;
-  border-bottom: 1rpx solid rgba(255,255,255,.04);
+  border-bottom: 1rpx solid $by-border;
   &:last-child { border-bottom: none; }
-  &__label { color: $by-text-2; font-size: 26rpx; }
+  &__label { color: $by-text-3; font-size: 26rpx; }
   &__value { color: $by-text-1; font-size: 28rpx; text-align: right; max-width: 60%; }
 }
 .progress {
   margin-top: 16rpx; height: 12rpx; background: $by-bg-soft; border-radius: 999rpx; overflow: hidden;
-  &__fill { height: 100%; background: linear-gradient(90deg, $by-gold-soft, $by-gold); border-radius: 999rpx; transition: all .3s; }
+  &__fill { height: 100%; background: $by-gradient-gold; border-radius: 999rpx; transition: all .3s; }
 }
-.desc { color: $by-text-2; font-size: 28rpx; line-height: 1.8; }
+.desc { color: $by-text-3; font-size: 28rpx; line-height: 1.8; }
 .avatars { display: flex; gap: 24rpx; flex-wrap: wrap; }
 .avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 8rpx; }
 .avatar {
   width: 96rpx; height: 96rpx; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   color: #fff; font-weight: 700; font-size: 32rpx;
-  border: 3rpx solid rgba(212,175,55,.3);
+  border: 3rpx solid rgba(212,160,23,.3);
 }
-.avatar-name { font-size: 22rpx; color: $by-text-muted; }
+.avatar-name { font-size: 22rpx; color: $by-text-3; }
 
 .bottom-bar {
   position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx 32rpx 32rpx;
   background: $by-bg-soft; display: flex; gap: 20rpx; align-items: center;
-  border-top: 1rpx solid rgba(212,175,55,.1);
+  border-top: 1rpx solid $by-border;
 }
 .by-btn-outline {
   flex: 0 0 200rpx; border: 2rpx solid $by-gold; color: $by-gold !important;
@@ -259,8 +258,8 @@ async function onJoin() {
 }
 .by-btn-gold {
   flex: 1;
-  background: linear-gradient(135deg, $by-gold-soft 0%, $by-gold 100%);
-  color: #1a1200 !important; font-weight: 700; border-radius: 999rpx; border: none;
+  background: $by-gradient-gold;
+  color: $by-bg !important; font-weight: 700; border-radius: 999rpx; border: none;
   font-size: 30rpx;
 }
 </style>
