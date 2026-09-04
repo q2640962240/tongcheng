@@ -272,18 +272,47 @@ async function requestMicrophonePermission(): Promise<boolean> {
   } else if (systemInfo.platform === 'ios') {
     return new Promise((resolve) => {
       try {
+        // 先检查当前权限状态，避免不必要的权限请求
         const AVAudioSession = plus.ios.importClass('AVAudioSession');
         const audioSession = AVAudioSession.sharedInstance();
+        const currentPermission = audioSession.recordPermission();
+        plus.ios.deleteObject(audioSession);
+        plus.ios.deleteObject(AVAudioSession);
 
-        audioSession.requestRecordPermission((granted: boolean) => {
-          plus.ios.deleteObject(audioSession);
+        // 1684369017 = denied, 1970168948 = undetermined, 1735552627 = granted (avAudioSessionRecordPermissionGranted)
+        if (currentPermission === 1735552627) {
+          // 已授权
+          resolve(true);
+          return;
+        }
+        if (currentPermission === 1684369017) {
+          // 已拒绝，无法再次请求（需跳转设置）
+          resolve(false);
+          return;
+        }
 
-          if (granted) {
-            resolve(true);
-          } else {
+        // undetermined：首次请求权限
+        // iOS 17+ requestRecordPermission 返回 void，回调可能不触发
+        // 使用轮询权限状态的方式作为可靠兑底
+        const AVAudioSession2 = plus.ios.importClass('AVAudioSession');
+        const audioSession2 = AVAudioSession2.sharedInstance();
+        audioSession2.requestRecordPermission();
+        plus.ios.deleteObject(audioSession2);
+        plus.ios.deleteObject(AVAudioSession2);
+
+        // 延迟后轮询检查权限状态变化
+        setTimeout(() => {
+          try {
+            const AVAudioSession3 = plus.ios.importClass('AVAudioSession');
+            const audioSession3 = AVAudioSession3.sharedInstance();
+            const newPermission = audioSession3.recordPermission();
+            plus.ios.deleteObject(audioSession3);
+            plus.ios.deleteObject(AVAudioSession3);
+            resolve(newPermission === 1735552627);
+          } catch (_) {
             resolve(false);
           }
-        });
+        }, 1500);
       } catch (error) {
         console.error('[Audio] iOS: 请求权限失败:', error);
         resolve(false);

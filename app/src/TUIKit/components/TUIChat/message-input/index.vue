@@ -45,7 +45,7 @@
         :file="moreIcon"
         :size="'23px'"
         :hotAreaSize="'3px'"
-        @onClick="changeToolbarDisplayType('tools')"
+        @onClick="handleDirectImageSelect"
       />
     </div>
     <div>
@@ -75,6 +75,7 @@ import { isPC, isH5, isWeChat, isApp } from '../../../utils/env';
 import { sendTyping } from '../utils/sendMessage';
 import { ToolbarDisplayType, InputDisplayType } from '../../../interface';
 import TUIChatConfig from '../config';
+import { sendImageMessage } from '../message-input-toolbar/uploadToolkit/utils';
 
 interface IProps {
   placeholder: string;
@@ -172,6 +173,18 @@ const insertAt = (atInfo: any) => {
 const onAtListOpen = () => {
   editor?.value?.blur && editor?.value?.blur();
 };
+
+function handleDirectImageSelect() {
+  uni.chooseImage({
+    count: 9,
+    sourceType: ['album', 'camera'],
+    success: (res) => {
+      if (currentConversation.value) {
+        sendImageMessage(currentConversation.value, res);
+      }
+    },
+  });
+}
 
 const reEdit = (content: any) => {
   editor?.value?.resetEditor();

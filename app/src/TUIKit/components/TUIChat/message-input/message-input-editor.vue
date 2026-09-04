@@ -309,6 +309,7 @@ defineExpose({
     flex: 1;
     overflow-y: scroll;
     min-height: 25px;
+    color: #000000;
   }
 }
 

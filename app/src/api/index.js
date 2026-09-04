@@ -144,7 +144,7 @@ export const bannerApi = {
   list: (params) => get('/banners', params),
 }
 
-// ==================== 精英付费 (白夜 v2 新增) ====================
+// ==================== 精英认证 (白夜 v2 新增) ====================
 export const eliteApi = {
   rights: () => get('/elite/rights'),
   order: (channel) => post('/elite/pay/order', { channel }),

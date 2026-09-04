@@ -104,6 +104,7 @@ import { ref, computed } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { userApi } from '../../api'
 import { useUserStore } from '../../store/user'
+import { getCurrentBaseURL } from '../../utils/request'
 
 const userStore = useUserStore()
 const form = ref(null)
@@ -111,19 +112,18 @@ const avatarFull = ref('')
 const saving = ref(false)
 const showGenderPicker = ref(false)
 
-const BASE_URL = (() => {
-  // #ifdef H5
-  return '/api'
-  // #endif
-  // #ifndef H5
-  return 'http://localhost:3000'
-  // #endif
-})()
-
 const fullUrl = (url) => {
-  if (!url) return ''
-  if (/^https?:\/\//.test(url)) return url
-  return BASE_URL + url
+  const s = String(url || '')
+  if (!s) return ''
+  if (/^(https?:)?\/\//.test(s) || s.startsWith('data:')) return s
+  const base = getCurrentBaseURL() || ''
+  let host = base.replace(/\/api\/?$/i, '')
+  if (!/^https?:\/\//i.test(host)) {
+    try {
+      if (typeof window !== 'undefined' && window.location) host = window.location.origin
+    } catch (_) { host = '' }
+  }
+  return host + (s.startsWith('/') ? s : '/' + s)
 }
 
 const genderText = computed(() => {

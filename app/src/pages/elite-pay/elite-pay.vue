@@ -29,15 +29,15 @@
         </view>
       </view>
 
-      <!-- 为什么要付费 -->
+      <!-- 为什么需要精英认证 -->
       <view class="section" @click="whyOpen = !whyOpen">
         <view class="section-title row-between">
-          <text>💡 为什么付费？一定要看！</text>
+          <text>💡 为什么需要精英认证？一定要看！</text>
           <text>{{ whyOpen ? '▲' : '▼' }}</text>
         </view>
         <view v-if="whyOpen" class="why-box">
-          <text>1. 我们不是婚介平台，不赚差价。一次性 30 元用于平台安全审核 + 真人认证成本。</text>
-          <text>2. 付费门槛过滤掉 90% 的骚扰、机器人、广告账号，社区质量更好。</text>
+          <text>1. 我们不是婚介平台，不赚差价。精英认证 30 元用于平台安全审核 + 真人认证成本。</text>
+          <text>2. 认证门槛过滤掉 90% 的骚扰、机器人、广告账号，社区质量更好。</text>
           <text>3. 终身权益：后续所有新功能（语音房/匹配算法/VIP 标识）都不再额外收费。</text>
           <text>4. 7 天无理由退款：开通后联系客服可全额退（未使用联系 TA 权益的前提下）。</text>
         </view>

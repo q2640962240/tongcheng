@@ -229,7 +229,7 @@ const onToggleNotify = async (type, enabled) => {
 }
 const onAbout = () => uni.showModal({
   title: '关于我们',
-  content: '白夜 v1.0.0\n白夜 + 线上付费陪玩陪聊平台',
+  content: '白夜 v1.0.0\n白夜 · 精英认证陪伴社交平台',
   showCancel: false
 })
 const onCancel = () => {

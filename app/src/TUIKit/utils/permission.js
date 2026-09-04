@@ -22,6 +22,11 @@ function judgeIosPermissionRecord() {
 
 // Android 权限查询
 function requestAndroidPermission(permissionID) {
+  // 防御性检查：确保在 Android 平台调用，iOS 上 plus.android 不存在
+  if (isIos || (plus.os && plus.os.name && String(plus.os.name).toLowerCase() !== 'android')) {
+    console.warn('[Permission] requestAndroidPermission called on non-Android platform, skipping');
+    return Promise.resolve({ code: -1, message: 'Not Android platform' });
+  }
   return new Promise((resolve, reject) => {
     plus.android.requestPermissions(
       [permissionID], // 理论上支持多个权限同时查询，但实际上本函数封装只处理了一个权限的情况。有需要的可自行扩展封装
@@ -58,25 +63,46 @@ function requestAndroidPermission(permissionID) {
 // 跳转到**应用**的权限页面
 function gotoAppPermissionSetting() {
   if (isIos) {
-    const UIApplication = plus.ios.import('UIApplication');
-    const application2 = UIApplication.sharedApplication();
-    const NSURL2 = plus.ios.import('NSURL');
-    const setting2 = NSURL2.URLWithString('app-settings:');
-    application2.openURL(setting2);
+    try {
+      const UIApplication = plus.ios.import('UIApplication');
+      const application2 = UIApplication.sharedApplication();
+      const NSURL2 = plus.ios.import('NSURL');
+      const setting2 = NSURL2.URLWithString('app-settings:');
+      application2.openURL(setting2);
 
-    plus.ios.deleteObject(setting2);
-    plus.ios.deleteObject(NSURL2);
-    plus.ios.deleteObject(application2);
+      plus.ios.deleteObject(setting2);
+      plus.ios.deleteObject(NSURL2);
+      plus.ios.deleteObject(application2);
+    } catch (e) {
+      console.error('[Permission] iOS open settings failed:', e);
+      // 兜底：尝试 UIApplicationOpenSettingsURLString
+      try {
+        const UIApplication = plus.ios.import('UIApplication');
+        const app = UIApplication.sharedApplication();
+        const NSURL = plus.ios.import('NSURL');
+        const url = NSURL.URLWithString(UIApplication.sharedApplication().UIApplicationOpenSettingsURLString);
+        if (url) app.openURL(url);
+        plus.ios.deleteObject(url);
+        plus.ios.deleteObject(NSURL);
+        plus.ios.deleteObject(UIApplication);
+      } catch (_) { /* 兜底也失败则忽略 */ }
+    }
+  } else if (plus.os && plus.os.name && String(plus.os.name).toLowerCase() === 'android') {
+    try {
+      const Intent = plus.android.importClass('android.content.Intent');
+      const Settings = plus.android.importClass('android.provider.Settings');
+      const Uri = plus.android.importClass('android.net.Uri');
+      const mainActivity = plus.android.runtimeMainActivity();
+      const intent = new Intent();
+      intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+      const uri = Uri.fromParts('package', mainActivity.getPackageName(), null);
+      intent.setData(uri);
+      mainActivity.startActivity(intent);
+    } catch (e) {
+      console.error('[Permission] Android open settings failed:', e);
+    }
   } else {
-    const Intent = plus.android.importClass('android.content.Intent');
-    const Settings = plus.android.importClass('android.provider.Settings');
-    const Uri = plus.android.importClass('android.net.Uri');
-    const mainActivity = plus.android.runtimeMainActivity();
-    const intent = new Intent();
-    intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-    const uri = Uri.fromParts('package', mainActivity.getPackageName(), null);
-    intent.setData(uri);
-    mainActivity.startActivity(intent);
+    console.warn('[Permission] Unknown platform, cannot open settings');
   }
 }
 
