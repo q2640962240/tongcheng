@@ -212,9 +212,9 @@ const updateShowDeleteConversationDialog = (isShow: boolean) => {
   position: absolute;
   left: 164px;
   border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  box-shadow: 0 -4px 12px 0 rgba(0, 0, 0, 0.06);
-  background-color: #fff;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 -4px 12px 0 rgba(0, 0, 0, 0.2);
+  background-color: #1A2238;
   overflow: hidden;
   opacity: 0;
 
@@ -226,7 +226,7 @@ const updateShowDeleteConversationDialog = (isShow: boolean) => {
   }
 
   &.actions-menu-pc .actions-menu-item:hover {
-    background-color: #eee;
+    background-color: #242E4C;
   }
 }
 </style>

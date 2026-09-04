@@ -769,7 +769,7 @@ const onComingSoon = () => uni.showToast({ title: toStr('即将上线，敬请�
 .bottom-safe { height: calc(160rpx + env(safe-area-inset-bottom)); }
 
 .by-header {
-  padding: 60rpx 32rpx 20rpx;
+  padding: calc(env(safe-area-inset-top) + 20rpx) 32rpx 20rpx;
   background: linear-gradient(160deg, $by-bg-soft 0%, $by-bg 100%);
   border-bottom: 1rpx solid $by-border;
 }

@@ -55,7 +55,7 @@ onMounted(() => {
   display: flex;
   flex-direction: row;
   align-items: center;
-  background: #EBF0F6;
+  background: #141A2D;
   min-height: 44px;
   padding: 0 12px;
 
@@ -78,7 +78,7 @@ onMounted(() => {
       text-overflow: ellipsis;
       font-size: 18px;
       font-weight: 600;
-      color: #333;
+      color: #F5F7FF;
       margin: 0;
     }
   }

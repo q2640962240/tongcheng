@@ -7,18 +7,18 @@
       content: '';
       width: calc(100% - 60px);
       height: .5px;
-      background: #E5E5E5;
+      background: rgba(255,255,255,0.08);
       bottom: 0;
       left: 60px;
     }
 
     &-pinned {
-      background: #F4F4F4;
+      background: #242E4C;
     }
 
     &-selected,
     &-toggled {
-      background: rgba(0, 110, 255, 0.1);
+      background: rgba(212,175,55,0.15);
     }
 
     .left {
@@ -35,13 +35,13 @@
 
     .content-header {
       &-label {
-        color: #000;
+        color: #F5F7FF;
       }
 
       .name {
         font-weight: 400;
         letter-spacing: 0;
-        color: #000;
+        color: #F5F7FF;
       }
     }
 
@@ -54,34 +54,34 @@
 
       &-content {
         font-weight: 400;
-        color: #999;
+        color: #7E88AA;
         letter-spacing: 0;
       }
     }
 
     .content-footer {
-      color: #999;
+      color: #7E88AA;
 
       .time {
-        color: #bbb;
+        color: #7E88AA;
       }
     }
   }
 
   &-content {
     .dialog {
-      background: #fff;
+      background: #1A2238;
 
       &-item {
-        background: #fff;
-        border: 1px solid #e0e0e0;
-        box-shadow: 0 -4px 12px 0 rgba(0, 0, 0, 0.06);
+        background: #1A2238;
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 -4px 12px 0 rgba(0, 0, 0, 0.2);
       }
 
       .conversation-options {
         font-family: PingFangSC-Regular;
         font-weight: 400;
-        color: #4f4f4f;
+        color: #7E88AA;
         letter-spacing: 0;
       }
     }

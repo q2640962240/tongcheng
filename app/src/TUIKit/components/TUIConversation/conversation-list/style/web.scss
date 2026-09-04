@@ -62,7 +62,7 @@
         height: 10px;
         right: -5px;
         bottom: -5px;
-        border: 2px solid #fff;
+        border: 2px solid #1A2238;
         box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
         border-radius: 50%;
 
@@ -142,7 +142,7 @@
         }
 
         &-content {
-          color: #999;
+          color: #7E88AA;
           flex: 1;
           width: 0;
           overflow: hidden;
@@ -158,7 +158,7 @@
       position: relative;
 
       .tui-conversation-item:hover {
-        background: rgba(0, 110, 255, 0.1);
+        background: rgba(212,175,55,0.15);
       }
 
       .dialog {

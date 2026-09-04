@@ -27,8 +27,9 @@
             "navBar" : "#0B0F1A"
         },
         "modules" : {
-            "Push" : {},
-            "Share" : {}
+            "Share" : {},
+            "Camera" : {},
+            "Record" : {}
         },
         "distribute" : {
             "android" : {
@@ -60,7 +61,15 @@
             "sdkConfigs" : {
                 "oauth" : {},
                 "payment" : {},
-                "push" : {}
+                "push" : {},
+                "geolocation" : {
+                    "amap" : {
+                        "name" : "",
+                        "__platform__" : [ "ios", "android" ],
+                        "appkey_ios" : "",
+                        "appkey_android" : ""
+                    }
+                }
             },
             "icons" : {
                 "android" : {

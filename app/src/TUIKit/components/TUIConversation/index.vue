@@ -55,7 +55,7 @@ function applyH5LayoutFix() {
       }
     });
     const pageBody = document.querySelector('uni-page-body');
-    if (pageBody) pageBody.style.background = '#ffffff';
+    if (pageBody) pageBody.style.background = '#0B0F1A';
   } catch (_) { /* ignore */ }
   // #endif
 }

@@ -441,7 +441,7 @@ const onContact = (item) => {
 .header-row {
   position: relative;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 20rpx 32rpx 12rpx;
+  padding: calc(env(safe-area-inset-top) + 20rpx) 32rpx 12rpx;
 }
 .brand { display: flex; align-items: center; gap: 16rpx; }
 .logo-wrap { position: relative; width: 72rpx; height: 72rpx; }

@@ -320,7 +320,7 @@ onShow(() => {
 
 .header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 $by-page-pad-x; height: $by-topbar-h; position: sticky; top: 0;
+  padding: env(safe-area-inset-top) $by-page-pad-x 0; height: calc($by-topbar-h + env(safe-area-inset-top)); position: sticky; top: 0;
   background: $by-bg;
   border-bottom: 1rpx solid $by-border; z-index: 10;
 }

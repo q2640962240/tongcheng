@@ -13,7 +13,7 @@
 
 .tui-conversation-header {
   width: 100%;
-  border-bottom: 1px solid #E6E9EB;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
   position: relative;
 }
 
@@ -101,8 +101,8 @@
     padding: 10px 0;
     border-radius: 7px;
     border-bottom: none;
-    background-color: #fff;
-    box-shadow: 0 0 10px 0 #0003;
+    background-color: #1A2238;
+    box-shadow: 0 0 10px 0 rgba(0,0,0,0.3);
     flex-direction: column;
 
     &::before {
@@ -114,7 +114,7 @@
       height: 0;
       border-left: 8px solid transparent;
       border-right: 8px solid transparent;
-      border-bottom: 8px solid #fff;
+      border-bottom: 8px solid #1A2238;
       z-index: 4;
     }
 
@@ -127,7 +127,7 @@
       height: 0;
       border-left: 8px solid transparent;
       border-right: 8px solid transparent;
-      border-bottom: 8px solid rgba(0, 0, 0, 0.1);
+      border-bottom: 8px solid rgba(255,255,255,0.1);
       z-index: 3;
     }
 
