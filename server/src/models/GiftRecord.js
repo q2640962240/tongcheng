@@ -16,7 +16,7 @@ const GiftRecord = sequelize.define('GiftRecord', {
     allowNull: false
   },
   giftId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.BIGINT,
     allowNull: false
   },
   giftName: {
