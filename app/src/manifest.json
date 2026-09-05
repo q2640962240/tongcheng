@@ -53,10 +53,17 @@
             },
             "ios" : {
                 "dSYMs" : false,
-                "deploymentTarget" : "12.0",
+                "deploymentTarget" : "13.0",
                 "backgroundColor" : "#0B0F1A",
                 "statusbar" : {
                     "style" : "light"
+                },
+                "privacyDescription" : {
+                    "NSCameraUsageDescription" : "用于拍摄头像和聊天图片",
+                    "NSMicrophoneUsageDescription" : "用于发送语音消息",
+                    "NSPhotoLibraryUsageDescription" : "用于选择头像和保存图片",
+                    "NSPhotoLibraryAddUsageDescription" : "用于保存图片到相册",
+                    "NSLocationWhenInUseUsageDescription" : "用于定位您所在的城市，推荐附近的内容"
                 }
             },
             "sdkConfigs" : {

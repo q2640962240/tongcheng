@@ -284,8 +284,7 @@ const tryAutoLocate = async () => {
 const quickEntries = [
   { key: 'finder', label: '寻人大厅', emoji: '🔍', path: '/pages/discover/discover?tab=finder' },
   { key: 'posts', label: '动态广场', emoji: '📝', path: '/pages/discover/discover?tab=posts' },
-  { key: 'groups', label: '同城组局', emoji: '🎯', path: '/pages/discover/discover?tab=groups' },
-  { key: 'redpack', label: '红包专区', emoji: '🧧', path: '/pages/discover/discover?tab=redpack' }
+  { key: 'groups', label: '同城组局', emoji: '🎯', path: '/pages/discover/discover?tab=groups' }
 ]
 
 /* ---- 认证引导条 ---- */
@@ -301,10 +300,10 @@ const userLoading = ref(false)
 const latestPosts = ref([])
 const postLoading = ref(false)
 
-const loadBanners = async () => {
+const loadBanners = async (silent = false) => {
   bannerLoadFailed.value = false
   try {
-    const res = await guard(bannerApi.list({ position: 'home_top', pageSize: 10 }), null)
+    const res = await guard(bannerApi.list({ position: 'home_top', pageSize: 10 }, silent ? { silent: true } : null), null)
     banners.value = toList(getPath(unwrap(res, null), 'list', []))
   } catch (e) { banners.value = []; bannerLoadFailed.value = true }
   if (banners.value.length === 0) {
@@ -315,13 +314,13 @@ const loadBanners = async () => {
   }
 }
 
-const loadRecommendUsers = async () => {
+const loadRecommendUsers = async (silent = false) => {
   userLoading.value = true
   userLoadFailed.value = false
   try {
     const params = { page: 1, pageSize: 10 }
     if (city.value && city.value !== '全国') params.city = city.value
-    const res = await guard(userApi.discover(params), null)
+    const res = await guard(userApi.discover(params, silent ? { silent: true } : null), null)
     const data = unwrap(res, null)
     const rows = toList(getPath(data, 'list', []) || getPath(data, 'rows', []) || getPath(data, 'items', []))
     recommendUsers.value = rows
@@ -340,11 +339,11 @@ const loadRecommendUsers = async () => {
   finally { userLoading.value = false }
 }
 
-const loadLatestPosts = async () => {
+const loadLatestPosts = async (silent = false) => {
   postLoading.value = true
   postLoadFailed.value = false
   try {
-    const res = await guard(postApi.list({ page: 1, pageSize: 5 }), null)
+    const res = await guard(postApi.list({ page: 1, pageSize: 5 }, silent ? { silent: true } : null), null)
     const data = unwrap(res, null)
     const rows = toList(getPath(data, 'list', []) || getPath(data, 'rows', []) || getPath(data, 'items', []))
     latestPosts.value = rows
@@ -384,9 +383,9 @@ const onRefresh = async () => {
 
 onShow(() => {
   readCity()
-  loadBanners()
-  loadRecommendUsers()
-  loadLatestPosts()
+  loadBanners(true)
+  loadRecommendUsers(true)
+  loadLatestPosts(true)
   if (userStore.token) msgBadge.value = true
 })
 onMounted(() => tryAutoLocate())
@@ -529,7 +528,7 @@ const onPostTap = (p) => uni.navigateTo({ url: `/pages/discover/discover?tab=pos
   margin: 24rpx 32rpx 0;
   padding: 28rpx 16rpx !important;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16rpx 0;
 }
 .quick-item {
@@ -549,7 +548,6 @@ const onPostTap = (p) => uni.navigateTo({ url: `/pages/discover/discover?tab=pos
 .qi-finder  { background: linear-gradient(135deg, color.change($by-info, $alpha: .25), color.change($by-aurora-c, $alpha: .12)); border-color: color.change($by-info, $alpha: .3); }
 .qi-posts   { background: linear-gradient(135deg, color.change($by-aurora-b, $alpha: .3), color.change($by-aurora-a, $alpha: .12)); border-color: color.change($by-aurora-b, $alpha: .3); }
 .qi-groups  { background: linear-gradient(135deg, color.change($by-success, $alpha: .25), color.change($by-info, $alpha: .1)); border-color: color.change($by-success, $alpha: .3); }
-.qi-redpack { background: linear-gradient(135deg, color.change($by-gold, $alpha: .25), color.change($by-gold-deep, $alpha: .08)); border-color: color.change($by-gold, $alpha: .3); }
 .quick-label { font-size: 24rpx; color: $by-text-2; font-weight: 500; }
 
 /* -------- 认证引导条 -------- */

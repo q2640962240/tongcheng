@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { User, Service, ServiceCategory, Order, Wallet, Feedback, Admin, Transaction, Invite, Message, Post, Group, Banner, EliteOrder, Gift, GiftRecord, Op } = require('../models')
+const { User, Service, ServiceCategory, Order, Wallet, Feedback, Admin, Transaction, Invite, Message, Post, Group, Banner, EliteOrder, Gift, GiftRecord, Comment, Review, SignIn, DailyTask, Follow, Greeting, Op } = require('../models')
 const { signToken } = require('../middleware/auth')
 const { success, paginate, fail } = require('../utils/response')
 
@@ -465,16 +465,16 @@ router.put('/orders/:id/refund', async (req, res, next) => {
     if (!order) return fail(res, '订单不存在', 404)
     await order.update({ status: 'refunded' })
 
-    // 退还星币给消费者
+    // 退还钻石给消费者
     const wallet = await Wallet.findOne({ where: { userId: order.userId } })
     if (wallet) {
-      await wallet.update({ starCoin: wallet.starCoin + order.amount })
+      await wallet.update({ diamond: (wallet.diamond || 0) + order.amount })
       await Transaction.create({
         userId: order.userId,
         type: 'refund',
         amount: order.amount,
-        currency: 'star',
-        balanceAfter: wallet.starCoin,
+        currency: 'diamond',
+        balanceAfter: wallet.diamond,
         orderId: order.id,
         remark: `后台退款：${order.orderNo}`
       })
@@ -913,6 +913,13 @@ const MODULE_META = {
         { label: '新加坡 (ap-singapore)', value: 'ap-singapore' }
       ]
     }
+  },
+  tasks: {
+    label: '每日任务',
+    icon: 'Finished',
+    color: '#8B5CF6',
+    description: '用户每日完成任务获取钻石奖励，提升日活留存。启用后用户端「每日任务」入口可见。',
+    options: {}
   }
 }
 const FIELD_LABELS = {
@@ -980,7 +987,14 @@ const FIELD_LABELS = {
   adminUserId:    { label: '服务端管理员 UserID',               placeholder: '默认 administrator' },
   cloudSecretId:  { label: '腾讯云 API SecretId (REST v3)',     placeholder: '账号导入、单发消息等 REST 调用需配置' },
   cloudSecretKey: { label: '腾讯云 API SecretKey (REST v3)',    placeholder: '配合 SecretId 使用' },
-  imRegion:       { label: 'IM 接入地域',                       placeholder: '默认 ap-guangzhou', required: true }
+  imRegion:       { label: 'IM 接入地域',                       placeholder: '默认 ap-guangzhou', required: true },
+
+  login_reward:    { label: '每日登录奖励 (钻石)',   placeholder: '默认 2', required: true },
+  chat_reward:     { label: '发 3 条消息奖励 (钻石)', placeholder: '默认 5', required: true },
+  gift_reward:     { label: '送 1 个礼物奖励 (钻石)', placeholder: '默认 5', required: true },
+  post_reward:     { label: '发 1 条动态奖励 (钻石)', placeholder: '默认 3', required: true },
+  share_reward:    { label: '分享 1 次奖励 (钻石)',   placeholder: '默认 2', required: true },
+  all_done_reward: { label: '全部完成额外奖励 (钻石)', placeholder: '默认 10', required: true }
 }
 
 function collectTemplate() {
@@ -1056,6 +1070,15 @@ function collectTemplate() {
       { key: 'cloudSecretId',   type: 'secret',  description: '腾讯云 API SecretId：调用 v3 REST(账号导入、单发消息等) 使用，非必填' },
       { key: 'cloudSecretKey',  type: 'secret',  description: '腾讯云 API SecretKey：配合 cloudSecretId 使用' },
       { key: 'imRegion',        type: 'select',  description: '接入地域：默认 ap-guangzhou' }
+    ],
+    tasks: [
+      { key: 'enabled',         type: 'boolean', description: '是否启用每日任务系统：true=用户端展示任务入口，false=隐藏' },
+      { key: 'login_reward',    type: 'number',  description: '每日登录奖励钻石数，默认 2' },
+      { key: 'chat_reward',     type: 'number',  description: '发 3 条消息奖励钻石数，默认 5' },
+      { key: 'gift_reward',     type: 'number',  description: '送 1 个礼物奖励钻石数，默认 5' },
+      { key: 'post_reward',     type: 'number',  description: '发 1 条动态奖励钻石数，默认 3' },
+      { key: 'share_reward',    type: 'number',  description: '分享 1 次奖励钻石数，默认 2' },
+      { key: 'all_done_reward', type: 'number',  description: '全部完成额外奖励钻石数，默认 10' }
     ]
   }
 }
@@ -1784,6 +1807,11 @@ router.delete('/gifts/:id', async (req, res, next) => {
   try {
     const gift = await Gift.findByPk(req.params.id)
     if (!gift) return fail(res, '礼物不存在', 404)
+    const refCount = await GiftRecord.count({ where: { giftId: gift.id } })
+    if (refCount > 0) {
+      await gift.update({ active: false })
+      return success(res, { softDeleted: true, refCount }, `该礼物已有 ${refCount} 条送礼记录，已改为下架（停用）而非删除，避免历史数据断裂`)
+    }
     await gift.destroy()
     success(res, null, '礼物已删除')
   } catch (err) { next(err) }
@@ -1956,6 +1984,155 @@ router.get('/announcements', async (req, res, next) => {
       return { id: m.id, title: parsed.title || '系统通知', content: parsed.body || m.content, receiverId: m.receiverId, createdAt: m.createdAt }
     })
     success(res, { list, total: count, page: pg, pageSize: ps })
+  } catch (err) { next(err) }
+})
+
+/* ================== 评论管理 ================== */
+
+/** 评论列表 */
+router.get('/comments', async (req, res, next) => {
+  try {
+    const { postId, userId, keyword, page = 1, pageSize = 20 } = req.query
+    const where = {}
+    if (postId) where.postId = postId
+    if (userId) where.userId = userId
+    if (keyword) where.text = { [Op.like]: `%${keyword}%` }
+    const { rows, count } = await Comment.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit: Number(pageSize),
+      offset: (Number(page) - 1) * Number(pageSize),
+      include: [
+        { model: User, as: 'author', attributes: ['id', 'nickname', 'avatar'] },
+        { model: Post, as: 'post', attributes: ['id', 'content'] }
+      ]
+    })
+    paginate(res, rows, count, Number(page), Number(pageSize))
+  } catch (err) { next(err) }
+})
+
+/** 删除评论 */
+router.delete('/comments/:id', async (req, res, next) => {
+  try {
+    const comment = await Comment.findByPk(req.params.id)
+    if (!comment) return fail(res, '评论不存在', 404)
+    await comment.destroy()
+    success(res, null, '评论已删除')
+  } catch (err) { next(err) }
+})
+
+/* ================== 评价管理 ================== */
+
+/** 评价列表 */
+router.get('/reviews', async (req, res, next) => {
+  try {
+    const { serviceId, userId, rating, page = 1, pageSize = 20 } = req.query
+    const where = {}
+    if (serviceId) where.serviceId = serviceId
+    if (userId) where.userId = userId
+    if (rating) where.rating = Number(rating)
+    const { rows, count } = await Review.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit: Number(pageSize),
+      offset: (Number(page) - 1) * Number(pageSize),
+      include: [
+        { model: User, as: 'reviewer', attributes: ['id', 'nickname', 'avatar'] },
+        { model: Service, as: 'service', attributes: ['id', 'title'] }
+      ]
+    })
+    paginate(res, rows, count, Number(page), Number(pageSize))
+  } catch (err) { next(err) }
+})
+
+/** 删除评价 */
+router.delete('/reviews/:id', async (req, res, next) => {
+  try {
+    const review = await Review.findByPk(req.params.id)
+    if (!review) return fail(res, '评价不存在', 404)
+    await review.destroy()
+    success(res, null, '评价已删除')
+  } catch (err) { next(err) }
+})
+
+/* ================== 签到记录 ================== */
+
+/** 签到记录列表 */
+router.get('/sign-ins', async (req, res, next) => {
+  try {
+    const { userId, date, page = 1, pageSize = 20 } = req.query
+    const where = {}
+    if (userId) where.userId = userId
+    if (date) where.date = date
+    const { rows, count } = await SignIn.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit: Number(pageSize),
+      offset: (Number(page) - 1) * Number(pageSize),
+      include: [{ model: User, as: 'user', attributes: ['id', 'nickname', 'avatar'] }]
+    })
+    paginate(res, rows, count, Number(page), Number(pageSize))
+  } catch (err) { next(err) }
+})
+
+/** 签到统计 */
+router.get('/sign-ins/stats', async (req, res, next) => {
+  try {
+    const today = new Date().toISOString().slice(0, 10)
+    const todayCount = await SignIn.count({ where: { date: today } })
+    const totalUsers = await SignIn.count({ distinct: true, col: 'userId' })
+    success(res, { todayCount, totalUsers })
+  } catch (err) { next(err) }
+})
+
+/* ================== 每日任务记录 ================== */
+
+/** 任务完成记录列表 */
+router.get('/tasks/records', async (req, res, next) => {
+  try {
+    const { userId, date, page = 1, pageSize = 20 } = req.query
+    const where = {}
+    if (userId) where.userId = userId
+    if (date) where.date = date
+    const { rows, count } = await DailyTask.findAndCountAll({
+      where,
+      order: [['date', 'DESC']],
+      limit: Number(pageSize),
+      offset: (Number(page) - 1) * Number(pageSize),
+      include: [{ model: User, as: 'user', attributes: ['id', 'nickname', 'avatar'] }]
+    })
+    paginate(res, rows, count, Number(page), Number(pageSize))
+  } catch (err) { next(err) }
+})
+
+/* ================== 关注关系 ================== */
+
+/** 关注列表 */
+router.get('/follows', async (req, res, next) => {
+  try {
+    const { userId, keyword, page = 1, pageSize = 20 } = req.query
+    const where = {}
+    if (userId) {
+      where[Op.or] = [
+        { followerId: userId },
+        { followingId: userId }
+      ]
+    }
+    const includeClause = [
+      { model: User, as: 'followerUser', attributes: ['id', 'nickname', 'avatar'] },
+      { model: User, as: 'followingUser', attributes: ['id', 'nickname', 'avatar'] }
+    ]
+    if (keyword) {
+      includeClause[0].where = { nickname: { [Op.like]: `%${keyword}%` } }
+    }
+    const { rows, count } = await Follow.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit: Number(pageSize),
+      offset: (Number(page) - 1) * Number(pageSize),
+      include: includeClause
+    })
+    paginate(res, rows, count, Number(page), Number(pageSize))
   } catch (err) { next(err) }
 })
 

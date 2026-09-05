@@ -233,7 +233,7 @@ function onMessageListUpdate(messageList: IMessageModel[]) {
   const newMessages = messageList.slice(lastMessageCount);
   lastMessageCount = messageList.length;
   for (const msg of newMessages) {
-    if (msg?.type === TUIChatEngine.TYPES.MSG_CUSTOM && msg?.flow === 'in') {
+    if (msg?.type === TUIChatEngine.TYPES.MSG_CUSTOM) {
       try {
         const data = typeof msg.payload.data === 'string' ? JSON.parse(msg.payload.data) : msg.payload.data;
         if (data?.businessID === 'gift') {

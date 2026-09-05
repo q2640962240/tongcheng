@@ -18,14 +18,102 @@
           active-text-color="#d4af37"
         >
           <!-- 一级菜单：平项 -->
-          <el-menu-item
-            v-for="flat in flatMenuItems"
-            :key="flat.path"
-            :index="flat.path"
-          >
-            <el-icon><component :is="flat.icon" /></el-icon>
-            <template #title>{{ flat.title }}</template>
+          <el-menu-item index="/dashboard">
+            <el-icon><Odometer /></el-icon>
+            <template #title>仪表盘</template>
           </el-menu-item>
+          <el-menu-item index="/users">
+            <el-icon><User /></el-icon>
+            <template #title>用户管理</template>
+          </el-menu-item>
+          <el-menu-item index="/chat-records">
+            <el-icon><ChatLineRound /></el-icon>
+            <template #title>聊天记录</template>
+          </el-menu-item>
+          <el-menu-item index="/orders">
+            <el-icon><List /></el-icon>
+            <template #title>订单管理</template>
+          </el-menu-item>
+          <el-menu-item index="/invite">
+            <el-icon><Share /></el-icon>
+            <template #title>邀请管理</template>
+          </el-menu-item>
+          <el-menu-item index="/gifts">
+            <el-icon><Present /></el-icon>
+            <template #title>礼物管理</template>
+          </el-menu-item>
+
+          <!-- 内容管理（子菜单：反馈管理 / 评论管理 / 评价管理） -->
+          <el-sub-menu index="content">
+            <template #title>
+              <el-icon><Document /></el-icon>
+              <span>内容管理</span>
+            </template>
+            <el-menu-item index="/content">
+              <el-icon><ChatLineSquare /></el-icon>
+              <span>反馈管理</span>
+            </el-menu-item>
+            <el-menu-item index="/content/comments">
+              <el-icon><ChatDotSquare /></el-icon>
+              <span>评论管理</span>
+            </el-menu-item>
+            <el-menu-item index="/content/reviews">
+              <el-icon><Star /></el-icon>
+              <span>评价管理</span>
+            </el-menu-item>
+          </el-sub-menu>
+
+          <!-- 发现管理（子菜单：动态管理 / 组局管理） -->
+          <el-sub-menu index="discover">
+            <template #title>
+              <el-icon><Compass /></el-icon>
+              <span>发现管理</span>
+            </template>
+            <el-menu-item index="/discover/posts">
+              <el-icon><ChatDotRound /></el-icon>
+              <span>动态管理</span>
+            </el-menu-item>
+            <el-menu-item index="/discover/groups">
+              <el-icon><UserFilled /></el-icon>
+              <span>组局管理</span>
+            </el-menu-item>
+          </el-sub-menu>
+
+          <!-- 社交管理 -->
+          <el-sub-menu index="social">
+            <template #title>
+              <el-icon><Connection /></el-icon>
+              <span>社交管理</span>
+            </template>
+            <el-menu-item index="/social/follows">
+              <el-icon><Connection /></el-icon>
+              <span>关注关系</span>
+            </el-menu-item>
+          </el-sub-menu>
+
+          <!-- 运营管理（子菜单：Banner / 公告 / 签到 / 任务） -->
+          <el-sub-menu index="operations">
+            <template #title>
+              <el-icon><Promotion /></el-icon>
+              <span>运营管理</span>
+            </template>
+            <el-menu-item index="/operations/banners">
+              <el-icon><PictureFilled /></el-icon>
+              <span>Banner 管理</span>
+            </el-menu-item>
+            <el-menu-item index="/operations/announcements">
+              <el-icon><Bell /></el-icon>
+              <span>系统公告</span>
+            </el-menu-item>
+            <el-menu-item index="/operations/sign-ins">
+              <el-icon><Calendar /></el-icon>
+              <span>签到记录</span>
+            </el-menu-item>
+            <el-menu-item index="/operations/task-records">
+              <el-icon><Finished /></el-icon>
+              <span>任务记录</span>
+            </el-menu-item>
+          </el-sub-menu>
 
           <!-- 财务管理（子菜单：提现审核 / 精英订单） -->
           <el-sub-menu index="finance">
@@ -59,38 +147,6 @@
             </el-menu-item>
           </el-sub-menu>
 
-          <!-- 发现管理（子菜单：动态管理 / 组局管理） -->
-          <el-sub-menu index="discover">
-            <template #title>
-              <el-icon><Compass /></el-icon>
-              <span>发现管理</span>
-            </template>
-            <el-menu-item index="/discover/posts">
-              <el-icon><ChatDotRound /></el-icon>
-              <span>动态管理</span>
-            </el-menu-item>
-            <el-menu-item index="/discover/groups">
-              <el-icon><UserFilled /></el-icon>
-              <span>组局管理</span>
-            </el-menu-item>
-          </el-sub-menu>
-
-          <!-- 运营管理（子菜单：Banner 管理） -->
-          <el-sub-menu index="operations">
-            <template #title>
-              <el-icon><Promotion /></el-icon>
-              <span>运营管理</span>
-            </template>
-            <el-menu-item index="/operations/banners">
-              <el-icon><PictureFilled /></el-icon>
-              <span>Banner 管理</span>
-            </el-menu-item>
-            <el-menu-item index="/operations/announcements">
-              <el-icon><Bell /></el-icon>
-              <span>系统公告</span>
-            </el-menu-item>
-          </el-sub-menu>
-
           <!-- 认证管理（子菜单：实名认证） -->
           <el-sub-menu index="auth">
             <template #title>
@@ -102,6 +158,11 @@
               <span>实名认证</span>
             </el-menu-item>
           </el-sub-menu>
+
+          <el-menu-item index="/settings">
+            <el-icon><Setting /></el-icon>
+            <template #title>配置中心</template>
+          </el-menu-item>
         </el-menu>
       </div>
     </el-aside>
@@ -152,24 +213,15 @@ import {
   Goods, List, Menu,
   Compass, ChatDotRound, UserFilled,
   Promotion, PictureFilled,
-  Key, Avatar, Present, Bell
+  Key, Avatar, Present, Bell,
+  Odometer, User, ChatLineRound, Share,
+  Document, ChatLineSquare, ChatDotSquare, Star,
+  Connection, Calendar, Finished, Setting
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const isCollapse = ref(false)
-
-// 一级平铺菜单（不含分组）
-const flatMenuItems = [
-  { path: '/dashboard', title: '仪表盘', icon: 'Odometer' },
-  { path: '/users', title: '用户管理', icon: 'User' },
-  { path: '/chat-records', title: '聊天记录', icon: 'ChatLineRound' },
-  { path: '/orders', title: '订单管理', icon: 'List' },
-  { path: '/invite', title: '邀请管理', icon: 'Share' },
-  { path: '/gifts', title: '礼物管理', icon: 'Present' },
-  { path: '/content', title: '内容管理', icon: 'Document' },
-  { path: '/settings', title: '配置中心', icon: 'Setting' }
-]
 
 // 默认展开的分组（路由命中时自动展开对应 submenu key）
 const groupByRoute = {
@@ -181,6 +233,12 @@ const groupByRoute = {
   '/discover/groups': 'discover',
   '/operations/banners': 'operations',
   '/operations/announcements': 'operations',
+  '/operations/sign-ins': 'operations',
+  '/operations/task-records': 'operations',
+  '/content': 'content',
+  '/content/comments': 'content',
+  '/content/reviews': 'content',
+  '/social/follows': 'social',
   '/auth/certifications': 'auth'
 }
 const defaultOpeneds = ref([])

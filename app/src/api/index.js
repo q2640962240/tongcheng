@@ -25,7 +25,7 @@ export const userApi = {
   // 客服信息（聊天页"联系客服"按钮）
   kefu: () => get('/user/kefu'),
   // 用户搜索（寻人大厅 & 搜索页）
-  discover: (params) => get('/user/discover', params),
+  discover: (params, opts) => get('/user/discover', params, opts),
   // 社交 — 公开主页
   publicProfile: (id) => get(`/user/${id}/public-profile`),
   follow: (id) => post(`/user/${id}/follow`),
@@ -50,6 +50,7 @@ export const walletApi = {
 export const chatApi = {
   sessions: () => get('/chat/sessions'),
   history: (userId, params) => get(`/chat/history/${userId}`, params),
+  search: (userId, params) => get(`/chat/search/${userId}`, params),
   send: (data) => post('/chat', data)
 }
 
@@ -118,7 +119,7 @@ export const settingsApi = {
 
 // ==================== 动态 (白夜 v2 新增) ====================
 export const postApi = {
-  list: (params) => get('/posts', params),
+  list: (params, opts) => get('/posts', params, opts),
   detail: (id) => get(`/posts/${id}`),
   create: (data) => post('/posts', data),
   remove: (id) => del(`/posts/${id}`),
@@ -129,7 +130,7 @@ export const postApi = {
 
 // ==================== 组局 (白夜 v2 新增) ====================
 export const groupApi = {
-  list: (params) => get('/groups', params),
+  list: (params, opts) => get('/groups', params, opts),
   detail: (id) => get(`/groups/${id}`),
   create: (data) => post('/groups', data),
   update: (id, data) => put(`/groups/${id}`, data),
@@ -141,7 +142,7 @@ export const groupApi = {
 
 // ==================== Banner (白夜 v2 新增) ====================
 export const bannerApi = {
-  list: (params) => get('/banners', params),
+  list: (params, opts) => get('/banners', params, opts),
 }
 
 // ==================== 精英认证 (白夜 v2 新增) ====================

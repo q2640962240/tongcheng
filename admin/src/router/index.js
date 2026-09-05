@@ -110,6 +110,36 @@ const routes = [
         meta: { title: '礼物管理', icon: 'Present' }
       },
       {
+        path: 'content/comments',
+        name: 'Comments',
+        component: () => import('../views/content/Comments.vue'),
+        meta: { title: '评论管理', icon: 'ChatDotSquare' }
+      },
+      {
+        path: 'content/reviews',
+        name: 'Reviews',
+        component: () => import('../views/content/Reviews.vue'),
+        meta: { title: '评价管理', icon: 'Star' }
+      },
+      {
+        path: 'operations/sign-ins',
+        name: 'SignIns',
+        component: () => import('../views/operations/SignIns.vue'),
+        meta: { title: '签到记录', icon: 'Calendar' }
+      },
+      {
+        path: 'operations/task-records',
+        name: 'TaskRecords',
+        component: () => import('../views/operations/TaskRecords.vue'),
+        meta: { title: '任务记录', icon: 'Finished' }
+      },
+      {
+        path: 'social/follows',
+        name: 'Follows',
+        component: () => import('../views/social/Follows.vue'),
+        meta: { title: '关注关系', icon: 'Connection' }
+      },
+      {
         path: 'settings',
         name: 'Settings',
         component: () => import('../views/settings/Settings.vue'),

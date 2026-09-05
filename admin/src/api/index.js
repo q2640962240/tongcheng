@@ -111,3 +111,31 @@ export const giftManageApi = {
 export const sendAnnouncement = (data) => http.post('/admin/announcements', data)
 export const getAnnouncements = (params) => http.get('/admin/announcements', { params })
 
+// ==================== 评论管理 ====================
+export const commentsApi = {
+  list: (params) => http.get('/admin/comments', { params }),
+  del: (id) => http.delete(`/admin/comments/${id}`)
+}
+
+// ==================== 评价管理 ====================
+export const reviewsApi = {
+  list: (params) => http.get('/admin/reviews', { params }),
+  del: (id) => http.delete(`/admin/reviews/${id}`)
+}
+
+// ==================== 签到记录 ====================
+export const signInApi = {
+  list: (params) => http.get('/admin/sign-ins', { params }),
+  stats: () => http.get('/admin/sign-ins/stats')
+}
+
+// ==================== 每日任务记录 ====================
+export const taskRecordsApi = {
+  list: (params) => http.get('/admin/tasks/records', { params })
+}
+
+// ==================== 关注关系 ====================
+export const followsApi = {
+  list: (params) => http.get('/admin/follows', { params })
+}
+

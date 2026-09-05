@@ -81,7 +81,6 @@ router.post('/sign-in', auth, async (req, res, next) => {
         await Transaction.create({
           userId,
           type: 'reward',
-          kind: 'signIn',
           amount: rewardDiamond,
           currency: 'diamond',
           balanceAfter: wallet.diamond,

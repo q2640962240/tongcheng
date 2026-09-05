@@ -79,6 +79,17 @@
       }
     },
     {
+      "path": "TUIKit/components/TUISearch/index",
+      "style": {
+        "navigationBarTitleText": "搜索",
+        "navigationStyle": "custom",
+        "backgroundColor": "#0B0F1A",
+        "app-plus": {
+          "background": "#0B0F1A"
+        }
+      }
+    },
+    {
       "path": "pages/chat-list/chat-list",
       "style": {
         "navigationBarTitleText": "消息"

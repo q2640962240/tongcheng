@@ -39,7 +39,7 @@
         <el-form-item label="标题"><el-input v-model="form.title" /></el-form-item>
         <el-form-item label="图片 URL"><el-input v-model="form.image" placeholder="https:// 或 /uploads/..." /></el-form-item>
         <el-form-item label="跳转链接"><el-input v-model="form.link" placeholder="/pages/... 或 https://..." /></el-form-item>
-        <el-form-item label="位置"><el-input v-model="form.position" placeholder="如 home-top" /></el-form-item>
+        <el-form-item label="位置"><el-input v-model="form.position" placeholder="如 home_top" /></el-form-item>
         <el-form-item label="权重"><el-input-number v-model="form.sort" :min="0" :max="999" /></el-form-item>
         <el-form-item label="启用"><el-switch v-model="form.enabled" active-color="#d4af37" /></el-form-item>
       </el-form>
@@ -60,9 +60,9 @@ const list = ref([])
 const loading = ref(false)
 const dlgVisible = ref(false)
 const isEdit = ref(false)
-const form = reactive({ id: null, title: '', image: '', link: '', position: 'home-top', sort: 10, enabled: true })
+const form = reactive({ id: null, title: '', image: '', link: '', position: 'home_top', sort: 10, enabled: true })
 
-const resetForm = () => Object.assign(form, { id: null, title: '', image: '', link: '', position: 'home-top', sort: 10, enabled: true })
+const resetForm = () => Object.assign(form, { id: null, title: '', image: '', link: '', position: 'home_top', sort: 10, enabled: true })
 
 const load = async () => {
   loading.value = true

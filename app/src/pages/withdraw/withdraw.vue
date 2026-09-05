@@ -151,7 +151,7 @@ onShow(() => {
 .tips-title { font-size: 26rpx; font-weight: 600; color: #525252; margin-bottom: 8rpx; }
 .tips-line { font-size: 24rpx; color: #a3a3a3; line-height: 1.6; }
 .submit-btn {
-  position: fixed; left: 32rpx; right: 32rpx; bottom: 48rpx;
+  position: fixed; left: 32rpx; right: 32rpx; bottom: calc(48rpx + env(safe-area-inset-bottom));
   height: 96rpx; background: #ffd60a; color: #171717;
   border-radius: 9999rpx; display: flex; align-items: center; justify-content: center;
   font-size: 32rpx; font-weight: 700;

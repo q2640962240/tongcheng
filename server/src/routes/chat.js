@@ -317,6 +317,30 @@ router.get('/history/:userId', auth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+/** 搜索聊天消息 */
+router.get('/search/:userId', auth, async (req, res, next) => {
+  try {
+    const otherId = req.params.userId
+    const keyword = String(req.query.keyword || '').trim()
+    if (!keyword) return fail(res, '请输入搜索关键词')
+    const { page = 1, pageSize = 20 } = req.query
+    const { rows, count } = await Message.findAndCountAll({
+      where: {
+        [Op.or]: [
+          { senderId: req.userId, receiverId: otherId },
+          { senderId: otherId, receiverId: req.userId }
+        ],
+        type: 'text',
+        content: { [Op.like]: `%${keyword}%` }
+      },
+      order: [['createdAt', 'DESC']],
+      offset: (page - 1) * Number(pageSize),
+      limit: Number(pageSize)
+    })
+    paginate(res, rows, count, page, pageSize)
+  } catch (err) { next(err) }
+})
+
 /**
  * AI 自动回复：根据 AI 用户的 aiConfig 调用外部 LLM，生成一条回复消息并保存、推送
  * 失败不影响主消息返回，但会在日志里记录（避免真实用户看到 500）
@@ -461,6 +485,7 @@ router.post('/im-sync', auth, async (req, res, next) => {
         }))
       }
     }
+    try { const { markChat } = require('./tasks'); markChat(req.userId) } catch (_) {}
     success(res, message, '同步成功')
   } catch (err) { next(err) }
 })

@@ -261,6 +261,7 @@ export const request = (options) => {
 
     const method = options.method || 'GET'
     const timeout = Number(options.timeout) || 15000 // 真机上默认 15s，避免等太久看上去像黑屏
+    const silent = !!options.silent // 静默模式：失败时不弹 toast，由调用方自行处理
     const base = getCurrentBaseURL()
     const finalURL = base + options.url
 
@@ -302,11 +303,13 @@ export const request = (options) => {
                   }
                   if (r2.statusCode >= 400) {
                     const msg2 = (r2.data && r2.data.message) || `请求失败 (${r2.statusCode})`
-                    uni.showToast({
-                      title: msg2.length > 48 ? msg2.slice(0, 48) : msg2,
-                      icon: 'none',
-                      duration: 3000
-                    })
+                    if (!silent) {
+                      uni.showToast({
+                        title: msg2.length > 48 ? msg2.slice(0, 48) : msg2,
+                        icon: 'none',
+                        duration: 3000
+                      })
+                    }
                     const e2 = new Error(msg2)
                     e2.status = r2.statusCode
                     e2.data = r2.data
@@ -317,7 +320,9 @@ export const request = (options) => {
                 },
                 fail: (e2) => {
                   const c2 = classifyNetworkError(e2)
-                  uni.showToast({ title: c2.message, icon: 'none', duration: 3000 })
+                  if (!silent) {
+                    uni.showToast({ title: c2.message, icon: 'none', duration: 3000 })
+                  }
                   reject(c2)
                 }
               })
@@ -337,11 +342,13 @@ export const request = (options) => {
           const fullMsg = (res.statusCode >= 500)
             ? `${msg} (${res.statusCode})`
             : msg
-          uni.showToast({
-            title: fullMsg.length > 48 ? fullMsg.slice(0, 48) : fullMsg,
-            icon: 'none',
-            duration: 3000
-          })
+          if (!silent) {
+            uni.showToast({
+              title: fullMsg.length > 48 ? fullMsg.slice(0, 48) : fullMsg,
+              icon: 'none',
+              duration: 3000
+            })
+          }
           console.error('[Request Error]', method, options.url,
             '\n  url:', finalURL,
             '\n  status:', res.statusCode,
@@ -360,11 +367,13 @@ export const request = (options) => {
           ? `（请确认 Vite 代理 /api 已转发；base=${base}）`
           : `（服务器地址=${base}）`
         const fullMsg = classified.message + hint
-        uni.showToast({
-          title: fullMsg.length > 48 ? fullMsg.slice(0, 48) : fullMsg,
-          icon: 'none',
-          duration: 4500
-        })
+        if (!silent) {
+          uni.showToast({
+            title: fullMsg.length > 48 ? fullMsg.slice(0, 48) : fullMsg,
+            icon: 'none',
+            duration: 4500
+          })
+        }
         console.error('[Request Fail]', method, finalURL,
           '\n  kind:', classified.kind,
           '\n  raw:', err && (err.errMsg || err.message),
@@ -380,10 +389,10 @@ export const request = (options) => {
   })
 }
 
-export const get = (url, data) => request({ url, method: 'GET', data })
-export const post = (url, data) => request({ url, method: 'POST', data })
-export const put = (url, data) => request({ url, method: 'PUT', data })
-export const del = (url, data) => request({ url, method: 'DELETE', data })
+export const get = (url, data, extra) => request({ url, method: 'GET', data, ...extra })
+export const post = (url, data, extra) => request({ url, method: 'POST', data, ...extra })
+export const put = (url, data, extra) => request({ url, method: 'PUT', data, ...extra })
+export const del = (url, data, extra) => request({ url, method: 'DELETE', data, ...extra })
 
 export default request
 export { IS_H5, detectPlatform }

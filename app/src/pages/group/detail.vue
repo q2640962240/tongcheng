@@ -248,7 +248,7 @@ async function onJoin() {
 .avatar-name { font-size: 22rpx; color: $by-text-3; }
 
 .bottom-bar {
-  position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx 32rpx 32rpx;
+  position: fixed; left: 0; right: 0; bottom: 0; padding: 20rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
   background: $by-bg-soft; display: flex; gap: 20rpx; align-items: center;
   border-top: 1rpx solid $by-border;
 }

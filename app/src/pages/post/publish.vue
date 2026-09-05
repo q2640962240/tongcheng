@@ -126,7 +126,7 @@ async function onSubmit() {
 }
 .tips { font-size: 24rpx; color: $by-text-muted; line-height: 1.8; }
 .submit-bar {
-  position: fixed; left: 0; right: 0; bottom: 0; padding: 24rpx 32rpx;
+  position: fixed; left: 0; right: 0; bottom: 0; padding: 24rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
   background: linear-gradient(180deg, transparent, $by-bg 20%);
 }
 .by-btn-gold {

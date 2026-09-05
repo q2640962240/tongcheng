@@ -267,71 +267,6 @@
       </view>
     </view>
 
-    <!-- 红包专区 -->
-    <view v-if="currentTab === 'redpack'" class="by-panel">
-      <view class="redpack-card card">
-        <view class="redpack-glow"></view>
-        <view class="redpack-body">
-          <view class="redpack-head">
-            <text class="redpack-title">💎 每日签到领钻石</text>
-            <text class="redpack-sub">连续签到 7 天，额外赠送 50 钻石</text>
-          </view>
-          <view class="sign-week">
-            <view v-for="(d, i) in signDays" :key="i" class="sign-day" :class="{ done: d.done, today: d.today }">
-              <text class="sign-w">{{ d.label }}</text>
-              <text class="sign-v">+{{ d.v }}</text>
-              <view v-if="d.done" class="sign-check">✓</view>
-            </view>
-          </view>
-          <view class="btn-primary sign-btn" @tap="onSign" :class="{ disabled: signedToday || signLoading }">
-            {{ signLoading ? '签到中…' : (signedToday ? '今日已签到 ✓' : `签到 +10 💎`) }}
-          </view>
-        </view>
-      </view>
-
-      <view class="act-card card">
-        <view class="act-title-row">
-          <text class="act-title">🎉 限时活动</text>
-        </view>
-        <view class="act-grid">
-          <view class="act-item ai-1" @tap="onActNewbie">
-            <text class="act-emoji">📣</text>
-            <text class="act-label">新人专享礼</text>
-            <text class="act-reward">领 100 钻石</text>
-          </view>
-          <view class="act-item ai-2" @tap="onActInvite">
-            <text class="act-emoji">🎁</text>
-            <text class="act-label">邀请好友</text>
-            <text class="act-reward">双方得特权</text>
-          </view>
-          <view class="act-item ai-3" @tap="onActTask">
-            <text class="act-emoji">🎯</text>
-            <text class="act-label">每日任务</text>
-            <text class="act-reward">最高 50 钻</text>
-          </view>
-          <view class="act-item ai-4" @tap="onActRank">
-            <text class="act-emoji">🏆</text>
-            <text class="act-label">周榜争霸</text>
-            <text class="act-reward">实物大奖</text>
-          </view>
-        </view>
-      </view>
-
-      <view class="act-card card">
-        <view class="act-title-row">
-          <text class="act-title">💰 红包雨预告</text>
-        </view>
-        <view class="rain-row">
-          <view class="rain-icon">🌧️</view>
-          <view class="rain-info">
-            <text class="rain-next">下一场：今晚 21:00</text>
-            <text class="rain-desc">每轮 1000 钻石奖池，手慢无！</text>
-          </view>
-          <view class="btn-outline rain-btn" @tap="onRainRemind">提醒我</view>
-        </view>
-      </view>
-    </view>
-
     <view class="bottom-safe"></view>
 
     <DailyTaskPanel v-model:visible="showTaskPanel" />
@@ -341,7 +276,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { postApi, groupApi, userApi, walletApi, locationApi } from '../../api'
+import { postApi, groupApi, userApi, locationApi } from '../../api'
 import { getCurrentBaseURL, openServerUrlModal } from '../../utils/request'
 import {
   toList, toStr, toNum, toObj, toBool, pickCity, getPath, unwrap, unwrapPage,
@@ -389,8 +324,7 @@ const readCity = async () => {
 const tabs = [
   { key: 'finder', label: toStr('寻人大厅'), meta: toStr('') },
   { key: 'posts', label: toStr('动态'), meta: toStr('Hot') },
-  { key: 'groups', label: toStr('同城组局'), meta: toStr('New') },
-  { key: 'redpack', label: toStr('红包专区'), meta: toStr('') }
+  { key: 'groups', label: toStr('同城组局'), meta: toStr('New') }
 ]
 const currentTab = ref('posts')
 
@@ -421,7 +355,6 @@ const finderList = ref([])
 const postsFailed = ref(false)
 const groupsFailed = ref(false)
 const finderFailed = ref(false)
-const signFailed = ref(false)
 const currentBaseURL = computed(() => getCurrentBaseURL())
 const onFixServerUrl = () => openServerUrlModal({
   title: '设置服务器地址',
@@ -432,73 +365,18 @@ const onReloadAll = () => {
   Promise.all([
     loadPosts(true).catch(() => {}),
     loadGroups(true).catch(() => {}),
-    loadFinder(true).catch(() => {}),
-    updateSignState().catch(() => {})
+    loadFinder(true).catch(() => {})
   ])
 }
 /* 顶栏诊断条：仅当所有数据为空白且至少一个 tab 加载失败时显示，避免正常页面的视觉干扰 */
 const showNetTrouble = computed(() => {
   const allEmpty = postsList.value.length === 0 && groupsList.value.length === 0 && finderList.value.length === 0
-  const anyFailed = postsFailed.value || groupsFailed.value || finderFailed.value || signFailed.value
+  const anyFailed = postsFailed.value || groupsFailed.value || finderFailed.value
   return allEmpty && anyFailed
 })
 
-/* 签到（真实 API） */
-const signedToday = ref(false)
-const signDays = ref([
-  { label: toStr('第1天'), v: 10, done: false, today: false },
-  { label: toStr('第2天'), v: 10, done: false, today: false },
-  { label: toStr('第3天'), v: 15, done: false, today: false },
-  { label: toStr('第4天'), v: 15, done: false, today: false },
-  { label: toStr('第5天'), v: 20, done: false, today: false },
-  { label: toStr('第6天'), v: 20, done: false, today: false },
-  { label: toStr('第7天'), v: 80, done: false, today: false }
-])
-const signLoading = ref(false)
-
-const updateSignState = async () => {
-  signFailed.value = false
-  // 未登录走本地兜底（保留交互感）
-  const hasToken = !!(uni.getStorageSync && toStr(uni.getStorageSync('baiye_token'), ''))
-  if (!hasToken) {
-    let history = {}
-    try { history = toObj(uni.getStorageSync('sign_history'), {}) } catch (_) { history = {} }
-    const today = new Date().toDateString()
-    signedToday.value = toBool(history[today], false)
-    const d = new Date()
-    for (let i = 6; i >= 0; i--) {
-      const dt = new Date(d.getTime() - i * 86400000).toDateString()
-      const day = signDays.value[6 - i]
-      day.done = toBool(history[dt], false)
-      day.today = toStr(dt) === toStr(today)
-    }
-    return
-  }
-  try {
-    const resp = await guard(walletApi.signInStatus(), null)
-    if (resp === null || resp === undefined) throw new Error('empty response')
-    const info = toObj(unwrap(resp, null), {})
-    signedToday.value = toBool(getPath(info, 'signedToday'), false)
-    const streak = Math.max(0, Math.min(7, toNum(getPath(info, 'streakDays'), 0)))
-    const d = new Date()
-    const todayStr = d.toDateString()
-    for (let i = 6; i >= 0; i--) {
-      const dt = new Date(d.getTime() - i * 86400000)
-      const dayIdx = 6 - i
-      const day = signDays.value[dayIdx]
-      const dayRel = 7 - i
-      day.done = dayRel <= streak
-      day.today = toStr(dt.toDateString()) === toStr(todayStr)
-    }
-    const nr = getPath(info, 'nextReward')
-    if (nr !== undefined && nr !== null) signDays.value[6].v = toNum(nr, 80)
-  } catch (e) {
-    signFailed.value = true
-  }
-}
-
 /* Posts */
-const loadPosts = async (reset = false) => {
+const loadPosts = async (reset = false, silent = false) => {
   if (postsLoading.value) return
   postsLoading.value = true
   postsFailed.value = false
@@ -506,7 +384,7 @@ const loadPosts = async (reset = false) => {
     if (reset) { postsPage.value = 1; postsList.value = []; postsHasMore.value = true }
     const params = { page: toNum(postsPage.value, 1), pageSize: 10 }
     if (toStr(rangeText.value) === '附近' && toStr(cityText.value)) params.city = toStr(cityText.value)
-    const pageResp = await guard(postApi.list(params).then((r) => unwrapPage(r, { list: [], total: 0 })), null)
+    const pageResp = await guard(postApi.list(params, silent ? { silent: true } : null).then((r) => unwrapPage(r, { list: [], total: 0 })), null)
     if (pageResp === null || pageResp === undefined) throw new Error('empty response')
     const pr = toObj(pageResp, { list: [], total: 0 })
     const rawList = toList(getPath(pr, 'list'))
@@ -543,7 +421,7 @@ const loadPosts = async (reset = false) => {
 
 /* Groups */
 const catMap = { '剧本杀':'game', '密室':'escape', '电影':'movie', '游戏':'game', '饭局':'dinner', '夜骑':'ride', '旅行':'travel' }
-const loadGroups = async (reset = false) => {
+const loadGroups = async (reset = false, silent = false) => {
   if (groupsLoading.value) return
   groupsLoading.value = true
   groupsFailed.value = false
@@ -554,7 +432,7 @@ const loadGroups = async (reset = false) => {
     if (city && city !== '全国') params.city = city
     const cat = toStr(groupCats[toNum(groupCatIdx.value, 0)], '')
     if (cat && cat !== '全部') params.category = toStr(catMap[cat], cat)
-    const pageResp = await guard(groupApi.list(params).then((r) => unwrapPage(r, { list: [], total: 0 })), null)
+    const pageResp = await guard(groupApi.list(params, silent ? { silent: true } : null).then((r) => unwrapPage(r, { list: [], total: 0 })), null)
     if (pageResp === null || pageResp === undefined) throw new Error('empty response')
     const pr = toObj(pageResp, { list: [], total: 0 })
     const rawList = toList(getPath(pr, 'list'))
@@ -589,7 +467,7 @@ const loadGroups = async (reset = false) => {
 }
 
 /* Finder (真实 userApi.discover) */
-const loadFinder = async () => {
+const loadFinder = async (silent = false) => {
   finderLoading.value = true
   finderFailed.value = false
   try {
@@ -599,7 +477,7 @@ const loadFinder = async () => {
       city: toStr(cityText.value) === '全国' ? '' : toStr(cityText.value)
     }
     if (toStr(genderText.value) === '小姐姐') params.gender = 2
-    const pageResp = await guard(userApi.discover(params).then((r) => unwrapPage(r, { list: [], total: 0 })), null)
+    const pageResp = await guard(userApi.discover(params, silent ? { silent: true } : null).then((r) => unwrapPage(r, { list: [], total: 0 })), null)
     if (pageResp === null || pageResp === undefined) throw new Error('empty response')
     const pr = toObj(pageResp, { list: [], total: 0 })
     const rawList = toList(getPath(pr, 'list'))
@@ -627,7 +505,6 @@ watch(currentTab, async (t) => {
   if (t === 'posts' && postsList.value.length === 0) tasks.push(loadPosts(true))
   if (t === 'groups' && groupsList.value.length === 0) tasks.push(loadGroups(true))
   if (t === 'finder' && finderList.value.length === 0) tasks.push(loadFinder())
-  if (t === 'redpack') tasks.push(updateSignState())
   if (tasks.length > 0) await Promise.all(tasks)
 })
 
@@ -635,16 +512,16 @@ watch([groupCityIdx, groupCatIdx], debounce(() => loadGroups(true), 180))
 
 onShow(async () => {
   // onShow 时：异步流水线解析城市 + 首次展示并行加载当前 tab 所需资源
-  const bootTasks = [readCity(), updateSignState()]
+  const bootTasks = [readCity()]
   try {
     if (uni.getStorageSync('group.dirty')) {
       uni.removeStorageSync('group.dirty')
       bootTasks.push(loadGroups(true))
     }
   } catch (_) {}
-  if (toStr(currentTab.value) === 'posts' && postsList.value.length === 0) bootTasks.push(loadPosts(true))
-  if (toStr(currentTab.value) === 'groups' && groupsList.value.length === 0) bootTasks.push(loadGroups(true))
-  if (toStr(currentTab.value) === 'finder' && finderList.value.length === 0) bootTasks.push(loadFinder())
+  if (toStr(currentTab.value) === 'posts' && postsList.value.length === 0) bootTasks.push(loadPosts(true, true))
+  if (toStr(currentTab.value) === 'groups' && groupsList.value.length === 0) bootTasks.push(loadGroups(true, true))
+  if (toStr(currentTab.value) === 'finder' && finderList.value.length === 0) bootTasks.push(loadFinder(true))
   await Promise.all(bootTasks)
 })
 
@@ -741,31 +618,11 @@ const onFinderContact = (u) => {
   if (!requireElite()) return
   uni.navigateTo({ url: `/pages/chat/chat?to=${toStr(getPath(u, 'id'), '')}` })
 }
-const onSign = async () => {
-  if (!requireLogin()) return
-  if (signLoading.value) return
-  if (signedToday.value) return uni.showToast({ title: toStr('今日已签到'), icon: 'none' })
-  signLoading.value = true
-  const resp = await guard(walletApi.signIn(), null)
-  const info = toObj(unwrap(resp, null), {})
-  if (resp === null || Object.keys(info).length === 0) {
-    // 异常：吞错误，不抛控制台
-    signLoading.value = false
-    return
-  }
-  signedToday.value = true
-  const reward = toNum(getPath(info, 'rewardDiamond') || getPath(info, 'reward'), 10)
-  uni.showToast({ title: toStr(`签到成功 +${reward} 💎`), icon: 'none' })
-  try {
-    let history = {}
-    try { history = toObj(uni.getStorageSync('sign_history'), {}) } catch (_) { history = {} }
-    history[new Date().toDateString()] = Date.now()
-    uni.setStorageSync('sign_history', history)
-  } catch (_) { /* ignore */ }
-  await updateSignState()
-  signLoading.value = false
-}
-const onRainRemind = () => uni.showToast({ title: toStr('已开启红包雨提醒'), icon: 'none' })
+/* ---- 活动跳转 ---- */
+const onActNewbie = () => uni.navigateTo({ url: '/pages/recharge/recharge?firstOrder=1' })
+const onActInvite = () => uni.navigateTo({ url: '/pages/invite/invite' })
+const onActTask = () => { showTaskPanel.value = true }
+const onActRank = () => uni.navigateTo({ url: '/pages/gift-rank/gift-rank' })
 
 /* ---- 年龄筛选 ---- */
 const ageRanges = ['全部年龄', '18-22岁', '23-27岁', '28-35岁', '36岁+']
@@ -789,11 +646,6 @@ const onZodiacFilter = () => {
   })
 }
 
-/* ---- 活动跳转 ---- */
-const onActNewbie = () => uni.navigateTo({ url: '/pages/recharge/recharge?firstOrder=1' })
-const onActInvite = () => uni.navigateTo({ url: '/pages/invite/invite' })
-const onActTask = () => { showTaskPanel.value = true }
-const onActRank = () => uni.navigateTo({ url: '/pages/gift-rank/gift-rank' })
 </script>
 
 <style lang="scss" scoped>
@@ -960,56 +812,6 @@ const onActRank = () => uni.navigateTo({ url: '/pages/gift-rank/gift-rank' })
   box-shadow: $by-shadow-gold;
 }
 .group-join-btn:active { filter: brightness(1.08); }
-
-/* ==== Redpack ==== */
-.redpack-card { position: relative; overflow: hidden; padding: 0 !important; margin-bottom: 24rpx; }
-.redpack-glow { position: absolute; inset: 0;
-  background:
-    radial-gradient(circle at 50% 0%, color.change(#FFFFFF, $alpha: .25), transparent 60%),
-    linear-gradient(160deg, color.change($by-gold-gradient-a, $alpha: 1) -10%, color.change($by-gold-gradient-b, $alpha: 1) 50%, color.change($by-gold-gradient-c, $alpha: 1) 110%);
-}
-.redpack-body { position: relative; padding: 36rpx 32rpx; }
-.redpack-head { margin-bottom: 24rpx; }
-.redpack-title { display: block; font-size: 40rpx; font-weight: 800; color: #1a1200; }
-.redpack-sub { display: block; margin-top: 8rpx; font-size: 26rpx; color: color.change($by-gold-deep, $alpha: .85); }
-.sign-week { display: flex; justify-content: space-between; gap: 10rpx; margin-bottom: 24rpx; }
-.sign-day {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6rpx;
-  padding: 18rpx 4rpx; border-radius: $by-radius-md;
-  background: color.change(#FFFFFF, $alpha: .35); position: relative;
-}
-.sign-day.done { background: color.change($by-gold-deep, $alpha: .35); }
-.sign-day.today { background: #fff; box-shadow: 0 8rpx 20rpx color.change($by-gold-deep, $alpha: .35); transform: translateY(-4rpx); }
-.sign-w { font-size: 20rpx; color: $by-gold-deep; font-weight: 600; }
-.sign-v { font-size: 22rpx; font-weight: 700; color: #1a1200; }
-.sign-check { position: absolute; top: 4rpx; right: 6rpx; font-size: 20rpx; color: $by-success; font-weight: 800; }
-.sign-btn { width: 100%; font-size: 30rpx !important; }
-.sign-btn.disabled { opacity: .6; }
-
-.act-card { padding: 24rpx !important; margin-bottom: 24rpx; }
-.act-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx; }
-.act-title { font-size: 30rpx; font-weight: 700; color: $by-text-1; }
-.act-more { font-size: 24rpx; color: $by-text-3; }
-.act-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16rpx; }
-.act-item {
-  position: relative; padding: 24rpx; border-radius: $by-radius-lg;
-  display: flex; flex-direction: column; gap: 8rpx; overflow: hidden;
-  background: $by-surface; border: 1rpx solid $by-border;
-}
-.act-emoji { font-size: 44rpx; }
-.act-label { font-size: 26rpx; font-weight: 700; color: $by-text-1; }
-.act-reward { font-size: 22rpx; color: $by-gold-soft; }
-.ai-1 { background: linear-gradient(135deg, color.change($by-info, $alpha: .22), color.change($by-aurora-a, $alpha: .18)); }
-.ai-2 { background: linear-gradient(135deg, color.change($by-gold, $alpha: .22), color.change($by-gold-deep, $alpha: .12)); }
-.ai-3 { background: linear-gradient(135deg, color.change($by-aurora-b, $alpha: .22), color.change($by-aurora-a, $alpha: .14)); }
-.ai-4 { background: linear-gradient(135deg, color.change($by-success, $alpha: .22), color.change($by-info, $alpha: .12)); }
-
-.rain-row { display: flex; align-items: center; gap: 20rpx; }
-.rain-icon { font-size: 60rpx; }
-.rain-info { flex: 1; display: flex; flex-direction: column; gap: 4rpx; }
-.rain-next { font-size: 28rpx; font-weight: 700; color: $by-text-1; }
-.rain-desc { font-size: 22rpx; color: $by-text-3; }
-.rain-btn { flex-shrink: 0; padding: 14rpx 24rpx !important; font-size: 24rpx !important; }
 
 /* ==== 公共 ==== */
 .state-wrap { padding: 80rpx 0; text-align: center; }

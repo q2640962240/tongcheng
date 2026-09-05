@@ -86,6 +86,39 @@
       <view class="btn-send" :class="{ disabled: !draft.trim() }" @tap="sendText">发送</view>
     </view>
 
+    <!-- 搜索入口按钮 -->
+    <view class="search-fab" @tap="showSearch = true">
+      <text class="search-fab-icon">🔍</text>
+    </view>
+
+    <!-- 搜索面板 -->
+    <view v-if="showSearch" class="search-overlay" @tap.self="closeSearch">
+      <view class="search-panel">
+        <view class="search-header">
+          <input
+            class="search-input"
+            v-model="searchKeyword"
+            placeholder="搜索聊天内容"
+            confirm-type="search"
+            :focus="showSearch"
+            @confirm="doSearch"
+          />
+          <text class="search-close" @tap="closeSearch">✕</text>
+        </view>
+        <view class="search-results" scroll-y>
+          <view v-if="searching" class="search-tip">搜索中…</view>
+          <view v-else-if="searchResults.length === 0 && searchDone" class="search-tip">未找到相关消息</view>
+          <view v-for="m in searchResults" :key="m.id" class="search-item" :class="{ mine: isMine(m) }" @tap="onSearchResultTap(m)">
+            <view class="search-item-meta">
+              <text class="search-item-sender">{{ isMine(m) ? '我' : peerName }}</text>
+              <text class="search-item-time">{{ formatTime(m.createdAt) }}</text>
+            </view>
+            <text class="search-item-content">{{ m.content }}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- 礼物面板 -->
     <GiftPanel
       v-if="showGiftPanel"
@@ -128,6 +161,51 @@ const scrollAnchor = ref('')
 const connected = ref(false)
 const showGiftPanel = ref(false)
 const giftAnimRef = ref(null)
+
+const showSearch = ref(false)
+const searchKeyword = ref('')
+const searchResults = ref([])
+const searching = ref(false)
+const searchDone = ref(false)
+
+function closeSearch() {
+  showSearch.value = false
+  searchKeyword.value = ''
+  searchResults.value = []
+  searchDone.value = false
+}
+
+async function doSearch() {
+  const kw = searchKeyword.value.trim()
+  if (!kw) return
+  searching.value = true
+  searchDone.value = false
+  searchResults.value = []
+  try {
+    const r = await request({
+      url: `/chat/search/${peerId.value}?keyword=${encodeURIComponent(kw)}&pageSize=50`,
+      method: 'GET'
+    })
+    const d = r && r.data
+    searchResults.value = (d && d.list) || []
+    searchDone.value = true
+  } catch (_) {
+    searchDone.value = true
+  } finally {
+    searching.value = false
+  }
+}
+
+function onSearchResultTap(m) {
+  closeSearch()
+  const idx = messages.value.findIndex(x => String(x.id) === String(m.id))
+  if (idx >= 0) {
+    scrollAnchor.value = ''
+    nextTick(() => { scrollAnchor.value = `msg-${m.id}` })
+  } else {
+    uni.showToast({ title: '该消息不在当前加载范围内', icon: 'none' })
+  }
+}
 
 let seq = 0
 let typingTimer = null
@@ -840,4 +918,99 @@ onUnload(() => {
   flex-shrink: 0;
 }
 /* #endif */
+
+.search-fab {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 16rpx);
+  right: 24rpx;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: rgba(20, 26, 45, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.2);
+}
+.search-fab-icon { font-size: 32rpx; }
+
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+}
+.search-panel {
+  margin-top: env(safe-area-inset-top);
+  background: $by-card-bg;
+  border-radius: 0 0 24rpx 24rpx;
+  max-height: 75vh;
+  display: flex;
+  flex-direction: column;
+}
+.search-header {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 28rpx;
+  border-bottom: 1rpx solid $by-border;
+}
+.search-input {
+  flex: 1;
+  height: 72rpx;
+  background: $by-bg;
+  border-radius: 36rpx;
+  padding: 0 28rpx;
+  font-size: 28rpx;
+  color: $by-text-1;
+}
+.search-close {
+  margin-left: 20rpx;
+  font-size: 36rpx;
+  color: $by-text-3;
+  padding: 8rpx;
+}
+.search-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16rpx 28rpx;
+  padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
+}
+.search-tip {
+  text-align: center;
+  color: $by-text-3;
+  font-size: 26rpx;
+  padding: 48rpx 0;
+}
+.search-item {
+  padding: 20rpx 24rpx;
+  background: $by-bg;
+  border-radius: 16rpx;
+  margin-bottom: 16rpx;
+}
+.search-item.mine {
+  background: rgba(100, 130, 255, 0.08);
+}
+.search-item-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8rpx;
+}
+.search-item-sender {
+  font-size: 24rpx;
+  color: $by-text-2;
+  font-weight: 500;
+}
+.search-item-time {
+  font-size: 22rpx;
+  color: $by-text-3;
+}
+.search-item-content {
+  font-size: 28rpx;
+  color: $by-text-1;
+  line-height: 1.5;
+  word-break: break-all;
+}
 </style>

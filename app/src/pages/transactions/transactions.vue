@@ -63,7 +63,9 @@ const total = ref(0)
 
 const typeMap = {
   recharge: '充值', exchange: '兑换', consume: '消费',
-  income: '约玩收入', withdraw: '提现', refund: '退款', reward: '分红奖励'
+  income: '礼物收入', withdraw: '提现', refund: '退款', reward: '奖励',
+  gift_withdraw: '礼物提现', elite_pay: '精英开通', diamond_unlock_wechat: '解锁微信',
+  admin_adjustment: '管理员调整'
 }
 
 const INCOME_TYPES = ['recharge', 'income', 'refund', 'reward']
@@ -72,7 +74,9 @@ const getTypeLabel = (t) => toStr(typeMap[t], '其他交易')
 
 const typeIcon = (t) => ({
   recharge: '💎', exchange: '⇄', consume: '🛒',
-  income: '💼', withdraw: '🏧', refund: '↩️', reward: '🎁'
+  income: '💼', withdraw: '🏧', refund: '↩️', reward: '🎁',
+  gift_withdraw: '🎁', elite_pay: '🌟', diamond_unlock_wechat: '🔓',
+  admin_adjustment: '⚙️'
 }[t] || '💰')
 
 // 收入类（金额为正显示）
@@ -142,7 +146,7 @@ onReachBottom(() => {
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: $by-bg; padding-bottom: 32rpx; }
+.page { min-height: 100vh; background: $by-bg; padding-bottom: calc(32rpx + env(safe-area-inset-bottom)); }
 
 /* Type bar */
 .type-bar {
