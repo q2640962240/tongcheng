@@ -93,6 +93,19 @@ async function sendCode(phone, scene = 'login') {
     return { success: true, message: 'TEST 环境验证码已生成', provider: 'test-memory', code }
   }
 
+  // ====== NODE_ENV=development：开发环境固定验证码 888888（方便本地调试，不影响生产） ======
+  if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
+    const devCode = '888888'
+    codeStore.set(key, {
+      code: devCode,
+      scene,
+      sentAt: nowMs,
+      expireAt: nowMs + CODE_TTL_MS,
+      tries: 0
+    })
+    return { success: true, message: '开发环境验证码: 888888', provider: 'dev-memory', code: devCode }
+  }
+
   const cfg = await getModuleConfig('sms')
   const cfgCheck = validateSmsConfig(cfg)
   if (!cfgCheck.ok) return { success: false, message: cfgCheck.message, provider: 'config-missing' }

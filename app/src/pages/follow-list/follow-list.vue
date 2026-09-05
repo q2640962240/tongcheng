@@ -97,10 +97,15 @@ onMounted(async () => {
   if (query.tab === 'followers') {
     currentTab.value = 'followers'
   }
+  if (query.userId) {
+    currentUserId.value = query.userId
+  }
 
   try {
-    const profile = await userApi.profile()
-    currentUserId.value = profile.id || profile.userId
+    if (!currentUserId.value) {
+      const profile = await userApi.profile()
+      currentUserId.value = profile.id || profile.userId
+    }
     fetchList()
   } catch (e) {
     console.error('获取用户信息失败', e)

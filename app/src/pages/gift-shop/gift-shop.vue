@@ -51,11 +51,10 @@
           class="gift-card"
           @tap="onGiftTap(gift)"
         >
-          <image
-            class="gift-image"
-            :src="gift.imageUrl"
-            mode="aspectFit"
-          />
+          <view class="gift-icon-wrap">
+            <text v-if="isEmoji(gift.imageUrl)" class="gift-emoji">{{ gift.imageUrl }}</text>
+            <image v-else class="gift-image" :src="gift.imageUrl" mode="aspectFit" />
+          </view>
           <text class="gift-name">{{ gift.name }}</text>
           <view class="gift-price">
             <text class="gift-price-icon">💎</text>
@@ -78,7 +77,10 @@
     <view v-if="showDetail" class="overlay" @tap.self="showDetail = false">
       <view class="detail-sheet">
         <view class="detail-close" @tap="showDetail = false">✕</view>
-        <image class="detail-image" :src="selectedGift.imageUrl" mode="aspectFit" />
+        <view v-if="isEmoji(selectedGift.imageUrl)" class="detail-emoji-wrap">
+          <text class="detail-emoji">{{ selectedGift.imageUrl }}</text>
+        </view>
+        <image v-else class="detail-image" :src="selectedGift.imageUrl" mode="aspectFit" />
         <text class="detail-name">{{ selectedGift.name }}</text>
         <view class="detail-price-row">
           <text class="detail-price-icon">💎</text>
@@ -160,10 +162,16 @@ const goWithdraw = () => {
   uni.navigateTo({ url: '/pages/withdraw/withdraw' })
 }
 
+/** 判断是否为 emoji 字符串（非图片 URL） */
+const isEmoji = (str) => {
+  if (!str) return false
+  return !str.startsWith('http') && !str.startsWith('/') && !str.startsWith('data:')
+}
+
 /** 跳转聊天 */
 const goChat = () => {
   showDetail.value = false
-  uni.switchTab({ url: '/pages/chat/chat' })
+  uni.switchTab({ url: '/TUIKit/components/TUIConversation/index' })
 }
 
 /** 页面显示时刷新数据 */
@@ -261,6 +269,17 @@ onShow(() => {
     transform: scale(0.97);
   }
 }
+.gift-icon-wrap {
+  width: 120rpx; height: 120rpx;
+  border-radius: 50%;
+  background: $by-surface-2;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.gift-emoji {
+  font-size: 64rpx;
+  line-height: 1;
+}
 .gift-image {
   width: 120rpx; height: 120rpx;
 }
@@ -311,6 +330,17 @@ onShow(() => {
   font-size: 36rpx; color: $by-text-3;
   width: 56rpx; height: 56rpx;
   display: flex; align-items: center; justify-content: center;
+}
+.detail-emoji-wrap {
+  width: 240rpx; height: 240rpx;
+  display: flex; align-items: center; justify-content: center;
+  background: $by-surface-2;
+  border-radius: 50%;
+  margin-top: 12rpx;
+}
+.detail-emoji {
+  font-size: 120rpx;
+  line-height: 1;
 }
 .detail-image {
   width: 240rpx; height: 240rpx;

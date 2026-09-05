@@ -73,6 +73,7 @@
             @changeToolbarDisplayType="changeToolbarDisplayType"
           />
         </template>
+        <MessageGiftEffect ref="giftEffectRef" />
       </div>
     </div>
   </div>
@@ -91,6 +92,7 @@ import TUICore, { TUIConstants, ExtensionInfo } from '@tencentcloud/tui-core-lit
 import ChatHeader from './chat-header/index.vue';
 import MessageList from './message-list/index.vue';
 import MessageInput from './message-input/index.vue';
+import MessageGiftEffect from './message-list/message-elements/message-gift-effect.vue';
 import MultipleSelectPanel from './mulitple-select-panel/index.vue';
 import Forward from './forward/index.vue';
 import MessageInputToolbar from './message-input-toolbar/index.vue';
@@ -171,6 +173,7 @@ const isMultipleSelectMode = ref(false);
 const inputToolbarDisplayType = ref<ToolbarDisplayType>('none');
 const messageInputRef = ref();
 const messageListRef = ref<InstanceType<typeof MessageList>>();
+const giftEffectRef = ref<InstanceType<typeof MessageGiftEffect>>();
 const headerExtensionList = ref<ExtensionInfo[]>([]);
 const featureConfig = TUIChatConfig.getFeatureConfig();
 // 键盘适配：App 端使用 onKeyboardHeightChange，仅触发滚动到底部，不再推移整个容器
@@ -202,14 +205,44 @@ onMounted(() => {
   TUIStore.watch(StoreName.CONV, {
     currentConversation: onCurrentConversationUpdate,
   });
+  TUIStore.watch(StoreName.CHAT, {
+    messageList: onMessageListUpdate,
+  });
 });
 
 onUnmounted(() => {
   TUIStore.unwatch(StoreName.CONV, {
     currentConversation: onCurrentConversationUpdate,
   });
+  TUIStore.unwatch(StoreName.CHAT, {
+    messageList: onMessageListUpdate,
+  });
   reset();
 });
+
+// 检测新礼物消息并触发特效
+let lastMessageCount = 0;
+function onMessageListUpdate(messageList: IMessageModel[]) {
+  if (!messageList || messageList.length <= lastMessageCount) {
+    lastMessageCount = messageList?.length || 0;
+    return;
+  }
+  // 检查新增的消息
+  const newMessages = messageList.slice(lastMessageCount);
+  lastMessageCount = messageList.length;
+  for (const msg of newMessages) {
+    if (msg?.type === TUIChatEngine.TYPES.MSG_CUSTOM && msg?.flow === 'in') {
+      try {
+        const data = typeof msg.payload.data === 'string' ? JSON.parse(msg.payload.data) : msg.payload.data;
+        if (data?.businessID === 'gift') {
+          giftEffectRef.value?.show(data);
+        }
+      } catch (e) {
+        // ignore parse error
+      }
+    }
+  }
+}
 
 const isInputToolbarShow = computed<boolean>(() => {
   return isUniFrameWork ? inputToolbarDisplayType.value !== 'none' : true;
@@ -312,6 +345,7 @@ function updateUIUserNotInGroup(conversation: IConversationModel) {
 }
 
 function onCurrentConversationUpdate(conversation: IConversationModel) {
+  lastMessageCount = 0;
   updateUIUserNotInGroup(conversation);
   // return when currentConversation is null
   if (!conversation) {

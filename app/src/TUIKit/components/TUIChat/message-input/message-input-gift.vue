@@ -13,7 +13,8 @@
         @click="selectGift(gift)"
       >
         <view class="gift-icon-wrap">
-          <image class="gift-image" :src="gift.imageUrl" mode="aspectFit" />
+          <text v-if="isEmoji(gift.imageUrl)" class="gift-emoji">{{ gift.imageUrl }}</text>
+          <image v-else class="gift-image" :src="gift.imageUrl" mode="aspectFit" />
         </view>
         <text class="gift-name">{{ gift.name }}</text>
         <text class="gift-price">{{ gift.price }}💎</text>
@@ -38,7 +39,9 @@
 
 <script setup>
 import { ref, onMounted } from '../../../adapter-vue'
+import TUIChatEngine, { TUIChatService, TUIStore, StoreName } from '@tencentcloud/chat-uikit-engine-lite'
 import { giftApi, walletApi } from '@/api'
+import { CHAT_MSG_CUSTOM_TYPE } from '../../../constant'
 
 const props = defineProps({
   receiverId: { type: [String, Number], required: true }
@@ -49,8 +52,10 @@ const giftList = ref([])
 const balance = ref(0)
 const selectedGift = ref(null)
 const loading = ref(true)
+const currentUserProfile = ref(null)
 
 onMounted(async () => {
+  currentUserProfile.value = TUIStore.getData(StoreName.USER, 'userProfile')
   try {
     const [giftsRes, balanceRes] = await Promise.all([
       giftApi.list(),
@@ -65,6 +70,11 @@ onMounted(async () => {
   }
 })
 
+const isEmoji = (str) => {
+  if (!str) return false
+  return !str.startsWith('http') && !str.startsWith('/') && !str.startsWith('data:')
+}
+
 const selectGift = (gift) => {
   selectedGift.value = selectedGift.value?.id === gift.id ? null : gift
 }
@@ -75,16 +85,41 @@ const sendGift = async () => {
     uni.showToast({ title: '钻石不足，请充值', icon: 'none' })
     return
   }
+  const gift = selectedGift.value
   try {
     await giftApi.send({
       receiverId: props.receiverId,
-      giftId: selectedGift.value.id
+      giftId: gift.id
     })
-    balance.value -= selectedGift.value.price
+    balance.value -= gift.price
+
+    // 发送 IM 自定义礼物消息
+    const payload = {
+      data: JSON.stringify({
+        businessID: CHAT_MSG_CUSTOM_TYPE.GIFT,
+        giftName: gift.name,
+        giftImage: gift.imageUrl,
+        diamondAmount: gift.price,
+        senderName: currentUserProfile.value?.nick || currentUserProfile.value?.userID || '',
+      }),
+      description: `送出了${gift.name}`,
+      extension: `送出了${gift.name}`,
+    }
+    const options = {
+      to: String(props.receiverId),
+      conversationType: TUIChatEngine.TYPES.CONV_C2C,
+      payload,
+      needReadReceipt: false,
+    }
+    try {
+      await TUIChatService.sendCustomMessage(options)
+    } catch (imErr) {
+      console.warn('[Gift] IM消息发送失败，礼物已扣费', imErr)
+    }
+
     uni.showToast({ title: '礼物已送出', icon: 'success' })
-    const sent = selectedGift.value
     selectedGift.value = null
-    emit('sent', sent)
+    emit('sent', gift)
   } catch (e) {
     uni.showToast({ title: e.message || '发送失败', icon: 'none' })
   }
@@ -179,6 +214,11 @@ const sendGift = async () => {
   justify-content: center;
   margin-bottom: 6px;
   overflow: hidden;
+}
+
+.gift-emoji {
+  font-size: 28px;
+  line-height: 1;
 }
 
 .gift-image {

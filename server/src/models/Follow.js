@@ -20,8 +20,8 @@ const Follow = sequelize.define('Follow', {
 }, {
   tableName: 'follows',
   indexes: [
-    { unique: true, fields: ['followerId', 'followingId'], name: 'uniq_follow_pair' },
-    { fields: ['followingId'] }
+    { unique: true, fields: ['follower_id', 'following_id'], name: 'uniq_follow_pair' },
+    { fields: ['following_id'] }
   ]
 })
 

@@ -72,6 +72,17 @@
         }}</a>
       </div>
     </template>
+    <template v-else-if="customData.businessID === CHAT_MSG_CUSTOM_TYPE.GIFT">
+      <view class="gift-message-card">
+        <view class="gift-card-inner">
+          <image class="gift-icon" :src="customData.giftImage" mode="aspectFill" />
+          <view class="gift-info">
+            <text class="gift-name">{{ customData.giftName }}</text>
+            <text class="gift-price">💎 {{ customData.diamondAmount }}</text>
+          </view>
+        </view>
+      </view>
+    </template>
     <template v-else>
       <span v-html="content.custom" />
     </template>
@@ -183,5 +194,49 @@ a {
       height: 67px;
     }
   }
+}
+
+.gift-message-card {
+  display: flex;
+  padding: 4px 0;
+}
+
+.gift-card-inner {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #1A2238 0%, #2A1F3D 100%);
+  border-radius: 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  box-shadow: 0 2px 12px rgba(255, 215, 0, 0.08);
+  min-width: 160px;
+}
+
+.gift-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 215, 0, 0.1);
+  flex-shrink: 0;
+}
+
+.gift-info {
+  display: flex;
+  flex-direction: column;
+  margin-left: 10px;
+}
+
+.gift-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #F5F7FF;
+  line-height: 1.3;
+}
+
+.gift-price {
+  font-size: 12px;
+  color: #FFD700;
+  margin-top: 3px;
+  font-weight: 500;
 }
 </style>

@@ -3,7 +3,7 @@ const { DataTypes } = require('sequelize')
 
 const Gift = sequelize.define('Gift', {
   id: {
-    type: DataTypes.BIGINT,
+    type: DataTypes.BIGINT.UNSIGNED,
     primaryKey: true,
     autoIncrement: true
   },

@@ -48,6 +48,8 @@ async function handleSendSms(req, res) {
   if (!result.success) return fail(res, result.message)
   if (process.env.NODE_ENV === 'test') {
     success(res, { code: result.code }, '[TEST] 验证码已生成（仅用于自动化测试）')
+  } else if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
+    success(res, { code: result.code }, '[DEV] 开发环境验证码已生成')
   } else {
     success(res, {}, '验证码已发送，请留意短信')
   }

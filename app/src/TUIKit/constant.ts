@@ -18,6 +18,7 @@ export const CHAT_MSG_CUSTOM_TYPE = {
   LINK: "text_link",
   CALL: 1,
   ORDER: "order",
+  GIFT: "gift",
 };
 
 export const DIALOG_CONTENT = {

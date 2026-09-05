@@ -459,15 +459,28 @@ async function ensureBanners({ transaction }) {
 
 // ============ 礼物种子数据 ============
 const DEFAULT_GIFTS = [
-  { name: '小红花', imageUrl: '/static/gifts/flower.png', price: 10, sort: 1, active: true },
-  { name: '爱心',   imageUrl: '/static/gifts/heart.png',   price: 50, sort: 2, active: true },
-  { name: '皇冠',   imageUrl: '/static/gifts/crown.png',   price: 100, sort: 3, active: true },
-  { name: '火箭',   imageUrl: '/static/gifts/rocket.png',  price: 500, sort: 4, active: true }
+  { name: '小红花', imageUrl: '🌹', price: 10, sort: 1, active: true },
+  { name: '爱心',   imageUrl: '❤️',  price: 50, sort: 2, active: true },
+  { name: '皇冠',   imageUrl: '👑', price: 100, sort: 3, active: true },
+  { name: '火箭',   imageUrl: '🚀', price: 500, sort: 4, active: true }
 ]
 async function ensureGifts({ transaction }) {
   const existing = await Gift.findAll({ transaction })
   if (existing.length > 0) {
-    console.log(`  🎁  礼物：已存在 ${existing.length} 个，跳过`)
+    // 修复旧数据：将本地 png 路径更新为 emoji
+    let patched = 0
+    for (const g of existing) {
+      if (g.imageUrl && g.imageUrl.startsWith('/static/gifts/')) {
+        const emojiMap = { 'flower.png': '🌹', 'heart.png': '❤️', 'crown.png': '👑', 'rocket.png': '🚀' }
+        const fileName = g.imageUrl.split('/').pop()
+        const emoji = emojiMap[fileName]
+        if (emoji) {
+          await g.update({ imageUrl: emoji }, { transaction })
+          patched++
+        }
+      }
+    }
+    console.log(`  🎁  礼物：已存在 ${existing.length} 个，修复 ${patched} 个图片路径`)
     return
   }
   for (const g of DEFAULT_GIFTS) {
