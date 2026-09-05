@@ -15,27 +15,7 @@
         "navigationStyle": "custom"
       }
     },
-    {
-      "path": "pages/warm/warm",
-      "style": {
-        "navigationBarTitleText": "暖心服务",
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/game/game",
-      "style": {
-        "navigationBarTitleText": "游戏陪玩",
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/offline/offline",
-      "style": {
-        "navigationBarTitleText": "兴趣约玩",
-        "navigationStyle": "custom"
-      }
-    },
+
     {
       "path": "pages/elite/elite",
       "style": {
@@ -82,7 +62,8 @@
         "navigationStyle": "custom",
         "backgroundColor": "#0B0F1A",
         "app-plus": {
-          "background": "#0B0F1A"
+          "background": "#0B0F1A",
+          "softinputMode": "adjustNothing"
         }
       }
     },
@@ -109,48 +90,7 @@
         "navigationBarTitleText": "充值"
       }
     },
-    {
-      "path": "pages/order-list/order-list",
-      "style": {
-        "navigationBarTitleText": "我的订单"
-      }
-    },
-    {
-      "path": "pages/order-detail/order-detail",
-      "style": {
-        "navigationBarTitleText": "订单详情"
-      }
-    },
-    {
-      "path": "pages/service-detail/service-detail",
-      "style": {
-        "navigationBarTitleText": "服务详情"
-      }
-    },
-    {
-      "path": "pages/service-publish/service-publish",
-      "style": {
-        "navigationBarTitleText": "发布服务"
-      }
-    },
-    {
-      "path": "pages/exchange/exchange",
-      "style": {
-        "navigationBarTitleText": "钻石兑换"
-      }
-    },
-    {
-      "path": "pages/review/review",
-      "style": {
-        "navigationBarTitleText": "评价订单"
-      }
-    },
-    {
-      "path": "pages/my-services/my-services",
-      "style": {
-        "navigationBarTitleText": "我的服务"
-      }
-    },
+
     {
       "path": "pages/withdraw/withdraw",
       "style": {
@@ -169,13 +109,7 @@
         "navigationBarTitleText": "编辑资料"
       }
     },
-    {
-      "path": "pages/provider/provider",
-      "style": {
-        "navigationBarTitleText": "服务者主页",
-        "navigationStyle": "custom"
-      }
-    },
+
     {
       "path": "pages/discover/discover",
       "style": {
@@ -234,6 +168,42 @@
       "path": "pages/webview/webview",
       "style": {
         "navigationBarTitleText": ""
+      }
+    },
+    {
+      "path": "pages/user-profile/user-profile",
+      "style": {
+        "navigationBarTitleText": "个人主页",
+        "navigationStyle": "custom",
+        "backgroundColor": "#0B0F1A",
+        "app-plus": { "background": "#0B0F1A" }
+      }
+    },
+    {
+      "path": "pages/follow-list/follow-list",
+      "style": {
+        "navigationBarTitleText": "关注与粉丝",
+        "navigationStyle": "custom",
+        "backgroundColor": "#0B0F1A",
+        "app-plus": { "background": "#0B0F1A" }
+      }
+    },
+    {
+      "path": "pages/verification-hub/verification-hub",
+      "style": {
+        "navigationBarTitleText": "认证中心",
+        "navigationStyle": "custom",
+        "backgroundColor": "#0B0F1A",
+        "app-plus": { "background": "#0B0F1A" }
+      }
+    },
+    {
+      "path": "pages/gift-shop/gift-shop",
+      "style": {
+        "navigationBarTitleText": "礼物商城",
+        "navigationStyle": "custom",
+        "backgroundColor": "#0B0F1A",
+        "app-plus": { "background": "#0B0F1A" }
       }
     }
   ],

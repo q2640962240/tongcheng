@@ -31,6 +31,9 @@
         @insertAt="insertAt"
         @onAtListOpen="onAtListOpen"
       />
+      <view class="gift-entry" v-if="!isGroup" @click.stop="toggleGiftPanel">
+        <text class="gift-entry-icon">🎁</text>
+      </view>
       <Icon
         v-if="isRenderEmojiPicker"
         class="icon icon-face"
@@ -54,6 +57,15 @@
         :displayType="displayType"
       />
     </div>
+    <!-- 礼物面板 -->
+    <view v-if="showGiftPanel" class="gift-panel-wrapper">
+      <view class="gift-mask" @click.stop="showGiftPanel = false"></view>
+      <MessageInputGift
+        :receiverId="peerUserId"
+        @close="showGiftPanel = false"
+        @sent="onGiftSent"
+      />
+    </view>
   </div>
 </template>
 <script setup lang="ts">
@@ -67,6 +79,7 @@ import { ref, watch, onMounted, onUnmounted } from '../../../adapter-vue';
 import MessageInputEditor from './message-input-editor.vue';
 import MessageInputAt from './message-input-at/index.vue';
 import MessageInputAudio from './message-input-audio.vue';
+import MessageInputGift from './message-input-gift.vue';
 import MessageQuote from './message-input-quote/index.vue';
 import Icon from '../../common/Icon.vue';
 import faceIcon from '../../../assets/icon/face-uni.png';
@@ -112,6 +125,18 @@ const featureConfig = TUIChatConfig.getFeatureConfig();
 const isRenderVoice = ref<boolean>(featureConfig.InputVoice);
 const isRenderEmojiPicker = ref<boolean>(featureConfig.InputEmoji || featureConfig.InputStickers);
 const isRenderMore = ref<boolean>(featureConfig.InputImage || featureConfig.InputVideo || featureConfig.InputEvaluation || featureConfig.InputQuickReplies);
+
+// 礼物面板
+const showGiftPanel = ref(false);
+const peerUserId = ref<string>('');
+
+const toggleGiftPanel = () => {
+  showGiftPanel.value = !showGiftPanel.value;
+};
+
+const onGiftSent = (gift: any) => {
+  showGiftPanel.value = false;
+};
 
 onMounted(() => {
   TUIStore.watch(StoreName.CONV, {
@@ -194,6 +219,12 @@ const reEdit = (content: any) => {
 function onCurrentConversationUpdated(conversation: IConversationModel) {
   currentConversation.value = conversation;
   isGroup.value = currentConversation.value?.type === TUIChatEngine.TYPES.CONV_GROUP;
+  // 提取对方用户ID（C2C 会话）
+  if (conversation?.conversationID?.startsWith('C2C')) {
+    peerUserId.value = conversation.conversationID.replace(/^C2C/, '');
+  } else if (conversation?.userProfile?.userID) {
+    peerUserId.value = conversation.userProfile.userID;
+  }
 }
 
 function onQuoteMessageUpdated(options?: { message: IMessageModel; type: string }) {
@@ -249,5 +280,46 @@ defineExpose({
   display: flex;
   flex-direction: row;
   align-items: center;
+}
+
+.gift-entry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin-right: 2px;
+  border-radius: 50%;
+  transition: background 0.2s;
+
+  &:active {
+    background: rgba(0, 0, 0, 0.06);
+  }
+}
+
+.gift-entry-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.gift-panel-wrapper {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.gift-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: -1;
 }
 </style>

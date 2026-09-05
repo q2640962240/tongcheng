@@ -1,3 +1,4 @@
+// @deprecated - 付费陪玩服务已下线，保留文件用于数据兼容
 const express = require('express')
 const router = express.Router()
 const { Service, ServiceCategory, User, Review } = require('../models')

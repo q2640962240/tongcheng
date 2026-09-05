@@ -29,6 +29,7 @@ const eliteRoutes = require('./routes/elite')
 const regionRoutes = require('./routes/regions')
 const locationRoutes = require('./routes/location')
 const imRoutes = require('./routes/im')
+const giftRoutes = require('./routes/gifts')
 
 const app = express()
 
@@ -130,6 +131,7 @@ app.use('/api/elite', eliteRoutes)
 app.use('/api/regions', regionRoutes)
 app.use('/api/location', locationRoutes)
 app.use('/api/im', imRoutes)
+app.use('/api/gifts', giftRoutes)
 
 // 健康检查接口（放在 404 处理之前）
 app.get('/api/health', async (req, res) => {

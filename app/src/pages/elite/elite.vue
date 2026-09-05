@@ -16,7 +16,7 @@
       <view class="benefits">
         <view class="benefit">
           <text class="b-icon">✅</text>
-          <text class="b-text">线下约玩权限</text>
+          <text class="b-text">线下活动权限</text>
         </view>
         <view class="benefit">
           <text class="b-icon">⚡</text>

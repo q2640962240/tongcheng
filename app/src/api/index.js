@@ -22,51 +22,28 @@ export const userApi = {
   applyElite: (filePath, formData) => uploadFileTo('/user/elite/apply', filePath, 'photo', formData),
   applyEliteJson: (data) => post('/user/elite/apply', data),
   certifications: () => get('/user/certifications'),
-  // 服务者主页（公开）
-  provider: (id) => get(`/user/provider/${id}`),
-  // 客服信息（聊天页/订单详情"联系客服"按钮）
+  // 客服信息（聊天页"联系客服"按钮）
   kefu: () => get('/user/kefu'),
   // 用户搜索（寻人大厅 & 搜索页）
-  discover: (params) => get('/user/discover', params)
+  discover: (params) => get('/user/discover', params),
+  // 社交 — 公开主页
+  publicProfile: (id) => get(`/user/${id}/public-profile`),
+  follow: (id) => post(`/user/${id}/follow`),
+  unfollow: (id) => del(`/user/${id}/follow`),
+  followers: (id, params) => get(`/user/${id}/followers`, { params }),
+  following: (id, params) => get(`/user/${id}/following`, { params }),
+  sendGreeting: (id, data) => post(`/user/${id}/greet`, data),
 }
 
 // ==================== 钱包 ====================
 export const walletApi = {
   balance: () => get('/wallet/balance'),
   recharge: (amount) => post('/wallet/recharge', { amount }),
-  exchange: (count) => post('/wallet/exchange', { count }),
   withdraw: (amount) => post('/wallet/withdraw', { amount }),
   transactions: (params) => get('/wallet/transactions', params),
   // 每日签到（红包签到专区）
   signIn: () => post('/wallet/sign-in'),
   signInStatus: () => get('/wallet/sign-in/status')
-}
-
-// ==================== 服务 ====================
-export const serviceApi = {
-  list: (params) => get('/services', params),
-  detail: (id) => get(`/services/${id}`),
-  publish: (data) => post('/services', data),
-  categories: () => get('/services/categories'),
-  myServices: (params) => get('/services/mine/list', params),
-  updateStatus: (id, status) => put(`/services/${id}/status`, { status }),
-  update: (id, data) => put(`/services/${id}`, data),
-  reviews: (id, params) => get(`/services/${id}/reviews`, params)
-}
-
-// ==================== 订单 ====================
-export const orderApi = {
-  create: (data) => post('/orders', data),
-  list: (params) => get('/orders', params),
-  detail: (id) => get(`/orders/${id}`),
-  pay: (id) => post(`/orders/${id}/pay`),
-  cancel: (id) => put(`/orders/${id}/cancel`),
-  start: (id) => put(`/orders/${id}/start`),
-  confirm: (id) => put(`/orders/${id}/confirm`),
-  review: (id, data) => post(`/orders/${id}/review`, data),
-  getReview: (id) => get(`/orders/${id}/review`),
-  serviceReviews: (id, params) => get(`/orders/${id}/reviews`, params),
-  refund: (id, reason) => post('/orders/' + id + '/refund', { reason })
 }
 
 // ==================== 聊天 ====================
@@ -79,10 +56,21 @@ export const chatApi = {
 // ==================== 邀请 ====================
 export const inviteApi = {
   stats: () => get('/invite/stats'),
-  leaderboard: () => get('/invite/leaderboard'),
   invitees: (params) => get('/invite/invitees', params),
   shareInfo: () => get('/invite/share-info'),
   bind: (inviteCode) => post('/invite/bind', { inviteCode })
+}
+
+// ==================== 礼物 ====================
+export const giftApi = {
+  // 获取礼物列表
+  list: () => get('/gifts'),
+  // 发送礼物
+  send: (data) => post('/gifts/send', data),
+  // 查询礼物收入
+  income: () => get('/gifts/income'),
+  // 申请提现
+  withdraw: (data) => post('/gifts/withdraw', data),
 }
 
 // ==================== 反馈 ====================
@@ -175,10 +163,9 @@ export default {
   auth: authApi,
   user: userApi,
   wallet: walletApi,
-  service: serviceApi,
-  order: orderApi,
   chat: chatApi,
   invite: inviteApi,
+  gift: giftApi,
   feedback: feedbackApi,
   upload: uploadApi,
   push: pushApi,

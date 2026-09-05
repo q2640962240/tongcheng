@@ -1,67 +1,76 @@
 <template>
-  <view class="page">
-    <view class="header">
-      <text class="back" @tap="onBack">‹</text>
-      <text class="title">邀请股东</text>
-      <view class="placeholder"></view>
+  <view class="page-invite">
+    <!-- 顶部 -->
+    <view class="inv-header">
+      <view class="inv-back" @tap="onBack"><text class="arrow">‹</text></view>
+      <text class="inv-title">邀请好友</text>
+      <view class="inv-placeholder"></view>
     </view>
 
-    <view class="content">
-      <!-- 规则 -->
-      <view class="rules-card">
-        <view class="rule-row">
-          <text class="rule-emoji">👨</text>
-          <view class="rule-info">
-            <text class="rule-title">邀请男性好友</text>
-            <text class="rule-desc">获得其消费 10% 现金分红</text>
-          </view>
-        </view>
-        <view class="rule-divider"></view>
-        <view class="rule-row">
-          <text class="rule-emoji">👩</text>
-          <view class="rule-info">
-            <text class="rule-title">邀请女性好友</text>
-            <text class="rule-desc">获得其收入 10% 现金分红</text>
+    <view class="inv-content">
+      <!-- 主视觉卡片 -->
+      <view class="hero-card">
+        <view class="hero-glow"></view>
+        <view class="hero-body">
+          <text class="hero-emoji">🌙</text>
+          <text class="hero-title">邀请好友，一起社交</text>
+          <text class="hero-desc">邀请好友注册，双方获得特权体验奖励</text>
+          <view class="hero-reward-row">
+            <view class="hero-reward-chip">
+              <text class="hrc-icon">✨</text>
+              <text class="hrc-text">每成功邀请1位好友，双方各获得3天精英体验</text>
+            </view>
           </view>
         </view>
       </view>
 
-      <!-- 邀请成绩 -->
+      <!-- 邀请码卡片 -->
+      <view class="code-card">
+        <view class="code-label">我的邀请码</view>
+        <view class="code-value">{{ inviteCode || '——' }}</view>
+        <view class="code-actions">
+          <view class="btn-outline code-btn" @tap="copyCode">复制邀请码</view>
+          <view class="btn-primary code-btn" @tap="copyLink">复制邀请链接</view>
+        </view>
+      </view>
+
+      <!-- 统计 -->
       <view class="stats-card">
         <view class="stat-item">
           <text class="stat-num">{{ stats.totalInvitees }}</text>
-          <text class="stat-label">累计邀请</text>
+          <text class="stat-label">已邀请好友</text>
         </view>
         <view class="stat-divider"></view>
         <view class="stat-item">
-          <text class="stat-num">¥{{ fenToYuan(stats.totalReward) }}</text>
-          <text class="stat-label">累计奖励</text>
-        </view>
-        <view class="stat-divider"></view>
-        <view class="stat-item">
-          <text class="stat-num">¥{{ fenToYuan(stats.monthlyReward) }}</text>
-          <text class="stat-label">本月奖励</text>
+          <text class="stat-num">{{ stats.totalDays || stats.totalInvitees * 3 }}</text>
+          <text class="stat-label">累计获得体验天数</text>
         </view>
       </view>
 
-      <!-- 排行榜 -->
-      <view class="leaderboard">
-        <view class="lb-header">
-          <text class="lb-title">奖励排行榜</text>
-          <text class="lb-more">查看全部</text>
-        </view>
-        <view v-for="(u, i) in leaderboard" :key="i" class="lb-item">
-          <text class="lb-rank" :class="rankClass(i)">{{ i + 1 }}</text>
-          <image class="lb-avatar" :src="u.avatar" mode="aspectFill" />
-          <text class="lb-name">{{ u.nickname }}</text>
-          <text class="lb-reward">¥{{ fenToYuan(u.reward) }}</text>
+      <!-- 已邀请列表 -->
+      <view v-if="invitees.length" class="invitees-card">
+        <view class="inv-section-title">已邀请的好友</view>
+        <view
+          v-for="(u, i) in invitees"
+          :key="i"
+          class="inv-item"
+        >
+          <image class="inv-avatar" :src="u.avatar" mode="aspectFill" />
+          <view class="inv-info">
+            <text class="inv-name">{{ u.nickname }}</text>
+            <text class="inv-time">{{ u.createdAt }}</text>
+          </view>
+          <view class="inv-badge">+3天</view>
         </view>
       </view>
     </view>
 
-    <!-- 底部邀请按钮 -->
-    <view class="footer-cta">
-      <view class="footer-btn" @tap="onInvite">立即邀请</view>
+    <!-- 底部按钮 -->
+    <view class="inv-footer">
+      <view class="inv-share-btn" @tap="onInvite">
+        <text class="isb-icon">📤</text>
+        <text class="isb-text">邀请好友</text>
+      </view>
     </view>
   </view>
 </template>
@@ -70,65 +79,76 @@
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { inviteApi } from '../../api'
-import { fenToYuan } from '../../utils/format'
+import {
+  toStr, toNum, toObj, toList, getPath, safeMap, avatarUrl
+} from '@/utils/fallback'
 
 const onBack = () => uni.navigateBack()
 
-const stats = ref({ totalInvitees: 0, totalReward: 0, monthlyReward: 0 })
-const leaderboard = ref([])
-const shareInfo = ref({})
+const stats = ref({ totalInvitees: 0, totalDays: 0 })
+const invitees = ref([])
+const inviteCode = ref('')
+const shareInfoData = ref({})
 
 const loadData = async () => {
   try {
-    const [s, lb, si] = await Promise.all([
-      inviteApi.stats(),
-      inviteApi.leaderboard(),
-      inviteApi.shareInfo()
+    const [si, inv] = await Promise.all([
+      inviteApi.shareInfo(),
+      inviteApi.invitees()
     ])
-    stats.value = s.data || {}
-    leaderboard.value = (lb.data || []).map(item => ({
-      nickname: item.nickname || '匿名用户',
-      avatar: item.avatar || '/static/avatar-user.png',
-      reward: item.reward || 0
+    const siData = toObj(getPath(si, 'data'), {})
+    shareInfoData.value = siData
+    inviteCode.value = toStr(getPath(siData, 'inviteCode'), '')
+
+    const invList = toList(getPath(inv, 'data'))
+    invitees.value = safeMap(invList, (item) => ({
+      nickname: toStr(getPath(item, 'nickname'), '匿名用户'),
+      avatar: avatarUrl(getPath(item, 'avatar')),
+      createdAt: toStr(getPath(item, 'createdAt'), '')
     }))
-    shareInfo.value = si.data || {}
+    stats.value = {
+      totalInvitees: invitees.value.length,
+      totalDays: invitees.value.length * 3
+    }
   } catch (e) {}
 }
 
-const rankClass = (i) => {
-  if (i === 0) return 'rank-1'
-  if (i === 1) return 'rank-2'
-  if (i === 2) return 'rank-3'
-  return ''
+const copyCode = () => {
+  const code = inviteCode.value
+  if (!code) return uni.showToast({ title: '暂无邀请码', icon: 'none' })
+  uni.setClipboardData({
+    data: code,
+    success: () => uni.showToast({ title: '邀请码已复制', icon: 'success' })
+  })
+}
+
+const copyLink = () => {
+  const code = inviteCode.value
+  if (!code) return uni.showToast({ title: '暂无邀请码', icon: 'none' })
+  const link = `${window.location.origin}/#/pages/login/login?inviteCode=${code}`
+  uni.setClipboardData({
+    data: link,
+    success: () => uni.showToast({ title: '邀请链接已复制', icon: 'success' })
+  })
 }
 
 const onInvite = () => {
   uni.showActionSheet({
     itemList: ['分享给微信好友', '分享到朋友圈', '复制邀请码', '复制邀请链接'],
     success: (res) => {
-      const code = shareInfo.value.inviteCode || ''
+      const code = inviteCode.value
       if (res.tapIndex === 2) {
-        // 复制邀请码
-        uni.setClipboardData({
-          data: code,
-          success: () => uni.showToast({ title: '邀请码已复制', icon: 'success' })
-        })
+        copyCode()
       } else if (res.tapIndex === 3) {
-        // 复制邀请链接（H5 友好）
-        const link = `${window.location.origin}/#/pages/login/login?inviteCode=${code}`
-        uni.setClipboardData({
-          data: link,
-          success: () => uni.showToast({ title: '邀请链接已复制', icon: 'success' })
-        })
+        copyLink()
       } else {
-        // 微信分享（小程序/App）
         // #ifdef MP-WEIXIN || APP-PLUS
         uni.share({
           provider: 'weixin',
           scene: res.tapIndex === 0 ? 'WXSceneSession' : 'WXSceneTimeline',
           type: 0,
-          title: shareInfo.value.shareTitle || '来白夜，找到你的专属陪伴',
-          summary: shareInfo.value.shareDesc || '白夜 + 陪玩陪聊，注册填写邀请码有惊喜',
+          title: shareInfoData.value.shareTitle || '来白夜，一起社交',
+          summary: shareInfoData.value.shareDesc || '邀请好友注册，双方各获3天精英体验',
           href: `${window.location.origin}/#/pages/login/login?inviteCode=${code}`,
           imageUrl: '',
           success: () => uni.showToast({ title: '分享成功', icon: 'success' }),
@@ -151,68 +171,117 @@ onShow(loadData)
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #fffbeb; padding-bottom: 160rpx; }
-.header {
+.page-invite { min-height: 100vh; background: $by-bg; padding-bottom: 180rpx; }
+
+.inv-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 24rpx; height: 88rpx; position: sticky; top: 0;
-  background: #fffbeb;
-  border-bottom: 2rpx solid #e5e5e5; z-index: 10;
+  background: $by-bg-soft; border-bottom: 1rpx solid $by-border; z-index: 10;
 }
-.back { font-size: 56rpx; line-height: 1; }
-.title { font-size: 34rpx; font-weight: 600; }
-.placeholder { width: 56rpx; }
-.content { padding: 32rpx; }
-.rules-card {
-  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
-  border-radius: 32rpx; padding: 32rpx; margin-bottom: 24rpx;
+.inv-back {
+  width: 60rpx; height: 60rpx; display: flex; align-items: center; justify-content: center;
+  color: $by-text-1;
+  .arrow { font-size: 48rpx; line-height: 48rpx; }
 }
-.rule-row { display: flex; align-items: center; gap: 24rpx; }
-.rule-emoji {
-  width: 80rpx; height: 80rpx; background: rgba(255,255,255,0.2);
-  border-radius: 9999rpx; display: flex; align-items: center; justify-content: center;
-  font-size: 44rpx;
+.inv-title { font-size: 34rpx; font-weight: 700; color: $by-text-1; }
+.inv-placeholder { width: 60rpx; }
+
+.inv-content { padding: 32rpx; display: flex; flex-direction: column; gap: 24rpx; }
+
+/* Hero */
+.hero-card {
+  position: relative; overflow: hidden;
+  border-radius: 32rpx; padding: 0;
 }
-.rule-info { display: flex; flex-direction: column; gap: 8rpx; }
-.rule-title { font-size: 30rpx; font-weight: 600; color: #ffffff; }
-.rule-desc { font-size: 26rpx; color: rgba(255,255,255,0.8); }
-.rule-divider { height: 2rpx; background: rgba(255,255,255,0.2); margin: 24rpx 0; }
+.hero-glow {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 20% 0%, color.change($by-aurora-b, $alpha: .4), transparent 55%),
+    radial-gradient(circle at 80% 100%, color.change($by-gold, $alpha: .3), transparent 55%),
+    linear-gradient(160deg, $by-bg-soft 0%, $by-surface 100%);
+}
+.hero-body {
+  position: relative; padding: 48rpx 36rpx;
+  display: flex; flex-direction: column; align-items: center; gap: 16rpx; text-align: center;
+}
+.hero-emoji { font-size: 72rpx; }
+.hero-title { font-size: 40rpx; font-weight: 800; color: $by-text-1; }
+.hero-desc { font-size: 26rpx; color: $by-text-3; }
+.hero-reward-row { margin-top: 8rpx; }
+.hero-reward-chip {
+  display: inline-flex; align-items: center; gap: 10rpx;
+  padding: 12rpx 24rpx; border-radius: 9999rpx;
+  background: color.change($by-gold, $alpha: .15);
+  border: 1rpx solid color.change($by-gold, $alpha: .3);
+}
+.hrc-icon { font-size: 24rpx; }
+.hrc-text { font-size: 24rpx; color: $by-gold-soft; font-weight: 600; }
+
+/* Code card */
+.code-card {
+  background: $by-surface; border: 1rpx solid $by-border;
+  border-radius: 24rpx; padding: 32rpx;
+  display: flex; flex-direction: column; align-items: center; gap: 20rpx;
+}
+.code-label { font-size: 24rpx; color: $by-text-3; }
+.code-value {
+  font-size: 56rpx; font-weight: 800; letter-spacing: 8rpx;
+  color: $by-gold; font-family: Menlo, Consolas, monospace;
+}
+.code-actions { display: flex; gap: 16rpx; width: 100%; }
+.code-btn { flex: 1; text-align: center; padding: 18rpx 0 !important; font-size: 26rpx !important; }
+
+/* Stats */
 .stats-card {
-  background: #ffffff; border-radius: 32rpx; padding: 40rpx 32rpx; margin-bottom: 24rpx;
+  background: $by-surface; border: 1rpx solid $by-border;
+  border-radius: 24rpx; padding: 36rpx 32rpx;
   display: flex; align-items: center;
 }
 .stat-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8rpx; }
-.stat-num { font-size: 40rpx; font-weight: 700; color: #171717; }
-.stat-label { font-size: 22rpx; color: #737373; }
-.stat-divider { width: 2rpx; height: 64rpx; background: #e5e5e5; }
-.leaderboard { background: #ffffff; border-radius: 32rpx; padding: 32rpx; }
-.lb-header {
-  display: flex; align-items: center; justify-content: space-between; margin-bottom: 24rpx;
+.stat-num {
+  font-size: 48rpx; font-weight: 800;
+  background: $by-gradient-aurora; -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.lb-title { font-size: 32rpx; font-weight: 600; }
-.lb-more { font-size: 24rpx; color: #737373; }
-.lb-item {
-  display: flex; align-items: center; gap: 16rpx; padding: 16rpx 0;
-  border-bottom: 2rpx solid #f5f5f5;
+.stat-label { font-size: 22rpx; color: $by-text-3; }
+.stat-divider { width: 2rpx; height: 64rpx; background: $by-border; }
+
+/* Invitees */
+.invitees-card {
+  background: $by-surface; border: 1rpx solid $by-border;
+  border-radius: 24rpx; padding: 28rpx;
+}
+.inv-section-title { font-size: 28rpx; font-weight: 700; color: $by-text-1; margin-bottom: 20rpx; }
+.inv-item {
+  display: flex; align-items: center; gap: 16rpx;
+  padding: 16rpx 0; border-bottom: 1rpx solid $by-border;
   &:last-child { border-bottom: none; }
 }
-.lb-rank {
-  width: 48rpx; text-align: center; font-size: 30rpx; font-weight: 700; color: #737373;
+.inv-avatar { width: 72rpx; height: 72rpx; border-radius: 9999rpx; background: $by-surface-2; }
+.inv-info { flex: 1; display: flex; flex-direction: column; gap: 4rpx; }
+.inv-name { font-size: 28rpx; font-weight: 600; color: $by-text-1; }
+.inv-time { font-size: 22rpx; color: $by-text-3; }
+.inv-badge {
+  padding: 6rpx 16rpx; border-radius: 9999rpx;
+  background: color.change($by-success, $alpha: .15); color: $by-success;
+  font-size: 22rpx; font-weight: 700;
 }
-.rank-1 { color: #ef4444; }
-.rank-2 { color: #f59e0b; }
-.rank-3 { color: #0ea5e9; }
-.lb-avatar { width: 64rpx; height: 64rpx; border-radius: 9999rpx; background: #f5f5f5; }
-.lb-name { flex: 1; font-size: 28rpx; }
-.lb-reward { font-size: 30rpx; font-weight: 700; color: #ef4444; }
-.footer-cta {
-  position: fixed; bottom: 0; left: 0; right: 0; padding: 24rpx 32rpx;
-  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-  background: rgba(255,255,255,0.95);
-  border-top: 2rpx solid #e5e5e5;
+
+/* Footer */
+.inv-footer {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  padding: 24rpx 32rpx; padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+  background: color.change($by-bg, $alpha: .95);
+  border-top: 1rpx solid $by-border;
+  backdrop-filter: blur(20rpx);
 }
-.footer-btn {
-  height: 96rpx; background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
-  color: #ffffff; border-radius: 9999rpx; display: flex; align-items: center;
-  justify-content: center; font-size: 32rpx; font-weight: 700;
+.inv-share-btn {
+  height: 96rpx;
+  background: $by-gradient-gold; color: #0B0F1A;
+  border-radius: 9999rpx;
+  display: flex; align-items: center; justify-content: center; gap: 10rpx;
+  font-size: 32rpx; font-weight: 700;
+  box-shadow: $by-shadow-gold;
 }
+.isb-icon { font-size: 30rpx; }
+.isb-text { font-size: 32rpx; }
 </style>

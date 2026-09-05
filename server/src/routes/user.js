@@ -3,7 +3,7 @@ const router = express.Router()
 const path = require('path')
 const fs = require('fs')
 const multer = require('multer')
-const { User, Wallet, Invite, Service, Review, Order, Op } = require('../models')
+const { User, Wallet, Invite, Service, Review, Order, Follow, Greeting, Op } = require('../models')
 const { auth, optionalAuth } = require('../middleware/auth')
 const { success, fail, paginate } = require('../utils/response')
 const oss = require('../utils/oss')
@@ -276,6 +276,115 @@ router.get('/kefu', async (req, res, next) => {
       phone: cfg.kefuPhone || '',
       notice: cfg.kefuNotice || '如有问题请联系客服微信'
     })
+  } catch (err) { next(err) }
+})
+
+// ========== 社交功能端点 ==========
+
+/** 获取用户公开主页 */
+router.get('/:id/public-profile', async (req, res, next) => {
+  try {
+    const userId = Number(req.params.id)
+    const user = await User.findByPk(userId, {
+      attributes: ['id', 'nickname', 'avatar', 'gender', 'city', 'bio', 'isElite', 'realPersonStatus', 'createdAt']
+    })
+    if (!user) return fail(res, '用户不存在', 404)
+    success(res, user)
+  } catch (err) { next(err) }
+})
+
+/** 关注用户（需鉴权） */
+router.post('/:id/follow', auth, async (req, res, next) => {
+  try {
+    const targetId = Number(req.params.id)
+    if (targetId === req.userId) return fail(res, '不能关注自己')
+
+    const target = await User.findByPk(targetId)
+    if (!target) return fail(res, '用户不存在', 404)
+
+    const existing = await Follow.findOne({
+      where: { followerId: req.userId, followingId: targetId }
+    })
+    if (existing) return fail(res, '已关注该用户')
+
+    await Follow.create({ followerId: req.userId, followingId: targetId })
+    success(res, null, '关注成功')
+  } catch (err) { next(err) }
+})
+
+/** 取消关注（需鉴权） */
+router.delete('/:id/follow', auth, async (req, res, next) => {
+  try {
+    const targetId = Number(req.params.id)
+    const record = await Follow.findOne({
+      where: { followerId: req.userId, followingId: targetId }
+    })
+    if (!record) return fail(res, '未关注该用户')
+    await record.destroy()
+    success(res, null, '已取消关注')
+  } catch (err) { next(err) }
+})
+
+/** 粉丝列表（分页） */
+router.get('/:id/followers', async (req, res, next) => {
+  try {
+    const userId = Number(req.params.id)
+    const { page = 1, pageSize = 20 } = req.query
+    const { rows, count } = await Follow.findAndCountAll({
+      where: { followingId: userId },
+      order: [['createdAt', 'DESC']],
+      offset: (page - 1) * pageSize,
+      limit: Number(pageSize)
+    })
+    const list = []
+    for (const f of rows) {
+      const u = await User.findByPk(f.followerId, {
+        attributes: ['id', 'nickname', 'avatar', 'bio', 'isElite']
+      })
+      if (u) list.push(u)
+    }
+    paginate(res, list, count, page, pageSize)
+  } catch (err) { next(err) }
+})
+
+/** 关注列表（分页） */
+router.get('/:id/following', async (req, res, next) => {
+  try {
+    const userId = Number(req.params.id)
+    const { page = 1, pageSize = 20 } = req.query
+    const { rows, count } = await Follow.findAndCountAll({
+      where: { followerId: userId },
+      order: [['createdAt', 'DESC']],
+      offset: (page - 1) * pageSize,
+      limit: Number(pageSize)
+    })
+    const list = []
+    for (const f of rows) {
+      const u = await User.findByPk(f.followingId, {
+        attributes: ['id', 'nickname', 'avatar', 'bio', 'isElite']
+      })
+      if (u) list.push(u)
+    }
+    paginate(res, list, count, page, pageSize)
+  } catch (err) { next(err) }
+})
+
+/** 打招呼（需鉴权） */
+router.post('/:id/greet', auth, async (req, res, next) => {
+  try {
+    const receiverId = Number(req.params.id)
+    if (receiverId === req.userId) return fail(res, '不能给自己打招呼')
+
+    const receiver = await User.findByPk(receiverId)
+    if (!receiver) return fail(res, '用户不存在', 404)
+
+    const { message } = req.body
+    await Greeting.create({
+      senderId: req.userId,
+      receiverId,
+      message: message || ''
+    })
+    success(res, null, '打招呼已发送')
   } catch (err) { next(err) }
 })
 

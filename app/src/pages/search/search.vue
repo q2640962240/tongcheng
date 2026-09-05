@@ -9,7 +9,7 @@
           v-model="keyword"
           class="s-input"
           type="text"
-          placeholder="搜服务 / 大神 / 组局 / 动态"
+          placeholder="搜用户 / 动态 / 组局"
           confirm-type="search"
           :focus="autoFocus"
           @confirm="onSubmit"
@@ -77,37 +77,6 @@
             </view>
           </view>
         </view>
-      </view>
-    </view>
-
-    <!-- 搜索结果：服务 -->
-    <view v-if="submitted && activeTab === 'service'" class="result">
-      <view v-if="serviceLoading && serviceList.length === 0" class="state-wrap"><text class="state-text">搜索中…</text></view>
-      <view v-else-if="serviceList.length === 0" class="empty">
-        <text class="empty-emoji">🌌</text>
-        <text class="empty-text">没有找到相关服务，换个词试试</text>
-      </view>
-      <view
-        v-for="s in serviceList"
-        :key="s.id"
-        class="svc-row card"
-        @tap="goService(s)"
-      >
-        <image class="svc-cover" :src="s.coverImage || s.provider?.avatar || '/static/sucai/profile-xiaokui.jpg'" mode="aspectFill" />
-        <view class="svc-body">
-          <view class="svc-title-row">
-            <text class="svc-title">{{ s.title }}</text>
-            <text class="svc-price">¥{{ s.price || 0 }}<text class="unit">/{{ s.priceUnit || '次' }}</text></text>
-          </view>
-          <text class="svc-provider">{{ s.provider?.nickname || s.providerName || '匿名服务者' }} · {{ s.city || '同城' }}</text>
-          <view class="svc-tags">
-            <text v-for="(t, i) in (s.tags || []).slice(0, 3)" :key="i" class="t-tag" :class="'tc-' + (i % 4)">{{ t }}</text>
-          </view>
-        </view>
-      </view>
-      <view v-if="serviceHasMore" class="load-more" @tap="loadMoreServices">
-        <text v-if="serviceLoading">加载中…</text>
-        <text v-else>加载更多 ↓</text>
       </view>
     </view>
 
@@ -213,7 +182,7 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { serviceApi, postApi, groupApi, userApi } from '../../api'
+import { postApi, groupApi, userApi } from '../../api'
 import {
   toList, toStr, toNum, toObj, toBool, unwrap, unwrapPage, guard,
   getPath, avatarUrl, coverUrl, pickTags, formatTime, truncate,
@@ -225,13 +194,12 @@ const HISTORY_KEY = 'baiye_search_history'
 const autoFocus = ref(true)
 const keyword = ref('')
 const submitted = ref(false)
-const activeTab = ref('service')
+const activeTab = ref('user')
 
 const tabs = [
-  { key: 'service', label: '服务' },
-  { key: 'user', label: '大神' },
-  { key: 'post', label: '动态' },
-  { key: 'group', label: '组局' }
+  { key: 'user', label: '搜用户' },
+  { key: 'post', label: '搜动态' },
+  { key: 'group', label: '搜组局' }
 ]
 
 const hotList = [
@@ -267,36 +235,9 @@ const clearKeyword = () => { keyword.value = ''; submitted.value = false }
 const onBack = () => uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/home' }) })
 
 /* ---- 搜索状态 ---- */
-const servicePage = ref(1), serviceList = ref([]), serviceHasMore = ref(true), serviceLoading = ref(false)
 const userPage = ref(1), userList = ref([]), userLoading = ref(false)
 const postPage = ref(1), postList = ref([]), postLoading = ref(false)
 const groupPage = ref(1), groupList = ref([]), groupLoading = ref(false)
-
-const loadServices = async (reset = false) => {
-  if (serviceLoading.value) return
-  serviceLoading.value = true
-  if (reset) { servicePage.value = 1; serviceList.value = []; serviceHasMore.value = true }
-  const kw = toStr(keyword.value, '').trim()
-  const pageResp = await guard(
-    serviceApi.list({ page: toNum(servicePage.value, 1), pageSize: 10, keyword: kw }).then((r) => unwrapPage(r, { list: [], total: 0 })),
-    { list: [], total: 0 }
-  )
-  const { list: rawList, total } = toObj(pageResp, { list: [], total: 0 })
-  const rows = safeMap(toList(rawList), (s) => ({
-    id: getPath(s, 'id', ''),
-    title: toStr(getPath(s, 'title'), ''),
-    price: toNum(getPath(s, 'price'), 0),
-    priceUnit: toStr(getPath(s, 'priceUnit'), '次'),
-    coverImage: coverUrl(getPath(s, 'coverImage') || getPath(s, 'cover') || getPath(s, 'provider.avatar')),
-    providerName: toStr(getPath(s, 'providerName') || getPath(s, 'provider.nickname'), '匿名服务者'),
-    city: pickCity(getPath(s, 'city'), '同城'),
-    tags: pickTags(getPath(s, 'tags'), 3)
-  }))
-  serviceList.value = reset ? rows : serviceList.value.concat(rows)
-  serviceHasMore.value = rows.length >= 10 && toNum(total, serviceList.value.length) > serviceList.value.length
-  servicePage.value = toNum(servicePage.value, 1) + 1
-  serviceLoading.value = false
-}
 
 const loadUsers = async (reset = false) => {
   if (userLoading.value) return
@@ -383,8 +324,6 @@ const loadGroups = async (reset = false) => {
   groupLoading.value = false
 }
 
-const loadMoreServices = () => loadServices(false)
-
 const runSearchAll = async (kw) => {
   keyword.value = toStr(kw, '').trim()
   const w = toStr(keyword.value, '').trim()
@@ -395,7 +334,6 @@ const runSearchAll = async (kw) => {
   pushHistory(w)
   submitted.value = true
   await Promise.all([
-    loadServices(true),
     loadUsers(true),
     loadPosts(true),
     loadGroups(true)
@@ -413,7 +351,7 @@ const onInput = debounce(() => {
   const w = toStr(keyword.value, '').trim()
   if (!w) {
     submitted.value = false
-    serviceList.value = []; userList.value = []; postList.value = []; groupList.value = []
+    userList.value = []; postList.value = []; groupList.value = []
     return
   }
   runSearchAll(w)
@@ -432,8 +370,7 @@ const groupStatusText = (s) => {
 }
 
 /* actions */
-const goService = (s) => uni.navigateTo({ url: `/pages/service-detail/service-detail?id=${toStr(getPath(s, 'id'), '')}` })
-const goUser = (u) => uni.navigateTo({ url: `/pages/provider/provider?id=${toStr(getPath(u, 'id'), '')}` })
+const goUser = (u) => uni.navigateTo({ url: `/pages/user-profile/user-profile?id=${toStr(getPath(u, 'id'), '')}` })
 const goPost = (p) => uni.navigateTo({ url: `/pages/group/detail?id=${toStr(getPath(p, 'id'), '')}&mode=post` })
 const goGroup = (g) => uni.navigateTo({ url: `/pages/group/detail?id=${toStr(getPath(g, 'id'), '')}` })
 const preview = (images, i) => {
@@ -448,7 +385,6 @@ const onChat = (u) => {
 
 watch(activeTab, () => {
   if (!submitted.value) return
-  if (activeTab.value === 'service' && serviceList.value.length === 0) loadServices(true)
   if (activeTab.value === 'user' && userList.value.length === 0) loadUsers(true)
   if (activeTab.value === 'post' && postList.value.length === 0) loadPosts(true)
   if (activeTab.value === 'group' && groupList.value.length === 0) loadGroups(true)
@@ -563,21 +499,7 @@ onMounted(loadHistory)
   &.new { background: color.adjust($by-aurora-a, $alpha: -0.88); color: $by-aurora-a; }
 }
 
-/* ---- 服务结果 ---- */
-.svc-row {
-  display: flex; gap: 20rpx;
-  padding: 20rpx;
-  margin-bottom: 20rpx;
-}
-.svc-cover { width: 180rpx; height: 180rpx; border-radius: 16rpx; background: $by-bg-soft; }
-.svc-body { flex: 1; display: flex; flex-direction: column; gap: 8rpx; }
-.svc-title-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16rpx; }
-.svc-title { flex: 1; font-weight: 700; color: $by-text-1; font-size: 30rpx; line-height: 1.35; }
-.svc-price { color: $by-gold; font-weight: 800; font-size: 32rpx;
-  .unit { color: $by-text-3; font-weight: 500; font-size: 22rpx; }
-}
-.svc-provider { color: $by-text-3; font-size: 24rpx; }
-.svc-tags { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 6rpx; }
+/* ---- 用户结果 ---- */
 .t-tag {
   padding: 6rpx 16rpx; border-radius: 9999rpx; font-size: 22rpx;
   &.tc-0 { background: color.adjust($by-gold, $alpha: -0.88); color: $by-gold; }
@@ -585,8 +507,6 @@ onMounted(loadHistory)
   &.tc-2 { background: color.adjust($by-aurora-c, $alpha: -0.88); color: $by-aurora-c; }
   &.tc-3 { background: color.adjust($by-aurora-b, $alpha: -0.88); color: $by-aurora-b; }
 }
-
-/* ---- 用户结果 ---- */
 .user-row {
   display: flex; gap: 20rpx; align-items: center;
   padding: 20rpx; margin-bottom: 20rpx;

@@ -73,7 +73,7 @@ const totalJoined = ref(12876);
 const paying = ref(false);
 const whyOpen = ref(false);
 const rights = ref([
-  { icon: '💖', t: '暖心服务解锁', d: '查看所有陪玩暖心服务详情与联系方式' },
+  { icon: '💖', t: '聊天交友特权', d: '查看所有达人社交详情与联系方式' },
   { icon: '🔍', t: '寻人大厅发布', d: '在寻人大厅发布个人邀约信息，精准匹配' },
   { icon: '🎯', t: '兴趣交友赠10次', d: '每日额外 10 次"超级喜欢"匹配机会' },
   { icon: '💬', t: '聊天无限聊', d: '私聊无次数上限，每天 50 次联系 TA 额度' },

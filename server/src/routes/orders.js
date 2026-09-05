@@ -1,3 +1,4 @@
+// @deprecated - 付费订单系统已下线，保留文件用于数据兼容
 const express = require('express')
 const router = express.Router()
 const { Order, Service, User, Wallet, Invite, Transaction, Review } = require('../models')

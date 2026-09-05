@@ -24,7 +24,7 @@ const UPLOAD_DIR = path.join(__dirname, '..', 'uploads')
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true })
 
 const db = require('./models')
-const { Admin, Config, ServiceCategory, User, Wallet, Service, Post, Banner, sequelize } = db
+const { Admin, Config, ServiceCategory, User, Wallet, Service, Post, Banner, Gift, sequelize } = db
 
 // ============ 配置中心空模板定义 ============
 // type 说明: string / number / boolean / secret(敏感, 后台应脱敏显示) / json
@@ -114,7 +114,8 @@ const SINGLE_CONFIGS = [
   { module: 'app', key: 'withdraw_min_amount_fen',      value: '1000', type: 'number', description: '最低提现额(分), 默认 10 元' },
   { module: 'app', key: 'withdraw_fee_rate',            value: '0',    type: 'number', description: '提现手续费比例(0~1), 默认 0' },
   { module: 'app', key: 'signInRewardDiamond',          value: '10',   type: 'number', description: '每日签到奖励钻石数, 默认 10' },
-  { module: 'app', key: 'serviceAutoApprove',            value: 'true', type: 'boolean', description: '用户发布服务是否自动过审(true=直接上架，false=进入审核队列，默认 true)' }
+  { module: 'app', key: 'serviceAutoApprove',            value: 'true', type: 'boolean', description: '用户发布服务是否自动过审(true=直接上架，false=进入审核队列，默认 true)' },
+  { module: 'gift', key: 'withdrawRatio',                value: '0.7',  type: 'number',  description: '礼物提现比例(0~1), 默认 0.7(70%)' }
 ]
 
 async function ensureAdmin({ transaction }) {
@@ -456,6 +457,25 @@ async function ensureBanners({ transaction }) {
   return created
 }
 
+// ============ 礼物种子数据 ============
+const DEFAULT_GIFTS = [
+  { name: '小红花', imageUrl: '/static/gifts/flower.png', price: 10, sort: 1, active: true },
+  { name: '爱心',   imageUrl: '/static/gifts/heart.png',   price: 50, sort: 2, active: true },
+  { name: '皇冠',   imageUrl: '/static/gifts/crown.png',   price: 100, sort: 3, active: true },
+  { name: '火箭',   imageUrl: '/static/gifts/rocket.png',  price: 500, sort: 4, active: true }
+]
+async function ensureGifts({ transaction }) {
+  const existing = await Gift.findAll({ transaction })
+  if (existing.length > 0) {
+    console.log(`  🎁  礼物：已存在 ${existing.length} 个，跳过`)
+    return
+  }
+  for (const g of DEFAULT_GIFTS) {
+    await Gift.create(g, { transaction })
+  }
+  console.log(`  🎁  礼物：新增 ${DEFAULT_GIFTS.length} 个默认礼物`)
+}
+
 /**
  * 批量把业务用户（含 AI 虚拟大神）导入腾讯云 IM（account_import）。
  * 幂等：已存在的 IM 账号重复导入只会更新昵称/头像。
@@ -507,6 +527,7 @@ async function seed() {
       await ensureAiServices({ transaction })
       await ensureAiPosts({ transaction })
       await ensureBanners({ transaction })
+      await ensureGifts({ transaction })
       await transaction.commit()
     } catch (e) {
       await transaction.rollback()
@@ -522,6 +543,7 @@ async function seed() {
     await ensureAiServices({ transaction: undefined })
     await ensureAiPosts({ transaction: undefined })
     await ensureBanners({ transaction: undefined })
+    await ensureGifts({ transaction: undefined })
   }
   // 事务/写入全部完成后再做 IM 账号导入（需读最新数据，且不纳入事务；失败不阻塞启动）
   await importAllUsersToIM()

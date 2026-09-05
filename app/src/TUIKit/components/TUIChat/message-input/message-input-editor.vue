@@ -23,7 +23,7 @@
       id="editor"
       ref="inputRef"
       v-model="inputText"
-      :adjust-position="true"
+      :adjust-position="false"
       cursor-spacing="20"
       confirm-type="send"
       :confirm-hold="true"
@@ -38,6 +38,7 @@
       @input="onInput"
       @blur="onBlur"
       @focus="onFocus"
+      @keyboardheightchange="onKeyboardHeightChange"
     >
   </div>
 </template>
@@ -194,6 +195,13 @@ const onFocus = (e: any) => {
   inputBlur.value = false;
   emits('onFocus', e?.detail?.height);
   uni.$emit('scroll-to-bottom');
+};
+
+const onKeyboardHeightChange = (e: any) => {
+  const height = e?.detail?.height ?? e?.height ?? 0;
+  if (height > 0) {
+    uni.$emit('scroll-to-bottom');
+  }
 };
 
 const isEditorContentEmpty = () => {

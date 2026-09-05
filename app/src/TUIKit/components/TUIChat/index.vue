@@ -1,5 +1,5 @@
 <template>
-  <div class="chat" :style="{marginBottom: keywordHight + 'px'}">
+  <div class="chat">
     <div :class="['tui-chat', !isPC && 'tui-chat-h5']">
       <div
         v-if="!currentConversationID"
@@ -78,7 +78,7 @@
   </div>
 </template>
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted, computed } from '../../adapter-vue';
+import { ref, onMounted, onUnmounted, computed, nextTick } from '../../adapter-vue';
 import TUIChatEngine, {
   TUITranslateService,
   TUIConversationService,
@@ -173,20 +173,30 @@ const messageInputRef = ref();
 const messageListRef = ref<InstanceType<typeof MessageList>>();
 const headerExtensionList = ref<ExtensionInfo[]>([]);
 const featureConfig = TUIChatConfig.getFeatureConfig();
-const keywordHight = ref(0);
+// 键盘适配：App 端使用 onKeyboardHeightChange，仅触发滚动到底部，不再推移整个容器
+// #ifdef APP-PLUS
+uni.onKeyboardHeightChange((height) => {
+  if (height > 0) {
+    nextTick(() => {
+      uni.$emit('scroll-to-bottom');
+    });
+  }
+});
+// #endif
 
+// H5 端保留 onWindowResize 兼容
+// #ifdef H5
 const systemInfo = uni.getSystemInfoSync();
 const screenHeight = systemInfo.screenHeight;
-
 const windowResizeCallback = (res) => {
   const value = screenHeight - res.size.windowHeight;
   if (value > 0 && inputToolbarDisplayType.value !== 'dialog') {
     inputToolbarDisplayType.value = 'none';
   }
   uni.$emit('scroll-to-bottom');
-  keywordHight.value = value;
 };
 uni.onWindowResize(windowResizeCallback);
+// #endif
 
 onMounted(() => {
   TUIStore.watch(StoreName.CONV, {

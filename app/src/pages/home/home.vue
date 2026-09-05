@@ -34,13 +34,13 @@
         </view>
         <view class="search-input" @tap="onSearch">
           <text class="s-icon">🔎</text>
-          <text class="s-placeholder">搜服务 / 大神 / 组局主题</text>
+          <text class="s-placeholder">搜用户 / 动态 / 组局</text>
         </view>
       </view>
     </view>
 
     <scroll-view scroll-y class="scroll" :refresher-enabled="true" :refresher-triggered="refreshing" @refresherrefresh="onRefresh">
-      <!-- 网络异常诊断条（真机本地 WiFi 场景最常见：BASE_URL 指向了电脑 IP 不正确 → 看上去像黑屏） -->
+      <!-- 网络异常诊断条 -->
       <view class="net-troubleshoot card" v-if="showNetTrouble">
         <view class="nt-head">
           <text class="nt-icon">📡</text>
@@ -73,7 +73,7 @@
         </swiper>
       </view>
 
-      <!-- 快捷入口 6 宫格（暖心/游戏/线下/唱歌/哄睡/精英） -->
+      <!-- 快捷入口 4 宫格 -->
       <view class="quick-wrap card">
         <view
           v-for="q in quickEntries"
@@ -85,108 +85,101 @@
             <text class="qi-emoji">{{ q.emoji }}</text>
           </view>
           <text class="quick-label">{{ q.label }}</text>
-          <view v-if="q.tag" class="quick-tag">{{ q.tag }}</view>
         </view>
       </view>
 
-      <!-- 精英开通 CTA -->
-      <view class="elite-cta card" @tap="onElite">
-        <view class="elite-bg"></view>
-        <view class="elite-body">
-          <view class="elite-left">
-            <view class="elite-badge">✨ 白夜精英</view>
-            <text class="elite-title">{{ eliteInfo.totalJoinedApprox || 12876 }} 人已解锁特权</text>
-            <text class="elite-desc">无限聊天 · 精英徽章 · 优先匹配 · 解锁微信号</text>
+      <!-- 认证引导条（未认证时显示） -->
+      <view class="verify-bar card" v-if="showVerifyBar" @tap="onGoVerify">
+        <view class="verify-bar-bg"></view>
+        <view class="verify-bar-body">
+          <view class="verify-bar-left">
+            <text class="verify-bar-icon">🛡️</text>
+            <text class="verify-bar-text">完成精英认证，解锁全部社交功能</text>
           </view>
-          <view class="elite-btn">
-            <text class="elite-price">¥{{ eliteInfo.priceYuan || '30.00' }}</text>
-            <text class="elite-plan">终身</text>
+          <view class="verify-bar-btn">
+            <text class="verify-bar-btn-text">去认证</text>
           </view>
         </view>
       </view>
 
-      <!-- 附近精英用户（Bug 3 修复：社交平台属性，展示 isElite=true 的用户，即使未发布服务也能被看到和联系） -->
+      <!-- 推荐好友 -->
       <view class="section">
         <view class="section-head">
-          <text class="section-title">✨ 附近精英</text>
-          <text class="section-more" @tap="onNavDiscover">查看全部 ›</text>
+          <text class="section-title">👋 推荐好友</text>
+          <text class="section-more" @tap="onNavDiscover">查看更多 ›</text>
         </view>
-        <view v-if="eliteLoading" class="loading-wrap"><text class="loading">精英用户加载中…</text></view>
-        <scroll-view v-else-if="eliteUserList.length > 0" scroll-x class="hide-scrollbar elite-scroll">
-          <view class="elite-row">
+        <view v-if="userLoading" class="loading-wrap"><text class="loading">加载中…</text></view>
+        <scroll-view v-else-if="recommendUsers.length > 0" scroll-x class="hide-scrollbar user-scroll">
+          <view class="user-row">
             <view
-              v-for="u in eliteUserList"
+              v-for="u in recommendUsers"
               :key="u.id"
-              class="elite-card"
-              @tap="onEliteUserTap(u)"
+              class="user-card"
+              @tap="onUserTap(u)"
             >
-              <view class="elite-avatar-wrap">
-                <image class="elite-avatar" :src="u.avatar" mode="aspectFill" />
-                <view class="elite-crown">👑</view>
-              </view>
-              <view class="elite-info">
-                <text class="elite-name" :numberOfLines="1">{{ u.nickname }}</text>
-                <text class="elite-city" v-if="u.city" :numberOfLines="1">📍{{ u.city }}</text>
-                <text class="elite-bio" :numberOfLines="2">{{ u.bio }}</text>
-                <view class="say-hi" @tap.stop="onSayHi(u)">
-                  <text class="say-hi-text">打招呼</text>
+              <image class="user-avatar" :src="u.avatar" mode="aspectFill" />
+              <view class="user-info">
+                <view class="user-name-row">
+                  <text class="user-name" :numberOfLines="1">{{ u.nickname }}</text>
+                  <view class="user-gender" :class="'g-' + u.gender">
+                    <text class="user-gender-icon">{{ u.gender === 'female' ? '♀' : '♂' }}</text>
+                  </view>
                 </view>
+                <text class="user-age-city" :numberOfLines="1">{{ u.age ? u.age + '岁 · ' : '' }}{{ u.city || '未知' }}</text>
+                <text class="user-bio" :numberOfLines="1">{{ u.bio || '这个人很懒，什么都没写~' }}</text>
               </view>
-            </view>
-            <view v-if="eliteUserList.length < 12" class="elite-card join-elite" @tap="onElite">
-              <view class="join-emoji">+</view>
-              <text class="join-title">成为精英</text>
-              <text class="join-desc">解锁精英徽章，优先被推荐给附近的人</text>
             </view>
           </view>
         </scroll-view>
-        <view v-else class="empty elite-empty">
+        <view v-else class="empty">
           <text class="empty-emoji">🌟</text>
-          <text class="empty-text">暂无精英用户，成为第一位精英被附近的人发现吧</text>
-          <view class="btn-primary empty-action" @tap="onElite">立即开通精英</view>
+          <text class="empty-text">暂无推荐用户，下拉刷新试试</text>
         </view>
       </view>
 
-      <!-- 分类 chips -->
-      <view class="chips">
-        <scroll-view scroll-x class="hide-scrollbar">
-          <view class="chips-inner">
-            <text
-              v-for="(c, i) in categories"
-              :key="i"
-              class="chip"
-              :class="{ active: activeCategory === c.key }"
-              @tap="activeCategory = c.key"
-            >{{ c.label }}</text>
-          </view>
-        </scroll-view>
-      </view>
-
-      <!-- 为你推荐（服务卡） -->
+      <!-- 最新动态 -->
       <view class="section">
         <view class="section-head">
-          <text class="section-title">🔥 为你推荐</text>
-          <text class="section-more" @tap="onMoreService">查看更多 ›</text>
+          <text class="section-title">📰 最新动态</text>
+          <text class="section-more" @tap="onMorePosts">查看更多 ›</text>
         </view>
-        <view v-if="loading" class="loading-wrap">
-          <text class="loading">加载中…</text>
+        <view v-if="postLoading" class="loading-wrap"><text class="loading">加载中…</text></view>
+        <view v-else-if="latestPosts.length === 0" class="empty">
+          <text class="empty-emoji">📝</text>
+          <text class="empty-text">暂无动态，快来发布第一条吧</text>
         </view>
-        <view v-else-if="recommendList.length === 0" class="empty">
-          <text class="empty-emoji">{{ anyLoadFailed ? '📡' : '🌙' }}</text>
-          <text class="empty-text">{{ anyLoadFailed ? '无法连接到服务器，先检查一下服务器地址吧' : '暂无服务，稍后再来看看' }}</text>
-          <view v-if="anyLoadFailed" class="empty-actions">
-            <view class="btn-outline" @tap="onFixServerUrl">🛠 设置服务器地址</view>
-            <view class="btn-primary" @tap="onRefreshRetry">🔄 重试加载</view>
+        <view
+          v-else
+          v-for="p in latestPosts"
+          :key="p.id"
+          class="post-card card"
+          @tap="onPostTap(p)"
+        >
+          <view class="post-head">
+            <image class="post-avatar" :src="p.avatar" mode="aspectFill" />
+            <view class="post-meta">
+              <text class="post-nickname" :numberOfLines="1">{{ p.nickname }}</text>
+              <text class="post-time">{{ p.timeAgo }}</text>
+            </view>
           </view>
-          <text class="empty-hint" v-if="anyLoadFailed">本地 WiFi 真机调试 → 地址格式：http://电脑IP:3000/api</text>
+          <text class="post-content" :numberOfLines="2">{{ p.content }}</text>
+          <view class="post-images" v-if="p.images.length">
+            <image
+              v-for="(img, idx) in p.images.slice(0, 3)"
+              :key="idx"
+              class="post-thumb"
+              :src="img"
+              mode="aspectFill"
+            />
+            <view v-if="p.images.length > 3" class="post-more-img">
+              <text class="post-more-img-text">+{{ p.images.length - 3 }}</text>
+            </view>
+          </view>
+          <view class="post-stats">
+            <text class="post-stat">❤️ {{ p.likeCount || 0 }}</text>
+            <text class="post-stat">💬 {{ p.commentCount || 0 }}</text>
+          </view>
         </view>
-        <ServiceCard
-          v-for="item in recommendList"
-          :key="item.id"
-          :item="item"
-          @tap="onCardTap(item)"
-          @contact="onContact(item)"
-        />
       </view>
 
       <view class="bottom-safe"></view>
@@ -195,13 +188,12 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import ServiceCard from '../../components/ServiceCard.vue'
-import { serviceApi, bannerApi, eliteApi, locationApi, userApi } from '../../api'
+import { userApi, postApi, bannerApi, locationApi } from '../../api'
 import { useUserStore } from '../../store/user'
 import {
-  toList, toStr, toNum, pickCity, getPath, guard, unwrap, requireLogin, requireElite, resolveCityViaPipeline
+  toList, toStr, toNum, pickCity, getPath, guard, unwrap, resolveCityViaPipeline
 } from '../../utils/fallback'
 import { getCurrentBaseURL, openServerUrlModal } from '../../utils/request'
 
@@ -210,20 +202,18 @@ const CITY_KEY = 'baiye_city'
 const CITY_AT_KEY = 'baiye_city_at'
 const DEFAULT_CITY = '北京'
 const city = ref(DEFAULT_CITY)
-const tryLocateRef = ref(0) // 防止重复自动定位
+const tryLocateRef = ref(0)
 const banners = ref([])
-const eliteInfo = ref({})
 const msgBadge = ref(true)
 const refreshing = ref(false)
-const loading = ref(false)
-/* ---- 服务器连接异常追踪（用于"黑屏友好"提示） ---- */
+
+/* ---- 服务器连接异常追踪 ---- */
 const bannerLoadFailed = ref(false)
-const listLoadFailed = ref(false)
-const eliteLoadFailed = ref(false)
+const userLoadFailed = ref(false)
+const postLoadFailed = ref(false)
 const currentBaseURL = computed(() => getCurrentBaseURL())
-const anyLoadFailed = computed(() => bannerLoadFailed.value || listLoadFailed.value || eliteLoadFailed.value)
-// 仅当所有核心卡片都"无数据 + 至少一次加载失败"时才顶栏显示诊断条，避免正常数据页面视觉干扰
-const showNetTrouble = computed(() => anyLoadFailed.value && banners.value.length === 0 && recommendList.value.length === 0)
+const anyLoadFailed = computed(() => bannerLoadFailed.value || userLoadFailed.value || postLoadFailed.value)
+const showNetTrouble = computed(() => anyLoadFailed.value && banners.value.length === 0 && recommendUsers.value.length === 0 && latestPosts.value.length === 0)
 
 const onFixServerUrl = () => openServerUrlModal({
   title: '设置服务器地址',
@@ -240,16 +230,13 @@ const readCity = () => {
 }
 
 /**
- * 4 级定位流水线（首页版，兼容缓存 + 逆地理 + IP 粗定位 + 默认）
- * 异常均不抛出，页面保持可用；失败时保留上次城市或默认值
+ * 4 级定位流水线
  */
 const tryAutoLocate = async () => {
   if (tryLocateRef.value++) return
   readCity()
-  // L1：24 小时内已更新过定位的不再自动触发
   const at = Number(uni.getStorageSync(CITY_AT_KEY) || 0)
   if (Date.now() - at < 24 * 3600 * 1000) return
-
   try {
     const result = await resolveCityViaPipeline({
       requestFn: async ({ url, method, data }) => {
@@ -257,40 +244,34 @@ const tryAutoLocate = async () => {
         if (method === 'GET' && url === '/location/guess-by-ip') return locationApi.guessByIp()
         return null
       },
-      preferCacheMs: 0 // 这里 L1 已经判断，进入流水线直接从 L2 开始
+      preferCacheMs: 0
     })
     if (result && result.city) {
       city.value = result.city
       try { uni.setStorageSync(CITY_KEY, result.city) } catch (_) {}
     }
-  } catch (_) {
-    // 任何异常：保留上次 city.value，不影响页面
-  }
+  } catch (_) {}
 }
 
-const categories = [
-  { key: '', label: '全部' },
-  { key: 'warm', label: '暖心陪伴' },
-  { key: 'game', label: '游戏陪玩' },
-  { key: 'offline', label: '线下约玩' },
-  { key: 'sing', label: '唱歌' },
-  { key: 'sleep', label: '哄睡叫醒' },
-  { key: 'chat', label: '连麦聊天' }
-]
-const activeCategory = ref('')
-const recommendList = ref([])
-// Bug 3 修复：首页展示已精英认证（isElite=true）的用户，即使没有发布服务，也可被社交平台用户看到并打招呼
-const eliteUserList = ref([])
-const eliteLoading = ref(false)
-
+/* ---- 快捷入口 ---- */
 const quickEntries = [
-  { key: 'warm', label: '暖心陪伴', emoji: '🤍', path: '/pages/warm/warm' },
-  { key: 'game', label: '游戏陪玩', emoji: '🎮', path: '/pages/game/game' },
-  { key: 'offline', label: '线下约玩', emoji: '🍻', path: '/pages/offline/offline' },
-  { key: 'sing', label: '唱歌', emoji: '🎤' },
-  { key: 'sleep', label: '哄睡叫醒', emoji: '🌙' },
-  { key: 'elite', label: '精英特权', emoji: '👑', tag: 'NEW', path: '/pages/elite-pay/elite-pay' }
+  { key: 'finder', label: '寻人大厅', emoji: '🔍', path: '/pages/discover/discover?tab=finder' },
+  { key: 'posts', label: '动态广场', emoji: '📝', path: '/pages/discover/discover?tab=posts' },
+  { key: 'groups', label: '同城组局', emoji: '🎯', path: '/pages/discover/discover?tab=groups' },
+  { key: 'redpack', label: '红包专区', emoji: '🧧', path: '/pages/discover/discover?tab=redpack' }
 ]
+
+/* ---- 认证引导条 ---- */
+const showVerifyBar = computed(() => {
+  const u = userStore.user || {}
+  return !u.isElite && u.realPersonStatus !== 'passed'
+})
+
+/* ---- 数据 ---- */
+const recommendUsers = ref([])
+const userLoading = ref(false)
+const latestPosts = ref([])
+const postLoading = ref(false)
 
 const loadBanners = async () => {
   bannerLoadFailed.value = false
@@ -301,88 +282,82 @@ const loadBanners = async () => {
   if (banners.value.length === 0) {
     banners.value = [
       { id: -1, title: '净化网络环境 · 传播正能量', image: '/static/sucai/07db62c02f72d99581cffc375c02969e.jpg', link: '/pages/feedback/feedback' },
-      { id: -2, title: '精英优先报名 · 组局新玩法', image: '/static/sucai/378849617002ad354923701552859204.jpg', link: '/pages/elite-pay/elite-pay' }
+      { id: -2, title: '加入白夜，遇见有温度的黑夜', image: '/static/sucai/378849617002ad354923701552859204.jpg', link: '/pages/discover/discover' }
     ]
   }
 }
 
-const loadEliteInfo = async () => {
-  eliteLoadFailed.value = false
+const loadRecommendUsers = async () => {
+  userLoading.value = true
+  userLoadFailed.value = false
   try {
-    const res = await guard(eliteApi.rights(), null)
-    eliteInfo.value = unwrap(res, {}) || {}
-  } catch (e) { eliteInfo.value = { priceYuan: '30.00', totalJoinedApprox: 12876 }; eliteLoadFailed.value = true }
-  if (!eliteInfo.value || typeof eliteInfo.value !== 'object') {
-    eliteInfo.value = { priceYuan: '30.00', totalJoinedApprox: 12876 }
-  }
-}
-
-const loadEliteUsers = async () => {
-  eliteLoading.value = true
-  try {
-    const params = { isElite: 'true', page: 1, pageSize: 12 }
+    const params = { page: 1, pageSize: 10 }
     if (city.value && city.value !== '全国') params.city = city.value
     const res = await guard(userApi.discover(params), null)
     const data = unwrap(res, null)
     const rows = toList(getPath(data, 'list', []) || getPath(data, 'rows', []) || getPath(data, 'items', []))
-    eliteUserList.value = rows
+    recommendUsers.value = rows
       .filter((u) => u && u.id)
       .map((u) => ({
         id: u.id,
-        nickname: toStr(u.nickname, '精英用户'),
+        nickname: toStr(u.nickname, '匿名用户'),
         avatar: toStr(u.avatar || u.avatarUrl || '', '/static/sucai/profile-ziqing.jpg'),
+        age: toNum(u.age, 0) || null,
+        gender: toStr(u.gender, 'male'),
         city: toStr(u.city || city.value || ''),
-        bio: toStr(u.bio || u.intro || '欢迎认识我 ✨'),
-        isElite: !!u.isElite
+        bio: toStr(u.bio || u.intro || '')
       }))
-  } catch (_) { eliteUserList.value = [] }
-  finally { eliteLoading.value = false }
+  } catch (_) { recommendUsers.value = []; userLoadFailed.value = true }
+  finally { userLoading.value = false }
 }
 
-const loadList = async () => {
-  loading.value = true
-  listLoadFailed.value = false
+const loadLatestPosts = async () => {
+  postLoading.value = true
+  postLoadFailed.value = false
   try {
-    const params = { page: 1, pageSize: 20 }
-    if (activeCategory.value) params.category = activeCategory.value
-    if (city.value && city.value !== '全国') params.city = city.value
-    const res = await guard(serviceApi.list(params), null)
-    const rows = toList(getPath(unwrap(res, null), 'list', []))
-    recommendList.value = rows.map((s) => ({
-      id: s.id,
-      nickname: toStr(s.providerName || s.provider?.nickname || '匿名服务者', '匿名服务者'),
-      avatar: toStr(s.coverImage || s.providerAvatar || s.provider?.avatar || '/assets/avatar-provider-01.jpg', '/assets/avatar-provider-01.jpg'),
-      intro: toStr(s.title, '暂无标题'),
-      tags: toList(s.tags).slice(0, 3).map((t, i) => ({
-        label: toStr(t, ''),
-        color: ['yellow', 'purple', 'blue', 'pink'][i % 4] || 'yellow'
-      })).filter((t) => t.label),
-      price: toNum(s.price, 0),
-      priceUnit: toStr(s.priceUnit, '次'),
-      _raw: s
-    }))
-  } catch (e) {
-    recommendList.value = []
-    listLoadFailed.value = true
-  } finally {
-    loading.value = false
-  }
+    const res = await guard(postApi.list({ page: 1, pageSize: 5 }), null)
+    const data = unwrap(res, null)
+    const rows = toList(getPath(data, 'list', []) || getPath(data, 'rows', []) || getPath(data, 'items', []))
+    latestPosts.value = rows
+      .filter((p) => p && p.id)
+      .map((p) => ({
+        id: p.id,
+        nickname: toStr(p.user?.nickname || p.nickname || '匿名用户'),
+        avatar: toStr(p.user?.avatar || p.avatar || '/static/sucai/profile-ziqing.jpg'),
+        content: toStr(p.content || p.text || ''),
+        images: toList(p.images || p.pics || []).slice(0, 6),
+        likeCount: toNum(p.likeCount || p.likes, 0),
+        commentCount: toNum(p.commentCount || p.comments, 0),
+        timeAgo: formatTimeAgo(p.createdAt || p.createTime || '')
+      }))
+  } catch (_) { latestPosts.value = []; postLoadFailed.value = true }
+  finally { postLoading.value = false }
 }
 
-watch(activeCategory, loadList)
+/** 简单时间格式化 */
+const formatTimeAgo = (ts) => {
+  if (!ts) return '刚刚'
+  try {
+    const diff = Date.now() - new Date(ts).getTime()
+    if (diff < 60000) return '刚刚'
+    if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
+    if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
+    if (diff < 604800000) return Math.floor(diff / 86400000) + '天前'
+    return new Date(ts).toLocaleDateString('zh-CN')
+  } catch (_) { return '刚刚' }
+}
 
 const onRefresh = async () => {
   refreshing.value = true
-  await Promise.all([loadBanners(), loadEliteInfo(), loadEliteUsers(), loadList()])
+  await Promise.all([loadBanners(), loadRecommendUsers(), loadLatestPosts()])
   refreshing.value = false
 }
 
 onShow(() => {
   readCity()
   loadBanners()
-  loadEliteInfo()
-  loadEliteUsers()
-  loadList()
+  loadRecommendUsers()
+  loadLatestPosts()
   if (userStore.token) msgBadge.value = true
 })
 onMounted(() => tryAutoLocate())
@@ -399,29 +374,14 @@ const onBannerTap = (b) => {
 }
 const onQuickTap = (q) => {
   if (q.path) return uni.navigateTo({ url: q.path })
-  activeCategory.value = q.key
-  uni.pageScrollTo({ scrollTop: 400, duration: 300 })
 }
-const onElite = () => uni.navigateTo({ url: '/pages/elite-pay/elite-pay' })
-const onMoreService = () => uni.showToast({ title: '上滑查看更多', icon: 'none' })
-const onCardTap = (item) => uni.navigateTo({ url: `/pages/service-detail/service-detail?id=${item.id}` })
-const onEliteUserTap = (u) => uni.navigateTo({ url: `/pages/provider/provider?id=${u.id}` })
-const onSayHi = (u) => {
-  if (!requireElite()) return
-  uni.navigateTo({ url: `/pages/chat/chat?to=${u.id}&hi=1` })
-}
-const onContact = (item) => {
-  if (!requireElite()) return
-  const providerId = getPath(item, '_raw.providerId', '')
-  if (providerId) uni.navigateTo({ url: `/pages/chat/chat?to=${providerId}` })
-  else uni.showToast({ title: `已向 ${toStr(item.nickname, '服务者')} 发起联系`, icon: 'none' })
-}
+const onGoVerify = () => uni.navigateTo({ url: '/pages/verification-hub/verification-hub' })
+const onUserTap = (u) => uni.navigateTo({ url: `/pages/user-profile/user-profile?id=${u.id}` })
+const onMorePosts = () => uni.navigateTo({ url: '/pages/discover/discover?tab=posts' })
+const onPostTap = (p) => uni.navigateTo({ url: `/pages/discover/discover?tab=posts&postId=${p.id}` })
 </script>
 
 <style lang="scss" scoped>
-/* uni.scss 会自动注入到本 style 块顶部，已加载 sass:color 和 $by-* 全局变量。
- * ✅ 直接用 color.adjust / $by-*；❌ 不要再写 @use "sass:color"（冲突）或 @use theme-baiye.scss。
- */
 .page {
   min-height: 100vh;
   height: 100vh;
@@ -507,10 +467,10 @@ const onContact = (item) => {
 /* -------- Scroll -------- */
 .scroll {
   flex: 1;
-  min-height: 0; /* 关键：防止 flex 子项撑破父容器，导致下滑滑不回来 */
-  height: 0; /* 配合 flex:1 让内容区域完全由父布局决定，避免高度抖动 */
-  -webkit-overflow-scrolling: touch; /* iOS 惯性滚动，保证流畅 */
-  overscroll-behavior: contain; /* 防止整页 pull-refresh 干扰内部滚 */
+  min-height: 0;
+  height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 /* -------- Banner -------- */
@@ -534,13 +494,13 @@ const onContact = (item) => {
   text-shadow: 0 2rpx 12rpx color.change(#000000, $alpha: .6);
 }
 
-/* -------- Quick entries -------- */
+/* -------- Quick entries 4 宫格 -------- */
 .quick-wrap {
   margin: 24rpx 32rpx 0;
   padding: 28rpx 16rpx !important;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  row-gap: 24rpx;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16rpx 0;
 }
 .quick-item {
   display: flex; flex-direction: column; align-items: center; gap: 10rpx;
@@ -556,124 +516,36 @@ const onContact = (item) => {
   border: 1rpx solid $by-border;
 }
 .qi-emoji { font-size: 44rpx; }
-.qi-warm    { background: linear-gradient(135deg, color.change($by-gold, $alpha: .25), color.change($by-gold-deep, $alpha: .08)); border-color: color.change($by-gold, $alpha: .3); }
-.qi-game    { background: linear-gradient(135deg, color.change($by-info, $alpha: .25), color.change($by-aurora-a, $alpha: .12)); border-color: color.change($by-info, $alpha: .3); }
-.qi-offline { background: linear-gradient(135deg, color.change($by-success, $alpha: .25), color.change($by-info, $alpha: .1)); border-color: color.change($by-success, $alpha: .3); }
-.qi-sing    { background: linear-gradient(135deg, color.change($by-aurora-b, $alpha: .3), color.change($by-aurora-a, $alpha: .12)); border-color: color.change($by-aurora-b, $alpha: .3); }
-.qi-sleep   { background: linear-gradient(135deg, color.change($by-aurora-a, $alpha: .3), color.change($by-aurora-c, $alpha: .1)); border-color: color.change($by-aurora-a, $alpha: .3); }
-.qi-elite   { background: $by-gradient-aurora; border-color: transparent; box-shadow: 0 8rpx 24rpx color.change($by-aurora-a, $alpha: .35); }
+.qi-finder  { background: linear-gradient(135deg, color.change($by-info, $alpha: .25), color.change($by-aurora-c, $alpha: .12)); border-color: color.change($by-info, $alpha: .3); }
+.qi-posts   { background: linear-gradient(135deg, color.change($by-aurora-b, $alpha: .3), color.change($by-aurora-a, $alpha: .12)); border-color: color.change($by-aurora-b, $alpha: .3); }
+.qi-groups  { background: linear-gradient(135deg, color.change($by-success, $alpha: .25), color.change($by-info, $alpha: .1)); border-color: color.change($by-success, $alpha: .3); }
+.qi-redpack { background: linear-gradient(135deg, color.change($by-gold, $alpha: .25), color.change($by-gold-deep, $alpha: .08)); border-color: color.change($by-gold, $alpha: .3); }
 .quick-label { font-size: 24rpx; color: $by-text-2; font-weight: 500; }
-.quick-tag {
-  position: absolute; top: -2rpx; right: 16rpx;
-  font-size: 18rpx; padding: 2rpx 10rpx; border-radius: 9999rpx;
-  background: $by-gradient-gold; color: #0B0F1A; font-weight: 700;
-}
 
-/* -------- Elite CTA -------- */
-.elite-cta {
+/* -------- 认证引导条 -------- */
+.verify-bar {
   position: relative; overflow: hidden;
   margin: 24rpx 32rpx 0;
-  padding: 28rpx 28rpx !important;
+  padding: 24rpx 28rpx !important;
 }
-.elite-bg {
+.verify-bar-bg {
   position: absolute; inset: 0;
   background:
-    radial-gradient(circle at 100% 0%, color.change($by-aurora-b, $alpha: .35), transparent 55%),
-    radial-gradient(circle at 0% 100%, color.change($by-gold, $alpha: .25), transparent 55%);
+    radial-gradient(circle at 100% 0%, color.change($by-aurora-b, $alpha: .3), transparent 55%),
+    radial-gradient(circle at 0% 100%, color.change($by-gold, $alpha: .2), transparent 55%);
   pointer-events: none;
 }
-.elite-body { position: relative; display: flex; align-items: center; gap: 20rpx; }
-.elite-left { flex: 1; display: flex; flex-direction: column; gap: 8rpx; min-width: 0; }
-.elite-badge {
-  align-self: flex-start;
-  padding: 4rpx 18rpx; border-radius: 9999rpx;
-  background: $by-gradient-aurora; color: #fff;
-  font-size: 22rpx; font-weight: 700;
-}
-.elite-title { font-size: 30rpx; font-weight: 700; color: $by-text-1; }
-.elite-desc { font-size: 22rpx; color: $by-text-3; line-height: 1.4; }
-.elite-btn {
-  flex-shrink: 0; padding: 14rpx 22rpx;
+.verify-bar-body { position: relative; display: flex; align-items: center; gap: 16rpx; }
+.verify-bar-left { flex: 1; display: flex; align-items: center; gap: 12rpx; min-width: 0; }
+.verify-bar-icon { font-size: 36rpx; flex-shrink: 0; }
+.verify-bar-text { font-size: 26rpx; color: $by-text-1; font-weight: 600; }
+.verify-bar-btn {
+  flex-shrink: 0; padding: 14rpx 28rpx;
   background: $by-gradient-gold;
   border-radius: $by-radius-md;
-  display: flex; flex-direction: column; align-items: center;
   box-shadow: $by-shadow-gold;
 }
-.elite-price { color: #0B0F1A; font-weight: 800; font-size: 30rpx; }
-.elite-plan { color: #0B0F1A; font-size: 20rpx; opacity: .8; }
-
-/* -------- 附近精英用户（Bug 3 修复） -------- */
-.section-head { padding: 16rpx 32rpx 8rpx; display: flex; justify-content: space-between; align-items: center; }
-.elite-scroll { width: 100%; }
-.elite-row {
-  display: inline-flex; gap: 20rpx;
-  padding: 12rpx 32rpx 24rpx;
-}
-.elite-card {
-  width: 260rpx; flex-shrink: 0;
-  border-radius: $by-radius-lg;
-  background: linear-gradient(180deg, color.change($by-aurora-a, $alpha: .14) 0%, color.change(#FFFFFF, $alpha: .04) 100%);
-  border: 1rpx solid color.change($by-gold, $alpha: .22);
-  padding: 18rpx 16rpx 18rpx;
-  display: flex; flex-direction: column; align-items: center; gap: 12rpx;
-}
-.elite-avatar-wrap { position: relative; width: 120rpx; height: 120rpx; }
-.elite-avatar {
-  width: 120rpx; height: 120rpx; border-radius: 9999rpx;
-  border: 3rpx solid $by-gold;
-  box-shadow: $by-shadow-gold;
-}
-.elite-crown {
-  position: absolute; top: -14rpx; left: 50%; transform: translateX(-50%);
-  font-size: 26rpx;
-  background: #FFFFFF; border-radius: 9999rpx;
-  padding: 0 10rpx;
-  box-shadow: 0 4rpx 14rpx rgba(0,0,0,.12);
-}
-.elite-info { width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4rpx; }
-.elite-name { font-size: 26rpx; font-weight: 700; color: $by-text-1; width: 100%; }
-.elite-city { font-size: 20rpx; color: $by-text-3; }
-.elite-bio {
-  font-size: 22rpx; color: $by-text-2;
-  line-height: 1.35; height: 60rpx; overflow: hidden;
-  width: 100%;
-}
-.say-hi {
-  margin-top: 6rpx; padding: 10rpx 20rpx;
-  background: $by-gradient-gold; color: #0B0F1A;
-  border-radius: 9999rpx;
-  font-size: 22rpx; font-weight: 700;
-  box-shadow: $by-shadow-gold;
-}
-.say-hi-text { color: #0B0F1A; }
-.join-elite { justify-content: center; text-align: center; gap: 8rpx; border-style: dashed; }
-.join-emoji {
-  width: 100rpx; height: 100rpx; border-radius: 9999rpx;
-  background: color.change($by-gold, $alpha: .18);
-  color: $by-gold; font-size: 56rpx; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  border: 2rpx dashed $by-gold;
-}
-.join-title { font-size: 26rpx; font-weight: 700; color: $by-text-1; }
-.join-desc { font-size: 20rpx; color: $by-text-3; padding: 0 12rpx; line-height: 1.4; }
-.elite-empty { padding: 60rpx 32rpx; }
-.empty-action { margin-top: 20rpx; padding: 16rpx 40rpx; font-size: 26rpx; }
-
-/* -------- Chips -------- */
-.chips { padding: 28rpx 0 12rpx; }
-.chips-inner { display: inline-flex; gap: 16rpx; padding: 0 32rpx; }
-.chip {
-  padding: 14rpx 28rpx; border-radius: 9999rpx;
-  background: color.change(#FFFFFF, $alpha: .05);
-  border: 1rpx solid $by-border;
-  color: $by-text-2; font-size: 26rpx; font-weight: 500;
-  white-space: nowrap;
-}
-.chip.active {
-  background: $by-gradient-gold; color: #0B0F1A;
-  border-color: transparent; font-weight: 700;
-  box-shadow: $by-shadow-gold;
-}
+.verify-bar-btn-text { color: #0B0F1A; font-size: 24rpx; font-weight: 700; white-space: nowrap; }
 
 /* -------- Section -------- */
 .section { padding: 12rpx 32rpx 0; }
@@ -681,17 +553,87 @@ const onContact = (item) => {
 .section-title { font-size: 32rpx; font-weight: 700; color: $by-text-1; }
 .section-more { font-size: 24rpx; color: $by-text-3; }
 
+/* -------- 推荐用户卡片 -------- */
+.user-scroll { width: 100%; }
+.user-row {
+  display: inline-flex; gap: 20rpx;
+  padding: 4rpx 0 24rpx;
+}
+.user-card {
+  width: 240rpx; flex-shrink: 0;
+  border-radius: $by-radius-lg;
+  background: $by-surface;
+  border: 1rpx solid $by-border;
+  padding: 20rpx 16rpx;
+  display: flex; flex-direction: column; align-items: center; gap: 14rpx;
+}
+.user-card:active { background: $by-surface-2; }
+.user-avatar {
+  width: 110rpx; height: 110rpx; border-radius: 9999rpx;
+  border: 3rpx solid color.change($by-aurora-a, $alpha: .4);
+  box-shadow: 0 4rpx 20rpx color.change($by-aurora-a, $alpha: .2);
+}
+.user-info { width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6rpx; }
+.user-name-row { display: flex; align-items: center; gap: 8rpx; justify-content: center; width: 100%; }
+.user-name { font-size: 26rpx; font-weight: 700; color: $by-text-1; max-width: 140rpx; }
+.user-gender {
+  width: 28rpx; height: 28rpx; border-radius: 9999rpx;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18rpx;
+}
+.g-male { background: color.change($by-info, $alpha: .2); color: $by-info; }
+.g-female { background: color.change($by-aurora-b, $alpha: .2); color: $by-aurora-b; }
+.user-gender-icon { font-size: 18rpx; }
+.user-age-city { font-size: 22rpx; color: $by-text-3; }
+.user-bio {
+  font-size: 22rpx; color: $by-text-2;
+  line-height: 1.35; height: 30rpx; overflow: hidden;
+  width: 100%;
+}
+
+/* -------- 最新动态 -------- */
+.post-card {
+  margin: 0 0 16rpx;
+  padding: 24rpx !important;
+}
+.post-card:active { background: $by-surface-2; }
+.post-head { display: flex; align-items: center; gap: 16rpx; margin-bottom: 16rpx; }
+.post-avatar {
+  width: 64rpx; height: 64rpx; border-radius: 9999rpx;
+  flex-shrink: 0;
+  border: 2rpx solid $by-border;
+}
+.post-meta { flex: 1; display: flex; flex-direction: column; gap: 4rpx; min-width: 0; }
+.post-nickname { font-size: 28rpx; font-weight: 600; color: $by-text-1; }
+.post-time { font-size: 22rpx; color: $by-text-3; }
+.post-content {
+  font-size: 28rpx; color: $by-text-2; line-height: 1.55;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 16rpx;
+}
+.post-images { display: flex; gap: 12rpx; margin-bottom: 16rpx; flex-wrap: wrap; }
+.post-thumb {
+  width: 180rpx; height: 180rpx; border-radius: $by-radius-md;
+  border: 1rpx solid $by-border;
+}
+.post-more-img {
+  width: 180rpx; height: 180rpx; border-radius: $by-radius-md;
+  background: color.change(#000000, $alpha: .5);
+  display: flex; align-items: center; justify-content: center;
+}
+.post-more-img-text { color: #FFFFFF; font-size: 28rpx; font-weight: 700; }
+.post-stats { display: flex; gap: 32rpx; }
+.post-stat { font-size: 24rpx; color: $by-text-3; }
+
+/* -------- Common -------- */
 .loading-wrap { padding: 40rpx 0; text-align: center; }
 .loading { color: $by-text-3; font-size: 26rpx; }
-.empty { padding: 80rpx 32rpx; display: flex; flex-direction: column; align-items: center; gap: 16rpx; text-align: center; }
+.empty { padding: 60rpx 32rpx; display: flex; flex-direction: column; align-items: center; gap: 16rpx; text-align: center; }
 .empty-emoji { font-size: 80rpx; }
 .empty-text { color: $by-text-3; }
-.empty-hint { color: $by-text-muted; font-size: 24rpx; margin-top: 8rpx; }
-.empty-actions { display: flex; gap: 16rpx; margin-top: 16rpx; flex-wrap: wrap; justify-content: center; }
-.empty-actions .btn-outline,
-.empty-actions .btn-primary { padding: 18rpx 28rpx; font-size: 26rpx; }
 
-/* 网络异常诊断条（黑屏友好） */
+/* 网络异常诊断条 */
 .net-troubleshoot {
   margin: 16rpx 32rpx 0;
   background: linear-gradient(180deg, color.adjust($by-info, $alpha: 0.12), color.adjust($by-aurora-a, $alpha: 0.08));

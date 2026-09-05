@@ -2,26 +2,21 @@
   <view class="page">
     <view class="header">
       <text class="title">我的</text>
-      <view class="icon-btn" @tap="onSettings">⚙</view>
     </view>
 
-    <view class="content">
-      <!-- 用户信息 -->
+    <scroll-view scroll-y class="content-scroll">
+      <!-- 1. 用户信息卡 -->
       <view class="user-card" @tap="onUserCardTap">
         <view class="user-aurora"></view>
         <image class="avatar" :src="safeAvatar" mode="aspectFill" />
         <view class="user-info">
           <view class="name-row">
             <text class="name">{{ safeNickname }}</text>
-            <text v-if="safeIsElite" class="elite-badge">精英</text>
+            <text v-if="safeIsElite" class="badge elite-badge">精英</text>
+            <text v-if="cert.realPerson === 'passed'" class="badge real-badge">真人</text>
           </view>
           <view class="auth-row" v-if="isLoggedIn">
-            <text class="auth-tag" :class="cert.realPerson === 'passed' ? 'passed' : 'pending'">
-              真人{{ cert.realPerson === 'passed' ? '已认证' : '未认证' }}
-            </text>
-            <text class="auth-tag" :class="cert.identity === 'passed' ? 'passed' : 'pending'">
-              身份{{ cert.identity === 'passed' ? '已认证' : '未认证' }}
-            </text>
+            <text class="uid-text">ID: {{ userStore.userId || '-' }}</text>
           </view>
           <view class="auth-row" v-else>
             <text class="auth-tag login-tag">点击登录 / 注册白夜账号</text>
@@ -30,91 +25,111 @@
         <view class="arrow" v-if="isLoggedIn">›</view>
       </view>
 
-      <!-- 钱包 -->
-      <view class="wallet-card">
-        <view class="wallet-glow"></view>
-        <view class="wallet-head">
-          <text class="wallet-title">我的钱包</text>
-          <view class="wallet-head-actions">
-            <view class="exchange-btn" @tap="onNavWithLogin('/pages/exchange/exchange')">兑换</view>
-            <view class="recharge-btn" @tap="onRecharge">充值</view>
+      <!-- 2. 社交数据栏 -->
+      <view class="social-bar" v-if="isLoggedIn">
+        <view class="social-item" @tap="onNavWithLogin('/pages/follow-list/follow-list?tab=following')">
+          <text class="social-num">{{ socialStats.followingCount }}</text>
+          <text class="social-label">关注</text>
+        </view>
+        <view class="social-divider"></view>
+        <view class="social-item" @tap="onNavWithLogin('/pages/follow-list/follow-list?tab=followers')">
+          <text class="social-num">{{ socialStats.followersCount }}</text>
+          <text class="social-label">粉丝</text>
+        </view>
+        <view class="social-divider"></view>
+        <view class="social-item" @tap="onNav('/pages/discover/discover?tab=posts')">
+          <text class="social-num">{{ socialStats.postsCount }}</text>
+          <text class="social-label">动态</text>
+        </view>
+      </view>
+
+      <!-- 3. 认证状态条 -->
+      <view class="cert-card" @tap="onNavWithLogin('/pages/verification-hub/verification-hub')" v-if="isLoggedIn">
+        <view class="cert-row">
+          <view class="cert-left">
+            <text class="cert-icon">👑</text>
+            <text class="cert-name">精英认证</text>
+          </view>
+          <view class="cert-status" :class="safeIsElite ? 'active' : 'inactive'">
+            <text v-if="safeIsElite" class="cert-badge elite-tag">精英会员</text>
+            <text v-else class="cert-action">去认证 →</text>
           </view>
         </view>
-        <view class="wallet-row">
-          <view class="wallet-item" @tap="onRecharge">
-            <text class="wallet-num">{{ safeDiamond }}</text>
-            <text class="wallet-label">💎 钻石</text>
+        <view class="cert-divider"></view>
+        <view class="cert-row">
+          <view class="cert-left">
+            <text class="cert-icon">✓</text>
+            <text class="cert-name">真人认证</text>
           </view>
-          <view class="wallet-divider"></view>
-          <view class="wallet-item" @tap="onRecharge">
-            <text class="wallet-num">{{ safeStarCoin }}</text>
-            <text class="wallet-label">⭐ 星币</text>
-          </view>
-          <view class="wallet-divider"></view>
-          <view class="wallet-item" @tap="onIncome">
-            <text class="wallet-num income">{{ incomeYuan }}</text>
-            <text class="wallet-label">¥ 可提现</text>
+          <view class="cert-status" :class="cert.realPerson === 'passed' ? 'active' : 'inactive'">
+            <text v-if="cert.realPerson === 'passed'" class="cert-badge real-tag">已认证</text>
+            <text v-else class="cert-action">去认证 →</text>
           </view>
         </view>
       </view>
 
-      <!-- 功能模块（4 列 × 3 行 = 12 格，补齐 12 项避免最后一行缺 1 个造成视觉错位） -->
-      <view class="modules">
-        <view class="module-item" @tap="onNavWithLogin('/pages/profile-edit/profile-edit')">
-          <view class="m-icon-wrap gold"><text class="m-icon">✎</text></view>
-          <text class="m-label">编辑资料</text>
+      <!-- 4. 简化钱包模块 -->
+      <view class="wallet-card" v-if="isLoggedIn">
+        <view class="wallet-glow"></view>
+        <view class="wallet-head">
+          <text class="wallet-title">我的钱包</text>
         </view>
-        <view class="module-item elite-item" :class="{ 'elite-on': safeIsElite }" @tap="onElite">
-          <view class="m-icon-wrap aurora"><text class="m-icon">👑</text></view>
-          <text class="m-label">{{ safeIsElite ? '精英特权' : '开通精英' }}</text>
+        <view class="wallet-row">
+          <view class="wallet-item">
+            <text class="wallet-num">{{ safeDiamond }}</text>
+            <text class="wallet-label">💎 钻石</text>
+            <view class="wallet-action recharge-btn" @tap="onRecharge">充值</view>
+          </view>
+          <view class="wallet-divider"></view>
+          <view class="wallet-item">
+            <text class="wallet-num income">{{ incomeYuan }}</text>
+            <text class="wallet-label">¥ 礼物收入</text>
+            <view class="wallet-action withdraw-btn" @tap="onIncome">提现</view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 5. 功能入口 8 宫格 (2行×4列) -->
+      <view class="modules">
+        <view class="module-item" @tap="onNav('/pages/discover/discover?tab=posts')">
+          <view class="m-icon-wrap"><text class="m-icon">📝</text></view>
+          <text class="m-label">我的动态</text>
+        </view>
+        <view class="module-item" @tap="onNav('/pages/discover/discover?tab=groups')">
+          <view class="m-icon-wrap"><text class="m-icon">🎯</text></view>
+          <text class="m-label">我的组局</text>
+        </view>
+        <view class="module-item" @tap="onNavWithLogin('/pages/follow-list/follow-list')">
+          <view class="m-icon-wrap"><text class="m-icon">👥</text></view>
+          <text class="m-label">关注/粉丝</text>
         </view>
         <view class="module-item" @tap="onNavWithLogin('/pages/invite/invite')">
-          <view class="m-icon-wrap aurora"><text class="m-icon">🎁</text></view>
-          <text class="m-label">邀请股东</text>
+          <view class="m-icon-wrap"><text class="m-icon">🎁</text></view>
+          <text class="m-label">邀请好友</text>
         </view>
-        <view class="module-item" @tap="onNavWithLogin('/pages/order-list/order-list')">
-          <view class="m-icon-wrap gold"><text class="m-icon">📦</text></view>
-          <text class="m-label">我的订单</text>
+        <view class="module-item" :class="{ 'elite-on': safeIsElite }" @tap="onElite">
+          <view class="m-icon-wrap aurora"><text class="m-icon">👑</text></view>
+          <text class="m-label">精英特权</text>
         </view>
-
-        <view class="module-item" @tap="onTransactions">
-          <view class="m-icon-wrap gold"><text class="m-icon">💰</text></view>
-          <text class="m-label">交易记录</text>
-        </view>
-        <view class="module-item" @tap="onNavWithLogin('/pages/my-services/my-services')">
-          <view class="m-icon-wrap gold"><text class="m-icon">📋</text></view>
-          <text class="m-label">我的服务</text>
-        </view>
-        <view class="module-item" @tap="onNavWithLogin('/pages/service-publish/service-publish')">
-          <view class="m-icon-wrap aurora"><text class="m-icon">✏️</text></view>
-          <text class="m-label">发布服务</text>
-        </view>
-        <view class="module-item" @tap="onGoMessage">
-          <view class="m-icon-wrap"><text class="m-icon">💬</text></view>
-          <text class="m-label">消息中心</text>
-        </view>
-
         <view class="module-item" @tap="onCustomerService">
-          <view class="m-icon-wrap aurora"><text class="m-icon">🎧</text></view>
+          <view class="m-icon-wrap"><text class="m-icon">🎧</text></view>
           <text class="m-label">联系客服</text>
         </view>
         <view class="module-item" @tap="onNav('/pages/feedback/feedback')">
-          <view class="m-icon-wrap"><text class="m-icon">📝</text></view>
+          <view class="m-icon-wrap"><text class="m-icon">📋</text></view>
           <text class="m-label">反馈问题</text>
         </view>
         <view class="module-item" @tap="onNav('/pages/settings/settings')">
           <view class="m-icon-wrap"><text class="m-icon">⚙️</text></view>
           <text class="m-label">设置</text>
         </view>
-        <view class="module-item" @tap="onRecharge">
-          <view class="m-icon-wrap gold"><text class="m-icon">💳</text></view>
-          <text class="m-label">充值中心</text>
-        </view>
       </view>
 
       <!-- 退出登录 -->
       <view v-if="isLoggedIn" class="logout-btn" @tap="onLogout">退出登录</view>
-    </view>
+
+      <view class="bottom-safe"></view>
+    </scroll-view>
   </view>
 </template>
 
@@ -150,14 +165,19 @@ const safeIsElite = computed(() => toBool(userStore.isElite, false))
 
 // ---- 字段收敛：wallet ----
 const safeDiamond = computed(() => toNum(walletStore.diamond, 0))
-const safeStarCoin = computed(() => toNum(walletStore.starCoin, 0))
 
 const incomeYuan = computed(() => {
   const fen = toNum(walletStore.income, 0)
-  // fenToYuan 内部再判一次
   const n = Number(fen)
   if (!Number.isFinite(n)) return '0.00'
   return (n / 100).toFixed(2)
+})
+
+// ---- 社交统计 ----
+const socialStats = ref({
+  followingCount: 0,
+  followersCount: 0,
+  postsCount: 0
 })
 
 // ---- 字段收敛：cert ----
@@ -183,14 +203,34 @@ const refreshCert = async () => {
   }
 }
 
-// ---- 并行加载：profile + balance + certifications ----
+// ---- 刷新社交统计 ----
+const refreshSocialStats = async () => {
+  if (!isLoggedIn.value) return
+  try {
+    const profile = await guard(
+      userApi.profile().then(r => unwrap(r, null)),
+      null
+    )
+    const obj = toObj(profile, {})
+    socialStats.value = {
+      followingCount: toNum(obj.followingCount, 0),
+      followersCount: toNum(obj.followersCount, 0),
+      postsCount: toNum(obj.postsCount, 0)
+    }
+  } catch (_) {
+    /* 静默 */
+  }
+}
+
+// ---- 并行加载：profile + balance + certifications + socialStats ----
 const loadAll = async () => {
   if (!isLoggedIn.value) return
   try {
     await Promise.all([
       guard(userStore.fetchProfile().catch(() => null), null),
       guard(walletStore.fetchBalance().catch(() => null), null),
-      refreshCert()
+      refreshCert(),
+      refreshSocialStats()
     ])
   } catch (_) {
     /* 并行异常全部吞 */
@@ -202,8 +242,7 @@ const onNav = (url) => uni.navigateTo({ url })
 
 const onNavWithLogin = (url) => {
   if (!requireLogin()) return
-  // 精英专属页面（服务发布/我的服务/交易记录/提现等）再叠加 requireElite 守卫，避免 401 → 重复登录死循环
-  const eliteOnly = /\/(service-publish|my-services|transactions|withdraw|exchange|elite-pay)\//.test(url)
+  const eliteOnly = /\/(elite-pay)\//.test(url)
   if (eliteOnly && !requireElite()) return
   uni.navigateTo({ url })
 }
@@ -215,8 +254,6 @@ const onUserCardTap = () => {
   }
   uni.navigateTo({ url: '/pages/profile-edit/profile-edit' })
 }
-
-const onSettings = () => uni.navigateTo({ url: '/pages/settings/settings' })
 
 const onRecharge = () => {
   if (!requireLogin()) return
@@ -285,14 +322,6 @@ const onCustomerService = async () => {
   }
 }
 
-const onGoMessage = () => {
-  if (!requireLogin()) return
-  uni.switchTab({ url: '/TUIKit/components/TUIConversation/index' })
-}
-
-const onMyServices = () => onNavWithLogin('/pages/my-services/my-services')
-const onTransactions = () => onNavWithLogin('/pages/transactions/transactions')
-
 const onLogout = () => {
   uni.showModal({
     title: '退出登录',
@@ -316,31 +345,28 @@ onShow(() => {
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: $by-bg; padding-bottom: 64rpx; }
+.page { min-height: 100vh; background: $by-bg; }
 
 .header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: env(safe-area-inset-top) $by-page-pad-x 0; height: calc($by-topbar-h + env(safe-area-inset-top)); position: sticky; top: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: env(safe-area-inset-top) $by-page-pad-x 0;
+  height: calc($by-topbar-h + env(safe-area-inset-top));
+  position: sticky; top: 0;
   background: $by-bg;
   border-bottom: 1rpx solid $by-border; z-index: 10;
 }
 .title { font-size: 36rpx; font-weight: 700; color: $by-text-1; }
-.icon-btn {
-  font-size: 40rpx; color: $by-text-2;
-  width: 64rpx; height: 64rpx;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: $by-radius-pill;
-  background: $by-soft-card;
-  border: 1rpx solid $by-border;
-}
 
-.content { padding: 24rpx $by-page-pad-x; }
+.content-scroll {
+  height: calc(100vh - #{$by-topbar-h} - env(safe-area-inset-top));
+  padding: 24rpx $by-page-pad-x;
+}
 
 /* ===== User Card ===== */
 .user-card {
   display: flex; align-items: center; gap: 24rpx;
   background: $by-card-bg;
-  border-radius: 32rpx; padding: 32rpx; margin-bottom: 24rpx;
+  border-radius: 32rpx; padding: 32rpx; margin-bottom: 20rpx;
   border: 1rpx solid $by-border;
   position: relative; overflow: hidden;
   transition: transform 0.15s ease;
@@ -354,32 +380,31 @@ onShow(() => {
   pointer-events: none;
 }
 .avatar {
-  width: 128rpx; height: 128rpx; border-radius: $by-radius-pill;
+  width: 140rpx; height: 140rpx; border-radius: $by-radius-pill;
   background: $by-soft-card;
   border: 3rpx solid color.adjust($by-gold, $alpha: 0.4);
   position: relative; z-index: 1;
 }
 .user-info { flex: 1; min-width: 0; position: relative; z-index: 1; }
-.name-row { display: flex; align-items: center; gap: 12rpx; }
-.name { font-size: 36rpx; font-weight: 700; color: $by-text-1; }
+.name-row { display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap; }
+.name { font-size: 38rpx; font-weight: 700; color: $by-text-1; }
+.badge {
+  font-size: 20rpx; font-weight: 600;
+  padding: 4rpx 16rpx; border-radius: $by-radius-pill;
+}
 .elite-badge {
   background: $by-gradient-gold; color: #0B0F1A;
-  font-size: 20rpx; font-weight: 600;
-  padding: 6rpx 18rpx; border-radius: $by-radius-pill;
   box-shadow: $by-shadow-gold;
 }
-.auth-row { display: flex; gap: 12rpx; margin-top: 14rpx; flex-wrap: wrap; }
-.auth-tag {
-  font-size: 22rpx; padding: 6rpx 16rpx; border-radius: $by-radius-sm;
-}
-.auth-tag.passed {
+.real-badge {
   background: color.adjust($by-success, $alpha: 0.16);
   color: $by-success;
   border: 1rpx solid color.adjust($by-success, $alpha: 0.3);
 }
-.auth-tag.pending {
-  background: $by-soft-card; color: $by-text-3;
-  border: 1rpx solid $by-border;
+.auth-row { margin-top: 12rpx; }
+.uid-text { font-size: 24rpx; color: $by-text-3; }
+.auth-tag {
+  font-size: 22rpx; padding: 6rpx 16rpx; border-radius: $by-radius-sm;
 }
 .auth-tag.login-tag {
   background: color.adjust($by-gold, $alpha: 0.12);
@@ -391,13 +416,79 @@ onShow(() => {
   padding-left: 8rpx;
 }
 
+/* ===== Social Bar ===== */
+.social-bar {
+  display: flex; align-items: center;
+  background: $by-card-bg;
+  border-radius: 24rpx; padding: 28rpx 0;
+  margin-bottom: 20rpx;
+  border: 1rpx solid $by-border;
+}
+.social-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8rpx;
+  &:active { background: rgba(255,255,255,0.03); border-radius: 16rpx; }
+}
+.social-num {
+  font-size: 40rpx; font-weight: 700; color: $by-text-1;
+}
+.social-label {
+  font-size: 22rpx; color: $by-text-3;
+}
+.social-divider {
+  width: 2rpx; height: 56rpx;
+  background: linear-gradient(180deg, transparent 0%, $by-border-strong 50%, transparent 100%);
+  flex-shrink: 0;
+}
+
+/* ===== Cert Card ===== */
+.cert-card {
+  background: $by-card-bg;
+  border-radius: 24rpx; padding: 8rpx 28rpx;
+  margin-bottom: 20rpx;
+  border: 1rpx solid $by-border;
+  transition: transform 0.15s ease;
+  &:active { transform: scale(0.995); }
+}
+.cert-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22rpx 0;
+}
+.cert-left {
+  display: flex; align-items: center; gap: 16rpx;
+}
+.cert-icon { font-size: 32rpx; }
+.cert-name { font-size: 28rpx; color: $by-text-1; font-weight: 500; }
+.cert-status {
+  display: flex; align-items: center;
+}
+.cert-badge {
+  font-size: 22rpx; font-weight: 600;
+  padding: 6rpx 20rpx; border-radius: $by-radius-pill;
+}
+.elite-tag {
+  background: $by-gradient-gold; color: #0B0F1A;
+  box-shadow: $by-shadow-gold;
+}
+.real-tag {
+  background: color.adjust($by-success, $alpha: 0.16);
+  color: $by-success;
+  border: 1rpx solid color.adjust($by-success, $alpha: 0.3);
+}
+.cert-action {
+  font-size: 24rpx; color: $by-gold-soft; font-weight: 500;
+}
+.cert-divider {
+  height: 1rpx;
+  background: $by-border;
+}
+
 /* ===== Wallet Card ===== */
 .wallet-card {
   position: relative;
   background: linear-gradient(135deg, $by-bg-soft 0%, $by-surface 100%);
-  border-radius: 32rpx;
-  padding: 28rpx 28rpx 28rpx;
-  margin-bottom: 24rpx;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  margin-bottom: 20rpx;
   border: 1rpx solid $by-border;
   overflow: hidden;
 }
@@ -407,39 +498,23 @@ onShow(() => {
   box-shadow: 0 0 30rpx color.adjust($by-gold, $alpha: 0.5);
 }
 .wallet-head {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24rpx;
+  position: relative; z-index: 1;
+  margin-bottom: 20rpx;
 }
 .wallet-title {
-  font-size: 28rpx;
-  font-weight: 700;
-  color: $by-text-1;
+  font-size: 28rpx; font-weight: 700; color: $by-text-1;
   letter-spacing: 2rpx;
 }
-.wallet-head-actions {
-  display: flex;
-  align-items: center;
-  gap: 14rpx;
-}
 .wallet-row {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
+  position: relative; z-index: 1;
+  display: flex; align-items: stretch;
 }
 .wallet-item {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 10rpx;
-  position: relative; z-index: 1;
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8rpx;
   padding: 16rpx 0;
 }
-.wallet-item:active { background: rgba(255,255,255,0.04); border-radius: 20rpx; }
 .wallet-num {
-  font-size: 44rpx; font-weight: 700;
-  color: $by-gold;
+  font-size: 44rpx; font-weight: 700; color: $by-gold;
   &.income {
     background: $by-gradient-gold;
     -webkit-background-clip: text;
@@ -448,36 +523,38 @@ onShow(() => {
   }
 }
 .wallet-label { font-size: 22rpx; color: $by-text-2; }
-.wallet-divider {
-  width: 2rpx; height: 64rpx;
-  background: linear-gradient(180deg, transparent 0%, $by-border-strong 50%, transparent 100%);
-  flex-shrink: 0;
+.wallet-action {
+  margin-top: 8rpx;
+  font-size: 22rpx; font-weight: 600;
+  padding: 8rpx 28rpx; border-radius: $by-radius-pill;
 }
 .recharge-btn {
   background: $by-gradient-gold; color: #0B0F1A;
-  font-size: 24rpx; font-weight: 700;
-  padding: 12rpx 28rpx; border-radius: $by-radius-pill;
   box-shadow: $by-shadow-gold;
 }
 .recharge-btn:active { transform: scale(0.97); }
-.exchange-btn {
+.withdraw-btn {
   background: color.adjust($by-gold, $alpha: 0.15);
-  color: $by-gold-soft; font-size: 24rpx; font-weight: 600;
-  padding: 10rpx 26rpx; border-radius: $by-radius-pill;
+  color: $by-gold-soft;
   border: 1rpx solid color.adjust($by-gold, $alpha: 0.35);
 }
-.exchange-btn:active { background: color.adjust($by-gold, $alpha: 0.25); }
+.withdraw-btn:active { background: color.adjust($by-gold, $alpha: 0.25); }
+.wallet-divider {
+  width: 2rpx;
+  background: linear-gradient(180deg, transparent 0%, $by-border-strong 50%, transparent 100%);
+  flex-shrink: 0;
+}
 
-/* ===== Modules (4 列 × 3 行 = 12，避免末尾缺项视觉错位) ===== */
+/* ===== Modules (4 列 × 2 行 = 8 格) ===== */
 .modules {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   row-gap: 8rpx;
   column-gap: 4rpx;
   background: $by-card-bg;
-  border-radius: 32rpx;
-  padding: 28rpx 12rpx;
-  margin-bottom: 32rpx;
+  border-radius: 24rpx;
+  padding: 24rpx 12rpx;
+  margin-bottom: 28rpx;
   border: 1rpx solid $by-border;
 }
 .module-item {
@@ -496,10 +573,6 @@ onShow(() => {
   background: $by-soft-card;
   display: flex; align-items: center; justify-content: center;
   border: 1rpx solid $by-border;
-  &.gold {
-    background: color.adjust($by-gold, $alpha: 0.14);
-    border-color: color.adjust($by-gold, $alpha: 0.3);
-  }
   &.aurora {
     background: linear-gradient(135deg,
       color.adjust($by-aurora-a, $alpha: 0.20) 0%,
@@ -527,6 +600,11 @@ onShow(() => {
   font-size: 30rpx; font-weight: 600;
   border: 1rpx solid color.adjust($by-error, $alpha: 0.25);
   transition: background 0.15s ease;
+  margin-bottom: 20rpx;
   &:active { background: color.adjust($by-error, $alpha: 0.08); }
+}
+
+.bottom-safe {
+  height: calc(#{$by-safe-bottom} + 40rpx);
 }
 </style>

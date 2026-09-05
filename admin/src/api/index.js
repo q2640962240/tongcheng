@@ -89,3 +89,17 @@ export const certificationsApi = {
   audit: (id, status, rejectReason) => http.put(`/admin/certifications/${id}/audit`, { status, rejectReason })
 }
 
+// ==================== 礼物管理 ====================
+export const giftManageApi = {
+  list: () => http.get('/admin/gifts'),
+  create: (data) => http.post('/admin/gifts', data),
+  update: (id, data) => http.put(`/admin/gifts/${id}`, data),
+  delete: (id) => http.delete(`/admin/gifts/${id}`),
+  // 提现审核
+  withdrawList: (params) => http.get('/admin/gifts/withdrawals', { params }),
+  withdrawAudit: (id, data) => http.put(`/admin/gifts/withdrawals/${id}/audit`, data),
+  // 配置
+  getConfig: () => http.get('/admin/gifts/config'),
+  updateConfig: (data) => http.put('/admin/gifts/config', data),
+}
+

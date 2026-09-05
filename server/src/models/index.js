@@ -31,6 +31,10 @@ const Group = require('./Group')
 const GroupJoin = require('./GroupJoin')
 const EliteOrder = require('./EliteOrder')
 const SignIn = require('./SignIn')
+const Follow = require('./Follow')
+const Greeting = require('./Greeting')
+const Gift = require('./Gift')
+const GiftRecord = require('./GiftRecord')
 
 // 2. 声明关联关系（仅当 Sequelize 原生支持时生效；JSON 层在 routes 里 in-memory join）
 if (sequelize.usingMysql) {
@@ -95,6 +99,25 @@ if (sequelize.usingMysql) {
   User.hasMany(EliteOrder, { foreignKey: 'userId', as: 'eliteOrders' })
   SignIn.belongsTo(User, { foreignKey: 'userId', as: 'user' })
   User.hasMany(SignIn, { foreignKey: 'userId', as: 'signIns' })
+
+  // Follow
+  User.hasMany(Follow, { as: 'following', foreignKey: 'followerId' })
+  User.hasMany(Follow, { as: 'followers', foreignKey: 'followingId' })
+  Follow.belongsTo(User, { foreignKey: 'followerId', as: 'followerUser' })
+  Follow.belongsTo(User, { foreignKey: 'followingId', as: 'followingUser' })
+
+  // GiftRecord
+  User.hasMany(GiftRecord, { as: 'sentGifts', foreignKey: 'senderId' })
+  User.hasMany(GiftRecord, { as: 'receivedGifts', foreignKey: 'receiverId' })
+  GiftRecord.belongsTo(User, { foreignKey: 'senderId', as: 'sender' })
+  GiftRecord.belongsTo(User, { foreignKey: 'receiverId', as: 'receiver' })
+  GiftRecord.belongsTo(Gift, { foreignKey: 'giftId', as: 'gift' })
+
+  // Greeting
+  User.hasMany(Greeting, { as: 'sentGreetings', foreignKey: 'senderId' })
+  User.hasMany(Greeting, { as: 'receivedGreetings', foreignKey: 'receiverId' })
+  Greeting.belongsTo(User, { foreignKey: 'senderId', as: 'sender' })
+  Greeting.belongsTo(User, { foreignKey: 'receiverId', as: 'receiver' })
 }
 
 // 3. bootstrap：启动期建表 + 健康校验（幂等）
@@ -129,7 +152,8 @@ const db = {
 
   Admin, User, Wallet, Service, ServiceCategory, Order, Transaction,
   Review, Invite, Message, Config, Feedback, Banner,
-  Post, Comment, Group, GroupJoin, EliteOrder, SignIn
+  Post, Comment, Group, GroupJoin, EliteOrder, SignIn,
+  Follow, Greeting, Gift, GiftRecord
 }
 
 module.exports = db

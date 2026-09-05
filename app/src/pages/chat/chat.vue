@@ -346,7 +346,8 @@ function onTyping() {
 }
 
 function onPeerTap() {
-  if (peerId.value) uni.navigateTo({ url: `/pages/provider/provider?id=${peerId.value}` })
+  // 旧达人主页已移除，统一跳转到新个人主页
+  if (peerId.value) uni.navigateTo({ url: `/pages/user-profile/user-profile?id=${peerId.value}` })
 }
 
 function setupSocket() {

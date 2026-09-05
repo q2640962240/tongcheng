@@ -11,6 +11,7 @@ const Wallet = sequelize.define('Wallet', {
     defaultValue: 0
   },
   starCoin: {
+    // @deprecated — 保留向后兼容，新业务统一使用 diamond
     type: DataTypes.BIGINT,
     defaultValue: 0
   },

@@ -64,13 +64,11 @@
                 "payment" : {},
                 "push" : {},
                 "geolocation" : {
-                    "amap" : {
-                        "name" : "",
-                        "__platform__" : [ "ios", "android" ],
-                        "appkey_ios" : "",
-                        "appkey_android" : ""
+                    "system" : {
+                        "__platform__" : [ "ios", "android" ]
                     }
-                }
+                },
+                "maps" : {}
             },
             "icons" : {
                 "android" : {

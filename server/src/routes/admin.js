@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { User, Service, ServiceCategory, Order, Wallet, Feedback, Admin, Transaction, Invite, Message, Post, Group, Banner, EliteOrder, Op } = require('../models')
+const { User, Service, ServiceCategory, Order, Wallet, Feedback, Admin, Transaction, Invite, Message, Post, Group, Banner, EliteOrder, Gift, GiftRecord, Op } = require('../models')
 const { signToken } = require('../middleware/auth')
 const { success, paginate, fail } = require('../utils/response')
 
@@ -1640,6 +1640,134 @@ router.get('/chat-messages/:sessionId', async (req, res, next) => {
         createdAt: m.createdAt
       }))
     })
+  } catch (err) { next(err) }
+})
+
+// ==========================================================
+// 礼物管理
+// ==========================================================
+
+/** 礼物列表 */
+router.get('/gifts', async (req, res, next) => {
+  try {
+    const list = await Gift.findAll({ order: [['sort', 'DESC'], ['id', 'ASC']] })
+    success(res, list.map(g => g.toJSON()))
+  } catch (err) { next(err) }
+})
+
+/** 创建礼物 */
+router.post('/gifts', async (req, res, next) => {
+  try {
+    const { name, imageUrl, price, sort = 0, active = true } = req.body || {}
+    if (!name || !imageUrl || !price) return fail(res, '名称、图片、价格必填', 400)
+    const gift = await Gift.create({ name, imageUrl, price: Number(price), sort: Number(sort), active: !!active })
+    success(res, gift.toJSON(), '礼物已创建')
+  } catch (err) { next(err) }
+})
+
+/** 更新礼物 */
+router.put('/gifts/:id', async (req, res, next) => {
+  try {
+    const gift = await Gift.findByPk(req.params.id)
+    if (!gift) return fail(res, '礼物不存在', 404)
+    const body = req.body || {}
+    const patch = {}
+    if (body.name !== undefined) patch.name = body.name
+    if (body.imageUrl !== undefined) patch.imageUrl = body.imageUrl
+    if (body.price !== undefined) patch.price = Number(body.price)
+    if (body.sort !== undefined) patch.sort = Number(body.sort)
+    if (body.active !== undefined) patch.active = !!body.active
+    await gift.update(patch)
+    success(res, gift.toJSON(), '礼物已更新')
+  } catch (err) { next(err) }
+})
+
+/** 删除礼物 */
+router.delete('/gifts/:id', async (req, res, next) => {
+  try {
+    const gift = await Gift.findByPk(req.params.id)
+    if (!gift) return fail(res, '礼物不存在', 404)
+    await gift.destroy()
+    success(res, null, '礼物已删除')
+  } catch (err) { next(err) }
+})
+
+/** 礼物提现申请列表 */
+router.get('/gifts/withdrawals', async (req, res, next) => {
+  try {
+    const { status = 'pending', page = 1, pageSize = 20 } = req.query
+    // 礼物提现记录存储在 GiftRecord 中，通过 diamondAmount 累计
+    // 这里复用 Transaction 表，type='gift_withdraw' 的记录
+    const allTx = await Transaction.findAll({ where: { type: 'gift_withdraw' } })
+    const filtered = allTx.filter(t => {
+      const st = (t.extra && t.extra.status) || 'pending'
+      return status === 'all' || status === '' || st === status
+    })
+    const sorted = filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    const start = (page - 1) * pageSize
+    const rows = sorted.slice(start, start + Number(pageSize))
+    const result = []
+    for (const t of rows) {
+      const u = await User.findByPk(t.userId)
+      result.push({
+        ...t.toJSON(),
+        user: u ? { id: u.id, nickname: u.nickname, phone: u.phone, avatar: u.avatar } : null
+      })
+    }
+    paginate(res, result, filtered.length, page, pageSize)
+  } catch (err) { next(err) }
+})
+
+/** 审核礼物提现（通过/拒绝） */
+router.put('/gifts/withdrawals/:id/audit', async (req, res, next) => {
+  try {
+    const { action } = req.body // approve | reject
+    if (!['approve', 'reject'].includes(action)) return fail(res, '操作参数无效', 400)
+    const tx = await Transaction.findByPk(req.params.id)
+    if (!tx) return fail(res, '提现记录不存在', 404)
+    const curStatus = (tx.extra && tx.extra.status) || 'pending'
+    if (curStatus !== 'pending') return fail(res, '当前状态不可操作')
+
+    const status = action === 'approve' ? 'approved' : 'rejected'
+    const extra = { ...tx.extra, status, handledAt: new Date().toISOString(), handledBy: req.adminId }
+
+    // 拒绝时退还钻石
+    if (action === 'reject') {
+      const wallet = await Wallet.findOne({ where: { userId: tx.userId } })
+      if (wallet) {
+        await wallet.update({ diamond: wallet.diamond + Number(tx.amount) })
+        extra.refundedAt = new Date().toISOString()
+      }
+    }
+
+    await tx.update({
+      remark: action === 'approve' ? '礼物提现已审核通过' : '礼物提现已拒绝（钻石已退还）',
+      extra
+    })
+    success(res, null, action === 'approve' ? '提现已通过' : '提现已拒绝，钻石已退还')
+  } catch (err) { next(err) }
+})
+
+/** 获取礼物配置 */
+router.get('/gifts/config', async (req, res, next) => {
+  try {
+    const { getModuleConfig } = require('../utils/config')
+    const cfg = await getModuleConfig('gift')
+    success(res, { withdrawRatio: cfg?.withdrawRatio ?? 0.7 })
+  } catch (err) { next(err) }
+})
+
+/** 更新礼物配置 */
+router.put('/gifts/config', async (req, res, next) => {
+  try {
+    const { setModule, getModuleConfig } = require('../utils/config')
+    const { withdrawRatio } = req.body || {}
+    if (withdrawRatio === undefined || withdrawRatio < 0 || withdrawRatio > 1) {
+      return fail(res, '提现比例必须在 0-1 之间', 400)
+    }
+    await setModule('gift', { withdrawRatio: Number(withdrawRatio) })
+    const cfg = await getModuleConfig('gift')
+    success(res, { withdrawRatio: cfg?.withdrawRatio ?? 0.7 }, '配置已保存')
   } catch (err) { next(err) }
 })
 

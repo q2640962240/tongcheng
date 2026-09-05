@@ -300,7 +300,7 @@
           <view class="act-item ai-2" @tap="onComingSoon">
             <text class="act-emoji">🎁</text>
             <text class="act-label">邀请好友</text>
-            <text class="act-reward">返 20% 佣金</text>
+            <text class="act-reward">双方得特权</text>
           </view>
           <view class="act-item ai-3" @tap="onComingSoon">
             <text class="act-emoji">🎯</text>
@@ -690,7 +690,8 @@ const goCreateGroup = () => {
 }
 const goGroupDetail = (g) => uni.navigateTo({ url: `/pages/group/detail?id=${toStr(getPath(g, 'id'), '')}` })
 const goPostDetail = (p) => uni.navigateTo({ url: `/pages/group/detail?id=${toStr(getPath(p, 'id'), '')}&mode=post` })
-const goUser = (u) => uni.navigateTo({ url: `/pages/provider/provider?id=${toStr(getPath(u, 'id'), '')}` })
+// 旧达人主页已移除，统一跳转到新个人主页
+const goUser = (u) => uni.navigateTo({ url: `/pages/user-profile/user-profile?id=${toStr(getPath(u, 'id'), '')}` })
 const onRangeChange = (e) => {
   const ranges = ['全国', '附近', '关注']
   rangeText.value = toStr(ranges[toNum(getPath(e, 'detail.value'), 0)], '全国')

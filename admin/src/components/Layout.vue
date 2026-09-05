@@ -148,7 +148,7 @@ import {
   Goods, List, Menu,
   Compass, ChatDotRound, UserFilled,
   Promotion, PictureFilled,
-  Key, Avatar
+  Key, Avatar, Present
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -162,6 +162,7 @@ const flatMenuItems = [
   { path: '/chat-records', title: '聊天记录', icon: 'ChatLineRound' },
   { path: '/orders', title: '订单管理', icon: 'List' },
   { path: '/invite', title: '邀请管理', icon: 'Share' },
+  { path: '/gifts', title: '礼物管理', icon: 'Present' },
   { path: '/content', title: '内容管理', icon: 'Document' },
   { path: '/settings', title: '配置中心', icon: 'Setting' }
 ]

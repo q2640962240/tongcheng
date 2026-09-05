@@ -98,6 +98,12 @@ const routes = [
         meta: { title: '认证管理', icon: 'Key' }
       },
       {
+        path: 'gifts',
+        name: 'Gifts',
+        component: () => import('../views/gifts/index.vue'),
+        meta: { title: '礼物管理', icon: 'Present' }
+      },
+      {
         path: 'settings',
         name: 'Settings',
         component: () => import('../views/settings/Settings.vue'),

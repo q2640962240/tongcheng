@@ -79,6 +79,11 @@ const User = sequelize.define('User', {
     type: DataTypes.DATE,
     allowNull: true
   },
+  giftIncome: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    comment: '礼物收入余额（可提现）'
+  },
   meta: {
     type: DataTypes.JSON,
     allowNull: true,
