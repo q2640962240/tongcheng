@@ -3,16 +3,16 @@ const { DataTypes } = require('sequelize')
 
 const Greeting = sequelize.define('Greeting', {
   id: {
-    type: DataTypes.BIGINT,
+    type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
   senderId: {
-    type: DataTypes.BIGINT,
+    type: DataTypes.INTEGER,
     allowNull: false
   },
   receiverId: {
-    type: DataTypes.BIGINT,
+    type: DataTypes.INTEGER,
     allowNull: false
   },
   message: {

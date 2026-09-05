@@ -3,20 +3,20 @@ const { DataTypes } = require('sequelize')
 
 const GiftRecord = sequelize.define('GiftRecord', {
   id: {
-    type: DataTypes.BIGINT,
+    type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
   senderId: {
-    type: DataTypes.BIGINT,
+    type: DataTypes.INTEGER,
     allowNull: false
   },
   receiverId: {
-    type: DataTypes.BIGINT,
+    type: DataTypes.INTEGER,
     allowNull: false
   },
   giftId: {
-    type: DataTypes.BIGINT,
+    type: DataTypes.INTEGER,
     allowNull: false
   },
   giftName: {
