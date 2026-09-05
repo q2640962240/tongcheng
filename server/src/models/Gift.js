@@ -29,6 +29,11 @@ const Gift = sequelize.define('Gift', {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
     comment: '是否上架'
+  },
+  animationLevel: {
+    type: DataTypes.TINYINT,
+    defaultValue: 1,
+    comment: '动画等级: 0无 1小型飘动 2中型横幅 3全屏'
   }
 }, {
   tableName: 'gifts',

@@ -282,9 +282,8 @@ const onToggleFollow = async () => {
 }
 
 const onChat = () => {
-  // 跳转到聊天页
   uni.navigateTo({
-    url: `/TUIKit/components/TUIChat/index?userID=${userId.value}`
+    url: `/pages/chat/chat?userId=${userId.value}`
   })
 }
 

@@ -106,11 +106,14 @@ router.get('/balance', auth, async (req, res, next) => {
   try {
     let wallet = await Wallet.findOne({ where: { userId: req.userId } })
     if (!wallet) wallet = await Wallet.create({ userId: req.userId })
+    const { User } = require('../models')
+    const user = await User.findByPk(req.userId, { attributes: ['id', 'giftIncome'] })
     success(res, {
       diamond: wallet.diamond,
       starCoin: wallet.starCoin,
       income: wallet.income,
-      withdrawable: wallet.income
+      withdrawable: wallet.income,
+      giftIncome: user ? (user.giftIncome || 0) : 0
     })
   } catch (err) { next(err) }
 })

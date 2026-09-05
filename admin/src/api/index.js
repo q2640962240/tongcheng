@@ -98,6 +98,8 @@ export const giftManageApi = {
   // 提现审核
   withdrawList: (params) => http.get('/admin/gifts/withdrawals', { params }),
   withdrawAudit: (id, data) => http.put(`/admin/gifts/withdrawals/${id}/audit`, data),
+  // 礼物记录
+  records: (params) => http.get('/admin/gifts/records', { params }),
   // 配置
   getConfig: () => http.get('/admin/gifts/config'),
   updateConfig: (data) => http.put('/admin/gifts/config', data),

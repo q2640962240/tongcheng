@@ -4,8 +4,8 @@
       <div class="filter-bar">
         <div class="page-title">
           <el-icon size="18" color="#d4af37"><Menu /></el-icon>
-          <span class="t1">服务分类管理</span>
-          <span class="sub">控制用户端 App 首页、发布服务页、筛选器展示的分类列表；支持二级结构、上下架、排序、价格默认值。</span>
+          <span class="t1">约玩分类管理</span>
+          <span class="sub">控制用户端 App 首页、发布约玩页、筛选器展示的分类列表；支持二级结构、上下架、排序、价格默认值。</span>
         </div>
         <div style="flex:1" />
         <el-button type="primary" :icon="Refresh" @click="loadData" :loading="loading">刷新</el-button>
@@ -145,7 +145,7 @@
           </el-form-item>
           <el-form-item label="自定义价格">
             <el-switch v-model="form.allowCustomPrice" />
-            <span style="margin-left: 8px; color:#909399;">开启：服务者发布服务时可自定义价格；关闭则强制使用默认价</span>
+            <span style="margin-left: 8px; color:#909399;">开启：发布者发布约玩时可自定义价格；关闭则强制使用默认价</span>
           </el-form-item>
         </template>
         <el-divider content-position="left">公共属性</el-divider>
@@ -159,7 +159,7 @@
         </el-form-item>
         <el-form-item label="发布审核">
           <el-switch v-model="form.requireAudit" />
-          <span style="margin-left: 8px;">关闭后用户发布到该分类下的服务直接上线，无需后台审核</span>
+          <span style="margin-left: 8px;">关闭后用户发布到该分类下的约玩直接上线，无需后台审核</span>
         </el-form-item>
         <el-form-item label="推荐标签">
           <el-select
@@ -337,7 +337,7 @@ const onDelete = async (row) => {
   const hasChild = row.parentKey ? false : tree.value.find(t => t.key === row.key)?.children?.length > 0
   const msg = hasChild
     ? `顶级分类「${row.name}」仍包含子分类，是否同时删除全部子项？`
-    : `确认删除分类「${row.name}」？删除后用户端发布服务的对应分类会被归为兜底。`
+    : `确认删除分类「${row.name}」？删除后用户端发布约玩的对应分类会被归为兜底。`
   try {
     await ElMessageBox.confirm(msg, '提示', {
       type: 'warning',

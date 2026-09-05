@@ -35,6 +35,19 @@
                 <text class="voice-dur">{{ m.duration || 1 }}″</text>
               </view>
             </template>
+            <template v-else-if="m.type === 'gift'">
+              <view class="gift-card" @tap="onGiftCardTap(m)">
+                <view class="gift-card-icon">
+                  <text v-if="isEmojiGift(parseGiftContent(m).giftImage)" class="gift-card-emoji">{{ parseGiftContent(m).giftImage }}</text>
+                  <image v-else class="gift-card-img" :src="parseGiftContent(m).giftImage" mode="aspectFit" />
+                </view>
+                <view class="gift-card-info">
+                  <text class="gift-card-name">{{ parseGiftContent(m).giftName || '礼物' }}</text>
+                  <text class="gift-card-price">{{ parseGiftContent(m).diamondAmount || 0 }}💎</text>
+                </view>
+                <text v-if="(parseGiftContent(m).quantity || 0) > 1" class="gift-card-qty">×{{ parseGiftContent(m).quantity }}</text>
+              </view>
+            </template>
             <template v-else>
               <text class="msg-text">{{ m.content }}</text>
             </template>
@@ -57,6 +70,9 @@
       <view class="btn-plus" @tap="onPickImage">
         <text class="plus-icon">🖼</text>
       </view>
+      <view class="btn-gift" @tap="showGiftPanel = true">
+        <text class="gift-icon">🎁</text>
+      </view>
       <input
         class="msg-input"
         v-model="draft"
@@ -68,6 +84,18 @@
       />
       <view class="btn-send" :class="{ disabled: !draft.trim() }" @tap="sendText">发送</view>
     </view>
+
+    <!-- 礼物面板 -->
+    <GiftPanel
+      v-if="showGiftPanel"
+      :receiverId="peerId"
+      :visible="showGiftPanel"
+      @close="showGiftPanel = false"
+      @sent="onGiftSent"
+    />
+
+    <!-- 礼物动画 -->
+    <GiftAnimation ref="giftAnimRef" />
   </view>
 </template>
 
@@ -79,6 +107,8 @@ import chatSocket from '@/utils/chatSocket'
 import { uploadFile } from '@/utils/upload'
 import { useUserStore } from '@/store/user'
 import { ensureTUILogin, getTUILoginContext } from '@/utils/tuilogin'
+import GiftPanel from '@/components/GiftPanel.vue'
+import GiftAnimation from '@/components/GiftAnimation.vue'
 
 const userStore = useUserStore()
 
@@ -95,6 +125,8 @@ const typing = ref(false)
 const playingId = ref('')
 const scrollAnchor = ref('')
 const connected = ref(false)
+const showGiftPanel = ref(false)
+const giftAnimRef = ref(null)
 
 let seq = 0
 let typingTimer = null
@@ -346,8 +378,62 @@ function onTyping() {
 }
 
 function onPeerTap() {
-  // 旧达人主页已移除，统一跳转到新个人主页
   if (peerId.value) uni.navigateTo({ url: `/pages/user-profile/user-profile?id=${peerId.value}` })
+}
+
+function parseGiftContent(m) {
+  if (m._giftCache) return m._giftCache
+  try {
+    const parsed = typeof m.content === 'string' ? JSON.parse(m.content) : (m.content || {})
+    m._giftCache = parsed
+    return parsed
+  } catch (_) {
+    return {}
+  }
+}
+
+function isEmojiGift(str) {
+  if (!str) return false
+  return !str.startsWith('http') && !str.startsWith('/') && !str.startsWith('data:')
+}
+
+function onGiftCardTap(m) {
+  const gc = parseGiftContent(m)
+  if (gc && giftAnimRef.value) {
+    giftAnimRef.value.play({
+      giftName: gc.giftName,
+      giftImage: gc.giftImage,
+      diamondAmount: gc.diamondAmount,
+      quantity: gc.quantity || 1,
+      animationLevel: gc.animationLevel || 1
+    })
+  }
+}
+
+function onGiftSent(gift) {
+  showGiftPanel.value = false
+  if (gift && gift.animationLevel > 0 && giftAnimRef.value) {
+    giftAnimRef.value.play({
+      giftName: gift.giftName,
+      giftImage: gift.giftImage || gift.imageUrl,
+      diamondAmount: gift.diamondAmount || gift.price,
+      quantity: gift.quantity || 1,
+      animationLevel: gift.animationLevel || 1
+    })
+  }
+}
+
+function triggerGiftAnimation(msg) {
+  const gc = parseGiftContent(msg)
+  if (gc && gc.animationLevel > 0 && giftAnimRef.value) {
+    giftAnimRef.value.play({
+      giftName: gc.giftName,
+      giftImage: gc.giftImage,
+      diamondAmount: gc.diamondAmount,
+      quantity: gc.quantity || 1,
+      animationLevel: gc.animationLevel || 1
+    })
+  }
 }
 
 function setupSocket() {
@@ -371,6 +457,7 @@ function setupSocket() {
     if (fromPeer) {
       pushMessage({ ...msg, status: 'success' })
       chatSocket.emit('read', { receiverId: Number(peerId.value) })
+      if (msg.type === 'gift') triggerGiftAnimation(msg)
     }
   }))
   socketOffs.push(chatSocket.on('typing', (d) => {
@@ -463,7 +550,7 @@ onLoad(async (options) => {
 
   // 打招呼：无历史消息时自动发送一句问候
   if (String(o.hi) === '1' && messages.value.length === 0) {
-    doSend('text', '你好，我对你的服务很感兴趣，方便聊聊吗？')
+    doSend('text', '你好，我想和你一起约玩，方便聊聊吗？')
   }
 })
 
@@ -676,6 +763,57 @@ onUnload(() => {
     background: $by-bg-soft;
     color: $by-text-mute;
   }
+}
+
+.btn-gift {
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.gift-icon { font-size: 44rpx; }
+
+.gift-card {
+  display: flex;
+  align-items: center;
+  min-width: 240rpx;
+  padding: 8rpx 0;
+}
+.gift-card-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: rgba(255, 215, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 16rpx;
+}
+.gift-card-emoji { font-size: 40rpx; line-height: 1; }
+.gift-card-img { width: 48rpx; height: 48rpx; }
+.gift-card-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.gift-card-name {
+  font-size: 28rpx;
+  color: $by-text-1;
+  font-weight: 500;
+}
+.gift-card-price {
+  font-size: 24rpx;
+  color: #FFD700;
+  margin-top: 4rpx;
+}
+.gift-card-qty {
+  font-size: 28rpx;
+  color: #FFD700;
+  font-weight: 600;
+  margin-left: 12rpx;
 }
 
 /* #ifdef APP-PLUS */

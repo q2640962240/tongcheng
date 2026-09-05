@@ -102,6 +102,30 @@
         </view>
       </view>
 
+      <!-- 在线速聊 -->
+      <view class="section" v-if="onlineUsers.length > 0">
+        <view class="section-head">
+          <text class="section-title">🟢 在线速聊</text>
+          <text class="section-more" @tap="onNavDiscover">更多 ›</text>
+        </view>
+        <scroll-view scroll-x class="hide-scrollbar online-scroll">
+          <view class="online-row">
+            <view
+              v-for="u in onlineUsers"
+              :key="'on-' + u.id"
+              class="online-bubble"
+              @tap="onOnlineChat(u)"
+            >
+              <view class="online-avatar-wrap">
+                <image class="online-avatar" :src="u.avatar" mode="aspectFill" />
+                <view class="online-dot"></view>
+              </view>
+              <text class="online-name" :numberOfLines="1">{{ u.nickname }}</text>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
       <!-- 推荐好友 -->
       <view class="section">
         <view class="section-head">
@@ -117,7 +141,10 @@
               class="user-card"
               @tap="onUserTap(u)"
             >
-              <image class="user-avatar" :src="u.avatar" mode="aspectFill" />
+              <view class="user-avatar-wrap">
+                <image class="user-avatar" :src="u.avatar" mode="aspectFill" />
+                <view v-if="u.isOnline" class="online-dot"></view>
+              </view>
               <view class="user-info">
                 <view class="user-name-row">
                   <text class="user-name" :numberOfLines="1">{{ u.nickname }}</text>
@@ -269,6 +296,7 @@ const showVerifyBar = computed(() => {
 
 /* ---- 数据 ---- */
 const recommendUsers = ref([])
+const onlineUsers = computed(() => recommendUsers.value.filter(u => u.isOnline))
 const userLoading = ref(false)
 const latestPosts = ref([])
 const postLoading = ref(false)
@@ -305,7 +333,8 @@ const loadRecommendUsers = async () => {
         age: toNum(u.age, 0) || null,
         gender: toStr(u.gender, 'male'),
         city: toStr(u.city || city.value || ''),
-        bio: toStr(u.bio || u.intro || '')
+        bio: toStr(u.bio || u.intro || ''),
+        isOnline: !!u.isOnline
       }))
   } catch (_) { recommendUsers.value = []; userLoadFailed.value = true }
   finally { userLoading.value = false }
@@ -377,6 +406,7 @@ const onQuickTap = (q) => {
 }
 const onGoVerify = () => uni.navigateTo({ url: '/pages/verification-hub/verification-hub' })
 const onUserTap = (u) => uni.navigateTo({ url: `/pages/user-profile/user-profile?id=${u.id}` })
+const onOnlineChat = (u) => uni.navigateTo({ url: `/pages/chat/chat?userId=${u.id}` })
 const onMorePosts = () => uni.navigateTo({ url: '/pages/discover/discover?tab=posts' })
 const onPostTap = (p) => uni.navigateTo({ url: `/pages/discover/discover?tab=posts&postId=${p.id}` })
 </script>
@@ -553,6 +583,36 @@ const onPostTap = (p) => uni.navigateTo({ url: `/pages/discover/discover?tab=pos
 .section-title { font-size: 32rpx; font-weight: 700; color: $by-text-1; }
 .section-more { font-size: 24rpx; color: $by-text-3; }
 
+/* -------- 在线速聊 -------- */
+.online-scroll { width: 100%; }
+.online-row {
+  display: inline-flex; gap: 24rpx;
+  padding: 4rpx 0 20rpx;
+}
+.online-bubble {
+  display: flex; flex-direction: column; align-items: center; gap: 10rpx;
+  width: 120rpx; flex-shrink: 0;
+  &:active { opacity: 0.7; }
+}
+.online-avatar-wrap {
+  position: relative; width: 96rpx; height: 96rpx;
+}
+.online-avatar {
+  width: 96rpx; height: 96rpx; border-radius: 9999rpx;
+  border: 3rpx solid color.adjust($by-success, $alpha: 0.4);
+}
+.online-dot {
+  position: absolute; right: 2rpx; bottom: 2rpx;
+  width: 22rpx; height: 22rpx; border-radius: 9999rpx;
+  background: $by-success;
+  border: 3rpx solid $by-bg;
+  box-shadow: 0 0 8rpx color.adjust($by-success, $alpha: 0.6);
+}
+.online-name {
+  font-size: 22rpx; color: $by-text-2;
+  max-width: 120rpx; text-align: center;
+}
+
 /* -------- 推荐用户卡片 -------- */
 .user-scroll { width: 100%; }
 .user-row {
@@ -568,6 +628,9 @@ const onPostTap = (p) => uni.navigateTo({ url: `/pages/discover/discover?tab=pos
   display: flex; flex-direction: column; align-items: center; gap: 14rpx;
 }
 .user-card:active { background: $by-surface-2; }
+.user-avatar-wrap {
+  position: relative;
+}
 .user-avatar {
   width: 110rpx; height: 110rpx; border-radius: 9999rpx;
   border: 3rpx solid color.change($by-aurora-a, $alpha: .4);

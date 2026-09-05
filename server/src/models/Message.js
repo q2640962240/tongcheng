@@ -15,7 +15,7 @@ const Message = sequelize.define('Message', {
     allowNull: true
   },
   type: {
-    type: DataTypes.ENUM('text', 'image', 'voice', 'system'),
+    type: DataTypes.ENUM('text', 'image', 'voice', 'video', 'system', 'gift'),
     defaultValue: 'text'
   },
   content: {

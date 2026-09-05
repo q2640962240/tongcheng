@@ -86,6 +86,16 @@ router.get('/dashboard', async (req, res, next) => {
       eliteRevenueFen: (await EliteOrder.findAll({ where: { status: 'paid' } })
         .then(list => list.reduce((s, o) => s + Number(o.amount), 0))
         .catch(() => 0)),
+      // 礼物统计
+      todayGiftCount: await GiftRecord.count({
+        where: { createdAt: { [Op.gte]: new Date(new Date().toISOString().slice(0, 10)) } }
+      }).catch(() => 0),
+      todayDiamondConsumed: await GiftRecord.sum('diamondAmount', {
+        where: { createdAt: { [Op.gte]: new Date(new Date().toISOString().slice(0, 10)) } }
+      }).catch(() => 0) || 0,
+      todayGiftIncome: await GiftRecord.sum('diamondAmount', {
+        where: { createdAt: { [Op.gte]: new Date(new Date().toISOString().slice(0, 10)) } }
+      }).catch(() => 0) || 0,
     })
   } catch (err) { next(err) }
 })
@@ -1658,9 +1668,9 @@ router.get('/gifts', async (req, res, next) => {
 /** 创建礼物 */
 router.post('/gifts', async (req, res, next) => {
   try {
-    const { name, imageUrl, price, sort = 0, active = true } = req.body || {}
+    const { name, imageUrl, price, sort = 0, active = true, animationLevel = 1 } = req.body || {}
     if (!name || !imageUrl || !price) return fail(res, '名称、图片、价格必填', 400)
-    const gift = await Gift.create({ name, imageUrl, price: Number(price), sort: Number(sort), active: !!active })
+    const gift = await Gift.create({ name, imageUrl, price: Number(price), sort: Number(sort), active: !!active, animationLevel: Number(animationLevel) || 0 })
     success(res, gift.toJSON(), '礼物已创建')
   } catch (err) { next(err) }
 })
@@ -1677,6 +1687,7 @@ router.put('/gifts/:id', async (req, res, next) => {
     if (body.price !== undefined) patch.price = Number(body.price)
     if (body.sort !== undefined) patch.sort = Number(body.sort)
     if (body.active !== undefined) patch.active = !!body.active
+    if (body.animationLevel !== undefined) patch.animationLevel = Number(body.animationLevel) || 0
     await gift.update(patch)
     success(res, gift.toJSON(), '礼物已更新')
   } catch (err) { next(err) }
@@ -1731,20 +1742,53 @@ router.put('/gifts/withdrawals/:id/audit', async (req, res, next) => {
     const status = action === 'approve' ? 'approved' : 'rejected'
     const extra = { ...tx.extra, status, handledAt: new Date().toISOString(), handledBy: req.adminId }
 
-    // 拒绝时退还钻石
+    // 拒绝时退还礼物收入
     if (action === 'reject') {
-      const wallet = await Wallet.findOne({ where: { userId: tx.userId } })
-      if (wallet) {
-        await wallet.update({ diamond: wallet.diamond + Number(tx.amount) })
+      const user = await User.findByPk(tx.userId)
+      if (user) {
+        await user.update({ giftIncome: (user.giftIncome || 0) + Number(tx.amount) })
         extra.refundedAt = new Date().toISOString()
       }
     }
 
     await tx.update({
-      remark: action === 'approve' ? '礼物提现已审核通过' : '礼物提现已拒绝（钻石已退还）',
+      remark: action === 'approve' ? '礼物提现已审核通过' : '礼物提现已拒绝（礼物收入已退还）',
       extra
     })
-    success(res, null, action === 'approve' ? '提现已通过' : '提现已拒绝，钻石已退还')
+    success(res, null, action === 'approve' ? '提现已通过' : '提现已拒绝，礼物收入已退还')
+  } catch (err) { next(err) }
+})
+
+/** 礼物记录（送礼记录列表） */
+router.get('/gifts/records', async (req, res, next) => {
+  try {
+    const { page = 1, pageSize = 20, userId, giftId, startDate, endDate } = req.query
+    const where = {}
+    if (userId) where[Op.or] = [{ senderId: userId }, { receiverId: userId }]
+    if (giftId) where.giftId = giftId
+    if (startDate || endDate) {
+      where.createdAt = {}
+      if (startDate) where.createdAt[Op.gte] = new Date(startDate)
+      if (endDate) where.createdAt[Op.lte] = new Date(endDate + 'T23:59:59')
+    }
+    const { rows, count } = await GiftRecord.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      offset: (page - 1) * pageSize,
+      limit: Number(pageSize)
+    })
+    const list = []
+    for (const r of rows) {
+      const j = r.toJSON()
+      const [sender, receiver] = await Promise.all([
+        User.findByPk(j.senderId, { attributes: ['id', 'nickname', 'avatar'] }),
+        User.findByPk(j.receiverId, { attributes: ['id', 'nickname', 'avatar'] })
+      ])
+      j.sender = sender ? sender.toJSON() : null
+      j.receiver = receiver ? receiver.toJSON() : null
+      list.push(j)
+    }
+    paginate(res, list, count, page, pageSize)
   } catch (err) { next(err) }
 })
 

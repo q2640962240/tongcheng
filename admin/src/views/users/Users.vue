@@ -305,7 +305,7 @@
         </el-form-item>
 
         <el-form-item label="业务标签">
-          <el-checkbox v-model="form.isProvider">服务者（可接单）</el-checkbox>
+          <el-checkbox v-model="form.isProvider">发布者（可接单）</el-checkbox>
           <el-checkbox v-model="form.isElite" style="margin-left: 16px;">精英认证</el-checkbox>
         </el-form-item>
 

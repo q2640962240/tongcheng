@@ -116,6 +116,8 @@ router.get('/discover', optionalAuth, async (req, res, next) => {
     const normalized = allRows.map(u => {
       const avatar = String(u.avatar || '').trim() || DEFAULT_AVATAR
       const nickname = String(u.nickname || `用户#${u.id}`).trim()
+      const lastActive = u.lastActiveAt ? new Date(u.lastActiveAt) : null
+      const isOnline = lastActive && (Date.now() - lastActive.getTime()) < 5 * 60 * 1000
       return {
         id: u.id, nickname, avatar,
         gender: u.gender != null ? Number(u.gender) : 0,
@@ -124,7 +126,8 @@ router.get('/discover', optionalAuth, async (req, res, next) => {
         isElite: !!u.isElite,
         realPersonStatus: u.realPersonStatus || '',
         servicesTitles: serviceTitleByUser.get(u.id) || [],
-        tags: (u.bio ? String(u.bio).split(/[,，、\s]+/).filter(Boolean).slice(0, 3) : [])
+        tags: (u.bio ? String(u.bio).split(/[,，、\s]+/).filter(Boolean).slice(0, 3) : []),
+        isOnline: !!isOnline
       }
     })
     const filtered = normalized.filter(u => {

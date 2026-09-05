@@ -87,10 +87,10 @@
           <text class="detail-price-num">{{ selectedGift.price }}</text>
         </view>
         <view class="detail-hint">
-          <text class="detail-hint-text">前往聊天页面，点击礼物按钮即可发送此礼物给好友</text>
+          <text class="detail-hint-text">{{ receiverId ? '点击下方按钮直接在聊天中发送此礼物给TA' : '前往聊天页面，点击礼物按钮即可发送此礼物给好友' }}</text>
         </view>
         <view class="detail-btn" @tap="goChat">
-          <text class="detail-btn-text">去聊天中发送</text>
+          <text class="detail-btn-text">{{ receiverId ? '发送给TA' : '去聊天中发送' }}</text>
         </view>
       </view>
     </view>
@@ -99,7 +99,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onShow, onLoad } from '@dcloudio/uni-app'
 import { giftApi } from '@/api'
 import { useWalletStore } from '@/store/wallet'
 
@@ -111,6 +111,13 @@ const gifts = ref([])
 const loading = ref(true)
 const showDetail = ref(false)
 const selectedGift = ref({})
+const receiverId = ref('')
+
+onLoad((options) => {
+  if (options?.receiverId) {
+    receiverId.value = options.receiverId
+  }
+})
 
 /** 礼物收入转元显示（后端单位：分） */
 const giftIncomeYuan = computed(() => {
@@ -171,7 +178,11 @@ const isEmoji = (str) => {
 /** 跳转聊天 */
 const goChat = () => {
   showDetail.value = false
-  uni.switchTab({ url: '/TUIKit/components/TUIConversation/index' })
+  if (receiverId.value) {
+    uni.navigateTo({ url: `/pages/chat/chat?userId=${receiverId.value}` })
+  } else {
+    uni.switchTab({ url: '/TUIKit/components/TUIConversation/index' })
+  }
 }
 
 /** 页面显示时刷新数据 */

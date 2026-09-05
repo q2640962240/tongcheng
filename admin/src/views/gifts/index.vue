@@ -32,6 +32,13 @@
               </template>
             </el-table-column>
             <el-table-column prop="sort" label="排序" width="80" />
+            <el-table-column label="动画等级" width="120">
+              <template #default="{ row }">
+                <el-tag :type="['info','success','warning','danger'][row.animationLevel || 0]" size="small">
+                  {{ ['无动画','小飘动','中横幅','全屏特效'][row.animationLevel || 0] }}
+                </el-tag>
+              </template>
+            </el-table-column>
             <el-table-column label="状态" width="100">
               <template #default="{ row }">
                 <el-tag :type="row.active ? 'success' : 'info'" size="small">
@@ -62,6 +69,14 @@
             </el-form-item>
             <el-form-item label="排序权重">
               <el-input-number v-model="giftForm.sort" :min="0" :max="999" />
+            </el-form-item>
+            <el-form-item label="动画等级">
+              <el-select v-model="giftForm.animationLevel" style="width: 100%">
+                <el-option :value="0" label="0 - 无动画" />
+                <el-option :value="1" label="1 - 小飘动（~2s）" />
+                <el-option :value="2" label="2 - 中型横幅+光效" />
+                <el-option :value="3" label="3 - 全屏特效" />
+              </el-select>
             </el-form-item>
             <el-form-item label="上架状态">
               <el-switch v-model="giftForm.active" active-color="#d4af37" />
@@ -122,7 +137,46 @@
         </el-card>
       </el-tab-pane>
 
-      <!-- Tab 3: 系统配置 -->
+      <!-- Tab 3: 礼物记录 -->
+      <el-tab-pane label="礼物记录" name="records">
+        <div class="tab-toolbar">
+          <el-input v-model="recordFilter.userId" placeholder="用户 ID" clearable style="width: 120px" />
+          <el-date-picker v-model="recordFilter.dateRange" type="daterange" start-placeholder="开始日期" end-placeholder="结束日期" value-format="YYYY-MM-DD" style="width: 260px" />
+          <el-button type="primary" @click="loadRecords">查询</el-button>
+        </div>
+
+        <el-card class="card">
+          <el-table :data="recordList" v-loading="recordLoading" stripe style="width: 100%">
+            <el-table-column prop="id" label="ID" width="70" />
+            <el-table-column label="送礼人" min-width="120">
+              <template #default="{ row }">
+                <div class="user-cell">
+                  <el-avatar :size="24" :src="row.sender?.avatar">{{ (row.sender?.nickname || 'U')[0] }}</el-avatar>
+                  <span>{{ row.sender?.nickname || `用户${row.senderId}` }}</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="收礼人" min-width="120">
+              <template #default="{ row }">
+                <div class="user-cell">
+                  <el-avatar :size="24" :src="row.receiver?.avatar">{{ (row.receiver?.nickname || 'U')[0] }}</el-avatar>
+                  <span>{{ row.receiver?.nickname || `用户${row.receiverId}` }}</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column prop="giftName" label="礼物" width="120" />
+            <el-table-column prop="quantity" label="数量" width="70" />
+            <el-table-column label="钻石" width="100">
+              <template #default="{ row }">
+                <span class="diamond-text">💎 {{ row.diamondAmount }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="createdAt" label="时间" width="170" />
+          </el-table>
+        </el-card>
+      </el-tab-pane>
+
+      <!-- Tab 4: 系统配置 -->
       <el-tab-pane label="系统配置" name="config">
         <el-card class="card config-card">
           <el-form :model="configForm" label-width="140px" style="max-width: 500px">
@@ -151,9 +205,9 @@ const giftList = ref([])
 const giftLoading = ref(false)
 const giftDlgVisible = ref(false)
 const isEditGift = ref(false)
-const giftForm = reactive({ id: null, name: '', imageUrl: '', price: 10, sort: 0, active: true })
+const giftForm = reactive({ id: null, name: '', imageUrl: '', price: 10, sort: 0, active: true, animationLevel: 1 })
 
-const resetGiftForm = () => Object.assign(giftForm, { id: null, name: '', imageUrl: '', price: 10, sort: 0, active: true })
+const resetGiftForm = () => Object.assign(giftForm, { id: null, name: '', imageUrl: '', price: 10, sort: 0, active: true, animationLevel: 1 })
 
 const loadGifts = async () => {
   giftLoading.value = true
@@ -219,6 +273,26 @@ const onAuditWithdraw = async (row, action) => {
   } catch (e) { if (e !== 'cancel') ElMessage.error('审核失败: ' + (e.message || '')) }
 }
 
+// ==================== 礼物记录 ====================
+const recordList = ref([])
+const recordLoading = ref(false)
+const recordFilter = reactive({ userId: '', dateRange: null })
+
+const loadRecords = async () => {
+  recordLoading.value = true
+  try {
+    const params = { page: 1, pageSize: 100 }
+    if (recordFilter.userId) params.userId = recordFilter.userId
+    if (recordFilter.dateRange && recordFilter.dateRange.length === 2) {
+      params.startDate = recordFilter.dateRange[0]
+      params.endDate = recordFilter.dateRange[1]
+    }
+    const r = await giftManageApi.records(params)
+    recordList.value = r.list || r.rows || r || []
+  } catch (e) { ElMessage.error('加载礼物记录失败: ' + (e.message || '')) }
+  finally { recordLoading.value = false }
+}
+
 // ==================== 系统配置 ====================
 const configForm = reactive({ withdrawRatio: 0.7 })
 const configSaving = ref(false)
@@ -240,11 +314,12 @@ const onSaveConfig = async () => {
 }
 
 // ==================== Tab 切换时按需加载 ====================
-const tabLoadMap = { gifts: false, withdraw: false, config: false }
+const tabLoadMap = { gifts: false, withdraw: false, records: false, config: false }
 
 const loadByTab = (tab) => {
   if (tab === 'gifts' && !tabLoadMap.gifts) { loadGifts(); tabLoadMap.gifts = true }
   if (tab === 'withdraw' && !tabLoadMap.withdraw) { loadWithdrawals(); tabLoadMap.withdraw = true }
+  if (tab === 'records' && !tabLoadMap.records) { loadRecords(); tabLoadMap.records = true }
   if (tab === 'config' && !tabLoadMap.config) { loadConfig(); tabLoadMap.config = true }
 }
 

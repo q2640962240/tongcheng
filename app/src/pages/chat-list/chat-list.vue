@@ -87,6 +87,13 @@ function avatarOf(s) {
 function lastText(s) {
   if (s.lastMessageType === 'image') return '[图片]'
   if (s.lastMessageType === 'voice') return '[语音]'
+  if (s.lastMessageType === 'video') return '[视频]'
+  if (s.lastMessageType === 'gift') {
+    try {
+      const gc = JSON.parse(s.lastMessage || '{}')
+      return `[礼物] ${gc.giftName || '礼物'}`
+    } catch (_) { return '[礼物]' }
+  }
   const t = String(s.lastMessage || '')
   return t.length > 30 ? t.slice(0, 30) + '…' : t
 }
@@ -133,7 +140,16 @@ function setupSocket() {
     const sid = [myId, otherId].sort((a, b) => Number(a) - Number(b)).join('-')
     const arr = [...sessions.value]
     const idx = arr.findIndex(x => x.sessionId === sid)
-    const preview = msg.type === 'image' ? '[图片]' : msg.type === 'voice' ? '[语音]' : String(msg.content || '')
+    let preview = String(msg.content || '')
+    if (msg.type === 'image') preview = '[图片]'
+    else if (msg.type === 'voice') preview = '[语音]'
+    else if (msg.type === 'video') preview = '[视频]'
+    else if (msg.type === 'gift') {
+      try {
+        const gc = JSON.parse(msg.content || '{}')
+        preview = `[礼物] ${gc.giftName || '礼物'}`
+      } catch (_) { preview = '[礼物]' }
+    }
     if (idx >= 0) {
       const s = { ...arr[idx], lastMessage: preview, lastMessageType: msg.type, lastMessageTime: msg.createdAt || Date.now() }
       if (!fromMe) s.unreadCount = (s.unreadCount || 0) + 1

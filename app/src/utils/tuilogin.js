@@ -52,6 +52,7 @@ function _onConversationListUpdated(event) {
       const toUserId = String(conv.conversationID).replace(/^C2C/, '')
       if (!toUserId) continue
       const timType = lm.type || 'TIMTextElem'
+      if (timType === 'TIMCustomElem') continue
       const type = timType === 'TIMImageElem' ? 'image'
         : timType === 'TIMSoundElem' ? 'voice'
         : timType === 'TIMFileElem' ? 'file'

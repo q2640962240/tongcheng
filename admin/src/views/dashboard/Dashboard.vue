@@ -31,6 +31,21 @@
       </el-col>
     </el-row>
 
+    <!-- 礼物统计 -->
+    <el-row :gutter="16" class="stat-row">
+      <el-col :span="8" v-for="card in giftStatCards" :key="card.label">
+        <div class="stat-card gift-stat">
+          <div class="stat-icon" :style="{ background: card.bg, color: card.color }">
+            <el-icon :size="28"><component :is="card.icon" /></el-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">{{ card.value }}</div>
+            <div class="stat-label">{{ card.label }}</div>
+          </div>
+        </div>
+      </el-col>
+    </el-row>
+
     <!-- 待办 -->
     <el-row :gutter="16" class="stat-row">
       <el-col :span="12">
@@ -85,7 +100,7 @@ const stats = ref({
 const statCards = ref([
   { label: '总用户数', value: 0, icon: 'User', bg: '#fff9c4', color: '#b45309' },
   { label: '总订单数', value: 0, icon: 'List', bg: '#e0f2fe', color: '#0ea5e9' },
-  { label: '服务总数', value: 0, icon: 'Goods', bg: '#f3e8ff', color: '#a855f7' },
+  { label: '约玩总数', value: 0, icon: 'Goods', bg: '#f3e8ff', color: '#a855f7' },
   { label: '反馈待处理', value: 0, icon: 'ChatDotRound', bg: '#fce7f3', color: '#f472b6' },
   { label: '动态总数', value: 0, icon: 'ChatLineSquare', bg: '#eef2ff', color: '#6366f1' },
   { label: '组局总数', value: 0, icon: 'UserFilled', bg: '#ecfeff', color: '#06b6d4' },
@@ -93,8 +108,14 @@ const statCards = ref([
   { label: '精英累计收入', value: '¥0', icon: 'WalletFilled', bg: '#fef3c7', color: '#b45309', gold: true },
 ])
 
+const giftStatCards = ref([
+  { label: '今日送礼次数', value: 0, icon: 'Present', bg: '#fce7f3', color: '#ec4899' },
+  { label: '今日钻石消耗', value: 0, icon: 'Diamond', bg: '#ede9fe', color: '#7c3aed' },
+  { label: '今日礼物收入', value: '¥0', icon: 'Coin', bg: '#fef3c7', color: '#d97706' },
+])
+
 const todos = ref([
-  { label: '待审核服务', count: 0 },
+  { label: '待审核约玩', count: 0 },
   { label: '待处理反馈', count: 0 },
   { label: '退款待处理', count: 0 }
 ])
@@ -111,6 +132,9 @@ const fetchDashboard = async () => {
     statCards.value[5].value = res.data.groupCount || 0
     statCards.value[6].value = res.data.elitePaidCount || 0
     statCards.value[7].value = '¥' + ((res.data.eliteRevenueFen || 0) / 100).toFixed(2)
+    giftStatCards.value[0].value = res.data.todayGiftCount || 0
+    giftStatCards.value[1].value = res.data.todayDiamondConsumed || 0
+    giftStatCards.value[2].value = '¥' + ((res.data.todayGiftIncome || 0) / 100).toFixed(2)
     todos.value[0].count = res.data.pendingServices
     todos.value[1].count = res.data.pendingFeedback
   } catch (e) {}
@@ -161,4 +185,5 @@ onMounted(fetchDashboard)
 .income-item { flex: 1; }
 .income-label { font-size: 14px; color: #737373; margin-bottom: 8px; }
 .income-value { font-size: 28px; font-weight: 700; color: #ef4444; }
+.gift-stat { border: 1px solid rgba(236,72,153,.12); }
 </style>

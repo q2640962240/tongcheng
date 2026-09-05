@@ -37,7 +37,7 @@
         </el-select>
         <el-button type="primary" @click="loadData">查询</el-button>
         <div style="flex:1" />
-        <el-button type="success" @click="openCreateDialog">+ 指定用户上架服务</el-button>
+        <el-button type="success" @click="openCreateDialog">+ 指定用户发布约玩</el-button>
         <el-button link type="primary" @click="router.push('/services/categories')">前往分类管理 →</el-button>
       </div>
       <el-alert
@@ -45,7 +45,7 @@
         type="info"
         :closable="false"
         show-icon
-        title="正在加载服务分类…"
+        title="正在加载约玩分类…"
         style="margin-top: 12px;"
       />
       <el-alert
@@ -53,7 +53,7 @@
         type="warning"
         :closable="false"
         show-icon
-        title="服务分类尚未初始化，筛选下拉使用内置兜底数据。建议前往分类管理初始化。"
+        title="约玩分类尚未初始化，筛选下拉使用内置兜底数据。建议前往分类管理初始化。"
         style="margin-top: 12px;"
       />
     </div>
@@ -61,7 +61,7 @@
     <div class="page-card">
       <el-table :data="list" v-loading="loading" border stripe>
         <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="title" label="服务标题" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="title" label="约玩标题" min-width="160" show-overflow-tooltip />
         <el-table-column label="顶级分类" width="120">
           <template #default="{ row }">
             <el-tag size="small" type="warning" effect="plain">{{ topName(row.category) }}</el-tag>
@@ -78,7 +78,7 @@
             <span class="price-unit"> / {{ row.priceUnit || '单' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="服务者" width="150" show-overflow-tooltip>
+        <el-table-column label="发布者" width="150" show-overflow-tooltip>
           <template #default="{ row }">
             {{ row.provider?.nickname || `ID:${row.providerId}` }}
           </template>
@@ -118,13 +118,13 @@
     <!-- 指定用户上架服务 对话框 -->
     <el-dialog
       v-model="createDialog.visible"
-      title="为指定用户上架服务"
+      title="为指定用户发布约玩"
       width="640px"
       :close-on-click-modal="false"
       @close="resetCreateForm"
     >
       <el-form :model="createForm" label-width="100px" ref="createFormRef" :rules="createRules">
-        <el-form-item label="服务者" prop="userId">
+        <el-form-item label="发布者" prop="userId">
           <el-select
             v-model="createForm.userId"
             filterable
@@ -143,10 +143,10 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="服务标题" prop="title">
+        <el-form-item label="约玩标题" prop="title">
           <el-input v-model="createForm.title" maxlength="80" show-word-limit placeholder="例如：王者荣耀钻石上分陪玩" />
         </el-form-item>
-        <el-form-item label="服务分类" prop="category">
+        <el-form-item label="约玩分类" prop="category">
           <el-select v-model="createForm.category" placeholder="顶级分类" style="width: 48%" @change="createForm.subCategory = ''">
             <el-option v-for="t in topCategories" :key="t.key" :label="t.name" :value="t.key" />
           </el-select>
@@ -173,11 +173,11 @@
         <el-form-item label="时长(分钟)" prop="duration">
           <el-input-number v-model="createForm.duration" :min="0" :step="15" placeholder="可选" style="width: 200px" />
         </el-form-item>
-        <el-form-item label="服务封面" prop="coverImage">
+        <el-form-item label="约玩封面" prop="coverImage">
           <el-input v-model="createForm.coverImage" placeholder="图片URL，留空则使用默认封面" clearable />
         </el-form-item>
-        <el-form-item label="服务描述" prop="description">
-          <el-input type="textarea" v-model="createForm.description" :rows="4" maxlength="500" show-word-limit placeholder="服务介绍、亮点、下单须知等" />
+        <el-form-item label="约玩描述" prop="description">
+          <el-input type="textarea" v-model="createForm.description" :rows="4" maxlength="500" show-word-limit placeholder="约玩介绍、亮点、说明等" />
         </el-form-item>
         <el-form-item label="标签" prop="tagsText">
           <el-input v-model="createForm.tagsText" placeholder="多个标签用英文逗号分隔，如：开黑,上分,温柔声线" />
@@ -219,7 +219,7 @@ const pageSize = ref(20)
 const filters = reactive({ status: '', category: '', subCategory: '' })
 
 const LEGACY_TOP = [
-  { key: 'warm', name: '暖心服务', visible: true },
+  { key: 'warm', name: '暖心约玩', visible: true },
   { key: 'game', name: '游戏陪玩', visible: true },
   { key: 'offline', name: '兴趣约玩', visible: true }
 ]
@@ -228,7 +228,7 @@ const LEGACY_SUB = {
     { key: 'virtual-lover', name: '虚拟恋人' },
     { key: 'sing', name: '给你唱歌' },
     { key: 'sleep', name: '哄睡电台' },
-    { key: 'wake', name: '叫醒服务' }
+    { key: 'wake', name: '叫醒问候' }
   ],
   game: [
     { key: 'wzry', name: '王者荣耀' },
@@ -306,7 +306,7 @@ const loadData = async () => {
     list.value = res.data.list || []
     total.value = res.data.total || 0
   } catch (e) {
-    ElMessage.error('加载服务列表失败')
+    ElMessage.error('加载约玩列表失败')
   } finally {
     loading.value = false
   }
@@ -357,9 +357,9 @@ const defaultCreateForm = () => ({
 })
 const createForm = reactive(defaultCreateForm())
 const createRules = {
-  userId: [{ required: true, message: '请选择服务者用户', trigger: 'change' }],
+  userId: [{ required: true, message: '请选择发布者用户', trigger: 'change' }],
   title: [
-    { required: true, message: '请输入服务标题', trigger: 'blur' },
+    { required: true, message: '请输入约玩标题', trigger: 'blur' },
     { min: 2, max: 80, message: '标题长度 2~80', trigger: 'blur' }
   ],
   category: [{ required: true, message: '请选择顶级分类', trigger: 'change' }],
@@ -368,7 +368,7 @@ const createRules = {
 
 const openCreateDialog = () => {
   if (!topCategories.value || !topCategories.value.length) {
-    ElMessage.warning('服务分类尚未初始化，请先前往分类管理初始化')
+    ElMessage.warning('约玩分类尚未初始化，请先前往分类管理初始化')
     return
   }
   createDialog.visible = true
@@ -431,7 +431,7 @@ const submitCreateForm = async () => {
       status: createForm.status
     }
     await createServiceForUser(payload)
-    ElMessage.success('服务已成功上架')
+    ElMessage.success('约玩已成功上架')
     createDialog.visible = false
     resetCreateForm()
     loadData()

@@ -262,12 +262,19 @@ router.get('/sessions', auth, async (req, res, next) => {
       const sid = sessionId(req.userId, otherId)
       if (!sessionMap.has(sid)) {
         const other = await User.findByPk(otherId)
+        let preview = m.content
+        if (m.type === 'gift') {
+          try {
+            const gc = JSON.parse(m.content || '{}')
+            preview = `[礼物] ${gc.giftName || '礼物'}`
+          } catch (_) { preview = '[礼物]' }
+        }
         sessionMap.set(sid, {
           sessionId: sid,
           otherUser: other ? {
             id: other.id, nickname: other.nickname, avatar: other.avatar, isElite: other.isElite
           } : null,
-          lastMessage: m.content,
+          lastMessage: preview,
           lastMessageType: m.type,
           lastMessageTime: m.createdAt,
           unreadCount: 0

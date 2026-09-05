@@ -39,7 +39,7 @@
             <div class="session-names">
               {{ s.participants.map((p) => `${p.nickname || '用户' + p.id}${p.userType === 'ai' ? '(AI)' : ''}`).join(' ↔ ') || s.sessionId }}
             </div>
-            <div class="session-last">{{ s.lastMessage.content || '[非文本消息]' }}</div>
+            <div class="session-last">{{ formatLastMessage(s.lastMessage) }}</div>
           </div>
           <div class="session-meta">
             <div class="session-count">{{ s.count }} 条</div>
@@ -73,6 +73,7 @@
                   </div>
                   <div class="msg-bubble">
                     <img v-if="m.type === 'image' && isHttpUrl(m.content)" :src="m.content" class="msg-img" />
+                    <span v-else-if="m.type === 'gift'" class="msg-gift">🎁 [礼物] {{ parseGiftName(m.content) }}</span>
                     <span v-else>{{ m.type === 'text' ? m.content : `[${m.type}] ${m.content || ''}` }}</span>
                   </div>
                 </div>
@@ -125,6 +126,21 @@ const fmtTime = (t) => {
 }
 
 const isHttpUrl = (s) => /^https?:\/\//.test(String(s || ''))
+
+const parseGiftName = (content) => {
+  try {
+    const obj = typeof content === 'string' ? JSON.parse(content) : content
+    return obj?.name || obj?.giftName || '未知礼物'
+  } catch { return '未知礼物' }
+}
+
+const formatLastMessage = (msg) => {
+  if (!msg) return '[无消息]'
+  if (msg.type === 'gift') return `🎁 [礼物] ${parseGiftName(msg.content)}`
+  if (msg.type === 'text') return msg.content || ''
+  if (msg.type === 'image') return '[图片]'
+  return `[${msg.type || '非文本'}消息]`
+}
 
 const loadSessions = async () => {
   sessionLoading.value = true

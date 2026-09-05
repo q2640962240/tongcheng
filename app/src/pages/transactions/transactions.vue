@@ -63,7 +63,7 @@ const total = ref(0)
 
 const typeMap = {
   recharge: '充值', exchange: '兑换', consume: '消费',
-  income: '服务收入', withdraw: '提现', refund: '退款', reward: '分红奖励'
+  income: '约玩收入', withdraw: '提现', refund: '退款', reward: '分红奖励'
 }
 
 const INCOME_TYPES = ['recharge', 'income', 'refund', 'reward']

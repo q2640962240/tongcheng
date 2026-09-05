@@ -84,6 +84,16 @@ const User = sequelize.define('User', {
     defaultValue: 0,
     comment: '礼物收入余额（可提现）'
   },
+  lastActiveAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    comment: '最后活跃时间（用于在线状态判断）'
+  },
+  charmValue: {
+    type: DataTypes.BIGINT,
+    defaultValue: 0,
+    comment: '魅力值=累计收到钻石'
+  },
   meta: {
     type: DataTypes.JSON,
     allowNull: true,
@@ -99,7 +109,8 @@ const User = sequelize.define('User', {
     { fields: ['is_elite'] },
     { fields: ['is_provider'] },
     { fields: ['inviter_id'] },
-    { fields: ['user_type'] }
+    { fields: ['user_type'] },
+    { fields: ['last_active_at'] }
   ]
 })
 

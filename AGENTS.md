@@ -1,10 +1,10 @@
-# AGENTS.md — 白夜陪玩项目 AI 交接入口
+# AGENTS.md — 白夜项目 AI 交接入口
 
 > 给下一位 AI 同事的快速入口。完整交接文档见 `docs/HANDOVER.md`。
 
 ## 项目一句话
 
-白夜陪玩 (BaiYe) — 同城陪伴服务平台。uni-app 三端 (H5/小程序/App) + Express 后端 + Vue 3 管理后台 + 腾讯 IM 聊天。线上运行中：https://zyb001.cn
+白夜 (BaiYe) — 聊天送礼社交平台。uni-app 三端 (H5/小程序/App) + Express 后端 + Vue 3 管理后台 + 腾讯 IM 聊天 + 聊天内送礼系统。线上运行中：https://zyb001.cn
 
 ## 技术栈
 
@@ -46,16 +46,23 @@ cd admin && npm install && npm run dev
 cd app && npm install && npm run dev:h5
 ```
 
-## 关键架构：聊天双模
+## 关键架构
 
-聊天模块是项目最复杂的部分，采用**双模架构**：
+### 聊天双模
 
 - **主通道**: 官方 TUIKit (TUIChat + TUIConversation)
 - **兜底**: 自建 Socket.IO (chatSocket.js)
 - **数据流**: DB (/chat/*) 为准 → IM v4 REST 桥接腾讯 IM 云
 - **关键文件**: `app/src/utils/tuilogin.js`, `app/src/utils/msgNotify.js`, `app/src/utils/chatSocket.js`
 
-详见 `docs/HANDOVER.md` 第三节。
+### 礼物系统 (核心业务)
+
+- **送礼**: POST /api/gifts/send → 事务(扣钻→加收入→创建GiftRecord→创建Message) → WS广播 → IM转发
+- **动画**: GiftAnimation 组件，4级效果 (L0无/L1小飘/L2横幅/L3全屏)
+- **经济**: 钻石(充值) → 送礼消耗 → 收礼获 giftIncome(分) → 提现
+- **关键文件**: `server/src/routes/gifts.js`, `app/src/components/GiftPanel.vue`, `app/src/components/GiftAnimation.vue`
+
+详见 `docs/HANDOVER.md` 第三/三½节。
 
 ## 已知坑点 (必读)
 
@@ -65,6 +72,8 @@ cd app && npm install && npm run dev:h5
 4. **v4 REST identifier 必须是管理员账号** — 否则报 60010
 5. **cloudSecretId/Key 未配置** — 不要用 TC3 云 API，v4 REST 是可用路径
 6. **APK 需 HBuilderX 本地打包** — TUIKit 需本地编译
+7. **giftIncome 单位为分** — API/存储用分，UI ÷100 显示元
+8. **im-sync 跳过自定义消息** — 防止礼物消息双写入
 
 ## 服务器信息
 
@@ -82,8 +91,9 @@ cd app && npm install && npm run dev:h5
 
 1. Android APK 打包 (HBuilderX 本地)
 2. 配置中心填写真实密钥 (短信/支付/OSS/推送)
-3. APK 震动功能真机测试
-4. 会话列表深色主题适配
+3. 钻石充值接入微信/支付宝支付
+4. 礼物素材正式设计 (当前 emoji 占位)
+5. 会话列表深色主题适配
 
 ## 文档索引
 
@@ -96,4 +106,4 @@ cd app && npm install && npm run dev:h5
 
 ---
 
-*最后更新: 2026-09-02*
+*最后更新: 2026-09-06*

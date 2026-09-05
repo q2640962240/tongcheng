@@ -205,6 +205,15 @@
         "backgroundColor": "#0B0F1A",
         "app-plus": { "background": "#0B0F1A" }
       }
+    },
+    {
+      "path": "pages/gift-rank/gift-rank",
+      "style": {
+        "navigationBarTitleText": "礼物排行榜",
+        "navigationStyle": "custom",
+        "backgroundColor": "#0B0F1A",
+        "app-plus": { "background": "#0B0F1A" }
+      }
     }
   ],
   "globalStyle": {

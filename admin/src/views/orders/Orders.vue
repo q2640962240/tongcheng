@@ -13,7 +13,7 @@
     <div class="page-card">
       <el-table :data="list" v-loading="loading" border>
         <el-table-column prop="orderNo" label="订单号" width="220" />
-        <el-table-column prop="serviceTitle" label="服务" min-width="160" />
+        <el-table-column prop="serviceTitle" label="约玩" min-width="160" />
         <el-table-column prop="amount" label="金额(星币)" width="120" />
         <el-table-column prop="quantity" label="数量" width="80" />
         <el-table-column label="状态" width="100">

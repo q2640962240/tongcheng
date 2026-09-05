@@ -26,6 +26,16 @@ const GiftRecord = sequelize.define('GiftRecord', {
   diamondAmount: {
     type: DataTypes.INTEGER,
     allowNull: false
+  },
+  quantity: {
+    type: DataTypes.INTEGER,
+    defaultValue: 1,
+    comment: '送礼数量'
+  },
+  messageId: {
+    type: DataTypes.BIGINT.UNSIGNED,
+    allowNull: true,
+    comment: '关联消息ID'
   }
 }, {
   tableName: 'gift_records',

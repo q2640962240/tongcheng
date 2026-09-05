@@ -7,6 +7,7 @@ export const useWalletStore = defineStore('wallet', {
     diamond: 0,      // 钻石（充值币）
     starCoin: 0,     // 星币（消费币）
     income: 0,       // 可提现收入（分）
+    giftIncome: 0,   // 礼物收入（分）
     withdrawable: 0  // 可提现金额
   }),
   actions: {
@@ -16,6 +17,7 @@ export const useWalletStore = defineStore('wallet', {
       this.diamond = res.data.diamond
       this.starCoin = res.data.starCoin
       this.income = res.data.income
+      this.giftIncome = res.data.giftIncome ?? 0
       this.withdrawable = res.data.withdrawable
       return res.data
     },

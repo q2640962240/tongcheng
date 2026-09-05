@@ -2,9 +2,9 @@
   <view class="page">
     <!-- 余额 -->
     <view class="balance-card">
-      <text class="bal-label">可提现收入（元）</text>
-      <text class="bal-num">{{ fenToYuan(wallet.income) }}</text>
-      <text class="bal-tip">服务收入扣除平台抽成后的金额</text>
+      <text class="bal-label">可提现礼物收入（元）</text>
+      <text class="bal-num">{{ fenToYuan(wallet.giftIncome) }}</text>
+      <text class="bal-tip">收到礼物后平台按分成比例结算的金额</text>
     </view>
 
     <!-- 提现金额 -->
@@ -62,15 +62,16 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useWalletStore } from '../../store/wallet'
+import { giftApi } from '../../api'
 import { fenToYuan } from '../../utils/format'
 
 const walletStore = useWalletStore()
-const wallet = computed(() => ({ income: walletStore.income }))
+const wallet = computed(() => ({ giftIncome: walletStore.giftIncome }))
 const amount = ref(null)
 const method = ref('wechat')
 const submitting = ref(false)
 
-const incomeYuan = computed(() => (Number(walletStore.income) / 100))
+const incomeYuan = computed(() => (Number(walletStore.giftIncome) / 100))
 const remainYuan = computed(() => {
   const remain = incomeYuan.value - (Number(amount.value) || 0)
   return Math.max(remain, 0).toFixed(2)
@@ -90,7 +91,7 @@ const onWithdraw = () => {
       if (res.confirm) {
         submitting.value = true
         try {
-          await walletStore.withdraw(Number(amount.value))
+          await giftApi.withdraw({ amount: Number(amount.value) * 100 })
           uni.showToast({ title: '提现申请已提交', icon: 'success' })
           amount.value = null
           await walletStore.fetchBalance()

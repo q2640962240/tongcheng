@@ -459,6 +459,34 @@ function sendIMC2CTextV4({ cfg, fromUserId, toUserId, text }) {
   })
 }
 
+/**
+ * 老版 REST 以 fromUserId 身份单发一条自定义消息给 toUserId
+ * 用于礼物卡片等非文本消息。MsgBody 为 TIMCustomElem。
+ */
+function sendIMC2CCustomV4({ cfg, fromUserId, toUserId, data, desc }) {
+  return callImRestV4({
+    cfg,
+    identifier: String((cfg && cfg.adminUserId) || 'administrator'),
+    service: 'openim',
+    cmd: 'sendmsg',
+    body: {
+      SyncOtherMachine: 2,
+      From_Account: String(fromUserId),
+      To_Account: String(toUserId),
+      MsgRandom: Math.floor(Math.random() * 0x7fffffff),
+      MsgBody: [{
+        MsgType: 'TIMCustomElem',
+        MsgContent: {
+          Data: Buffer.from(JSON.stringify(data)).toString('base64'),
+          Desc: String(desc || ''),
+          Ext: '',
+          Sound: ''
+        }
+      }]
+    }
+  })
+}
+
 module.exports = {
   genUserSig,
   genPrivateMapKey,
@@ -468,6 +496,7 @@ module.exports = {
   callImRestV4,
   importIMAccountV4,
   sendIMC2CTextV4,
+  sendIMC2CCustomV4,
   // 工具函数暴露方便测试
   _b64Escape,
   _b64Unescape,

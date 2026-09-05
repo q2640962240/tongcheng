@@ -35,13 +35,13 @@ const routes = [
         path: 'services',
         name: 'Services',
         component: () => import('../views/services/Services.vue'),
-        meta: { title: '服务管理', icon: 'Goods' }
+        meta: { title: '约玩管理', icon: 'Goods' }
       },
       {
         path: 'services/categories',
         name: 'ServiceCategories',
         component: () => import('../views/services/Categories.vue'),
-        meta: { title: '服务分类管理', icon: 'Menu' }
+        meta: { title: '约玩分类管理', icon: 'Menu' }
       },
       {
         path: 'orders',

@@ -24,7 +24,7 @@
         </view>
         <view class="benefit">
           <text class="b-icon">🌟</text>
-          <text class="b-text">高阶服务解锁</text>
+          <text class="b-text">高阶特权解锁</text>
         </view>
         <view class="benefit">
           <text class="b-icon">💎</text>

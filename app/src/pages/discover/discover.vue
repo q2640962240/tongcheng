@@ -78,7 +78,10 @@
           class="finder-card card"
           @tap="goUser(u)"
         >
-          <image class="finder-avatar" :src="u.avatar" mode="aspectFill" />
+          <view class="finder-avatar-wrap">
+            <image class="finder-avatar" :src="u.avatar" mode="aspectFill" />
+            <view v-if="u.isOnline" class="finder-online-dot"></view>
+          </view>
           <view class="finder-info">
             <view class="finder-top">
               <text class="finder-name">{{ u.nickname }}</text>
@@ -604,7 +607,8 @@ const loadFinder = async () => {
       bio: toStr(getPath(u, 'bio'), '这个人很神秘，什么也没留下～'),
       tags: pickTags(getPath(u, 'tags') || (getPath(u, 'city') ? [getPath(u, 'city')] : []), 3),
       isElite: toBool(getPath(u, 'isElite'), false),
-      realPersonStatus: toStr(getPath(u, 'realPersonStatus'), '')
+      realPersonStatus: toStr(getPath(u, 'realPersonStatus'), ''),
+      isOnline: toBool(getPath(u, 'isOnline'), false)
     }))
     finderList.value = rows
   } catch (e) {
@@ -834,7 +838,15 @@ const onComingSoon = () => uni.showToast({ title: toStr('即将上线，敬请�
 
 .finder-list { display: flex; flex-direction: column; gap: 20rpx; }
 .finder-card { display: flex; align-items: center; gap: 20rpx; padding: 20rpx !important; }
-.finder-avatar { width: 120rpx; height: 120rpx; border-radius: 32rpx; flex-shrink: 0; background: $by-surface-2; }
+.finder-avatar-wrap { position: relative; flex-shrink: 0; }
+.finder-avatar { width: 120rpx; height: 120rpx; border-radius: 32rpx; background: $by-surface-2; }
+.finder-online-dot {
+  position: absolute; right: 4rpx; bottom: 4rpx;
+  width: 22rpx; height: 22rpx; border-radius: 9999rpx;
+  background: $by-success;
+  border: 3rpx solid $by-card-bg;
+  box-shadow: 0 0 8rpx color.adjust($by-success, $alpha: 0.6);
+}
 .finder-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8rpx; }
 .finder-top { display: flex; align-items: center; gap: 10rpx; flex-wrap: wrap; }
 .finder-name { font-size: 30rpx; font-weight: 700; color: $by-text-1; }

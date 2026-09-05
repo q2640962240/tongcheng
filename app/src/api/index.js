@@ -71,6 +71,10 @@ export const giftApi = {
   income: () => get('/gifts/income'),
   // 申请提现
   withdraw: (data) => post('/gifts/withdraw', data),
+  // 排行榜
+  rank: (params) => get('/gifts/rank', params),
+  // 送礼记录
+  records: (params) => get('/gifts/records', params),
 }
 
 // ==================== 反馈 ====================

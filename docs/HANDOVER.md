@@ -1,7 +1,7 @@
 # 白夜陪玩 — AI 交接文档 (HANDOVER)
 
-> **文档版本**: v2.0 (2026-09-02)
-> **项目整体完成度**: ~95%（代码 100%，部署 100%，IM 95%）
+> **文档版本**: v3.0 (2026-09-06)
+> **项目整体完成度**: ~97%（代码 100%，部署 100%，IM 95%）
 > **本文档目的**: 让下一位 AI 同事在 10 分钟内掌握项目全貌、当前状态、未完成事项和注意事项
 
 ---
@@ -10,7 +10,7 @@
 
 | 项 | 值 |
 |---|---|
-| 项目名 | 白夜陪玩 (BaiYe) |
+| 项目名 | 白夜 (BaiYe) — 聊天送礼社交平台 |
 | 技术栈 | uni-app (Vue 3) + Express + MySQL + Docker Compose |
 | 仓库 | github.com/q2640962240/tongcheng (main 分支) |
 | 服务器 | 阿里云 ECS 2C4G, **114.55.225.77**, Aliyun Linux 3 |
@@ -18,6 +18,15 @@
 | 部署方式 | GitHub Actions CI/CD → SSH → Docker Compose |
 | 部署规则文档 | .trae/rules/deployment.md (v3.0) |
 | 线上地址 | https://zyb001.cn (H5) / https://zyb001.cn/admin/ (管理后台) |
+
+### 商业模式
+
+用户通过聊天互动建立社交关系，核心玩法是**聊天中送礼**：
+- 送礼消耗钻石（充值获得），收礼获得礼物收入（可提现）
+- 礼物按 animationLevel 分 4 级动画效果（无/小飘/横幅/全屏）
+- 魅力榜 + 豪礼榜排行榜激励
+- "约玩"系统保留（原服务系统改名，代码不变）
+- 精英会员体系保留
 
 ### 目录结构
 
@@ -61,7 +70,7 @@ companion-play-app/
 | HTTPS | https://zyb001.cn → 200 OK |
 | API | https://zyb001.cn/api/health → `{"status":"ok","driver":"mysql","dbOk":true}` |
 | 容器 | 6 个全部运行 (gateway, server, admin, h5, mysql, redis) |
-| 种子数据 | 11 用户, 15 服务, 1 管理员, 14 分类, 3 Banner, 11 帖子, 55 配置 |
+| 种子数据 | 11 用户, 15 约玩, 1 管理员, 14 分类, 3 Banner, 11 帖子, 6 礼物, 55 配置 |
 | 部署目录 | /opt/baiye |
 
 ### 紧急恢复
@@ -149,6 +158,48 @@ AI 自动回复
 
 ---
 
+## 三½、礼物系统架构 (核心业务)
+
+### 数据流
+
+```
+送礼流程 (server-authoritative):
+  POST /api/gifts/send
+    → 事务: LOCK wallet → 扣 sender.diamond → 加 receiver.giftIncome
+           → 创建 GiftRecord → 创建 Message(type='gift')
+    → WS emit 给双方房间
+    → IM v4 REST 转发 (viaIM 模式)
+    → 返回 { message, gift } 含 animationLevel
+
+动画触发:
+  发送方/接收方收到 WS/IM 消息 → 解析 type='gift' → GiftAnimation.play(gift)
+  animationLevel: 0=无, 1=小飘动+横幅, 2=中型横幅+光效, 3=全屏粒子特效
+```
+
+### 关键文件
+
+| 文件 | 说明 |
+|---|---|
+| `server/src/routes/gifts.js` | 送礼核心：扣钻→加收入→创建消息→WS→IM |
+| `server/src/models/Gift.js` | 礼物模型：name/price/animationLevel/active |
+| `server/src/models/GiftRecord.js` | 送礼记录：senderId/receiverId/giftId/quantity/messageId |
+| `server/src/models/User.js` | charmValue(魅力值=累计收到钻石), giftIncome(礼物收入,分) |
+| `app/src/components/GiftPanel.vue` | 共享礼物面板：网格+数量选择+余额检查 |
+| `app/src/components/GiftAnimation.vue` | 分级 CSS 动画组件，队列序列化 |
+| `app/src/pages/gift-rank/` | 排行榜：魅力榜+豪礼榜，日/周/总切换 |
+| `app/src/pages/gift-shop/` | 礼物商城 |
+
+### 经济模型
+
+| 项 | 说明 |
+|---|---|
+| 钻石 | 充值获得，送礼消耗 |
+| giftIncome | 收礼获得（单位：分），可提现 |
+| charmValue | 魅力值 = 累计收到钻石数，只增不减 |
+| 提现 | giftApi.withdraw → 管理员审核 → 通过后扣 giftIncome |
+
+---
+
 ## 四、部署系统 (deploy.yml v3)
 
 ### v3 四大安全规则（必读，违反必宕机）
@@ -185,7 +236,7 @@ AI 自动回复
 |---|---|---|
 | 1 | Android APK 打包 | HBuilderX 本地打包（TUIKit 需本地编译，云打包可能缺依赖） |
 | 2 | 配置中心填写真实密钥 | 短信/支付/OSS/推送 4 模块 (管理后台 → 系统设置) |
-| 3 | APK 震动测试 | msgNotify.js 的震动功能需真机验证 |
+| 3 | 钻石充值接入支付 | 当前钻石余额需手动后台调整，需接入微信/支付宝支付 |
 
 ### 中优先级
 
@@ -195,12 +246,14 @@ AI 自动回复
 | 5 | 微信小程序提审 | 打包产物已生成 |
 | 6 | 应用市场资质 | ICP 备案/软著/隐私政策 |
 | 7 | 会话列表深色主题适配 | 贴合白夜午夜蓝风格 |
+| 8 | 礼物素材补充 | 当前种子礼物用 emoji 占位，需设计正式图片 |
 
 ### 低优先级
 
 | # | 事项 | 说明 |
 |---|---|---|
-| 8 | 监控告警搭建 | API 错误率/订单成功率/UGC 审核积压 |
+| 9 | 监控告警搭建 | API 错误率/送礼成功率/UGC 审核积压 |
+| 10 | 送礼并发安全 | /gifts/send 当前 LOCK.UPDATE 需压力测试验证 |
 
 ---
 
@@ -271,6 +324,10 @@ curl -sk https://zyb001.cn/ | grep -o 'index-[A-Za-z0-9_-]*\.js'
 10. **cloudSecretId/cloudSecretKey 未配置**: 不要用 TC3 云 API 路径；v4 REST 是可用路径
 11. **APK 需本地打包**: TUIKit 需 HBuilderX 本地编译，服务器 H5 部署不影响 APK
 12. **Lite SDK 限制**: conversation.lastMessage 无 flow 字段，出站方向需通过 fromAccount === myUserId 判断
+13. **giftIncome 单位为分**: API 传输和存储都用分(fen)，UI 显示时 ÷100 转元
+14. **送礼消息双通道**: viaIM=true 走 TUIKit（IM→im-sync→DB），viaIM=false 走自建（DB→WS→IM）
+15. **im-sync 跳过自定义消息**: 防止礼物消息通过 IM 和 DB 双写入（tuilogin.js 配置）
+16. **钻石双花风险**: /gifts/send 事务内需 LOCK.UPDATE 锁 wallet 行，并发场景需压测验证
 
 ---
 
@@ -294,18 +351,23 @@ curl -sk https://zyb001.cn/ | grep -o 'index-[A-Za-z0-9_-]*\.js'
 
 ## 十一、已验证功能清单
 
-截至 2026-09-02，以下功能已在 H5 端验证通过：
+截至 2026-09-06，以下功能已在 H5 端验证通过：
 
 - [x] 用户注册/登录 (手机号+密码)
-- [x] 首页浏览 (Banner/分类/服务卡片)
-- [x] 服务详情页
+- [x] 首页浏览 (Banner/分类/动态流/在线速聊)
+- [x] 约玩系统 (原服务系统改名，浏览/发布/审核)
 - [x] 发现页 (动态广场)
 - [x] 消息 Tab (官方 TUIConversation)
 - [x] 聊天功能 (TUIKit 主通道 + 自建兜底)
+- [x] 聊天内送礼 + 分级动画 (L0-L3)
 - [x] 未读角标 + 进入清除
 - [x] AI 自动回复
-- [x] 管理后台 (用户/服务/订单/内容/聊天/设置)
-- [x] 种子数据完整
+- [x] 礼物商城 + 排行榜 (魅力榜/豪礼榜)
+- [x] 钻石经济 (送礼扣钻/收礼获收入/提现)
+- [x] 在线状态 (WS 活跃检测)
+- [x] 精英会员体系
+- [x] 管理后台 (用户/约玩/订单/礼物/内容/聊天/财务/配置)
+- [x] 种子数据完整 (含 6 个默认礼物)
 - [x] HTTPS + 自动续期
 - [x] Docker 6 容器编排
 

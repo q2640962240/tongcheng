@@ -87,19 +87,21 @@ const sendGift = async () => {
   }
   const gift = selectedGift.value
   try {
-    await giftApi.send({
+    const sendRes = await giftApi.send({
       receiverId: props.receiverId,
-      giftId: gift.id
+      giftId: gift.id,
+      viaIM: true
     })
     balance.value -= gift.price
 
-    // 发送 IM 自定义礼物消息
+    const giftData = (sendRes && sendRes.data) || {}
     const payload = {
       data: JSON.stringify({
         businessID: CHAT_MSG_CUSTOM_TYPE.GIFT,
         giftName: gift.name,
         giftImage: gift.imageUrl,
         diamondAmount: gift.price,
+        animationLevel: giftData.animationLevel || gift.animationLevel || 1,
         senderName: currentUserProfile.value?.nick || currentUserProfile.value?.userID || '',
       }),
       description: `送出了${gift.name}`,
@@ -119,7 +121,7 @@ const sendGift = async () => {
 
     uni.showToast({ title: '礼物已送出', icon: 'success' })
     selectedGift.value = null
-    emit('sent', gift)
+    emit('sent', { ...gift, animationLevel: giftData.animationLevel || gift.animationLevel || 1 })
   } catch (e) {
     uni.showToast({ title: e.message || '发送失败', icon: 'none' })
   }

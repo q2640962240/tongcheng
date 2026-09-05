@@ -95,21 +95,21 @@
           <view class="m-icon-wrap"><text class="m-icon">📝</text></view>
           <text class="m-label">我的动态</text>
         </view>
-        <view class="module-item" @tap="onNav('/pages/discover/discover?tab=groups')">
-          <view class="m-icon-wrap"><text class="m-icon">🎯</text></view>
-          <text class="m-label">我的组局</text>
+        <view class="module-item" @tap="onNav('/pages/gift-shop/gift-shop')">
+          <view class="m-icon-wrap"><text class="m-icon">🛍️</text></view>
+          <text class="m-label">礼物商城</text>
         </view>
         <view class="module-item" @tap="onNavWithLogin('/pages/follow-list/follow-list')">
           <view class="m-icon-wrap"><text class="m-icon">👥</text></view>
           <text class="m-label">关注/粉丝</text>
         </view>
-        <view class="module-item" @tap="onNavWithLogin('/pages/invite/invite')">
-          <view class="m-icon-wrap"><text class="m-icon">🎁</text></view>
-          <text class="m-label">邀请好友</text>
-        </view>
         <view class="module-item" :class="{ 'elite-on': safeIsElite }" @tap="onElite">
           <view class="m-icon-wrap aurora"><text class="m-icon">👑</text></view>
           <text class="m-label">精英特权</text>
+        </view>
+        <view class="module-item" @tap="onNav('/pages/gift-rank/gift-rank')">
+          <view class="m-icon-wrap"><text class="m-icon">🏆</text></view>
+          <text class="m-label">礼物排行</text>
         </view>
         <view class="module-item" @tap="onCustomerService">
           <view class="m-icon-wrap"><text class="m-icon">🎧</text></view>
@@ -167,7 +167,7 @@ const safeIsElite = computed(() => toBool(userStore.isElite, false))
 const safeDiamond = computed(() => toNum(walletStore.diamond, 0))
 
 const incomeYuan = computed(() => {
-  const fen = toNum(walletStore.income, 0)
+  const fen = toNum(walletStore.giftIncome, 0)
   const n = Number(fen)
   if (!Number.isFinite(n)) return '0.00'
   return (n / 100).toFixed(2)
