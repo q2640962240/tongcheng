@@ -95,6 +95,7 @@
           <el-select v-model="withdrawStatus" placeholder="状态筛选" clearable style="width: 160px" @change="loadWithdrawals">
             <el-option label="待审核" value="pending" />
             <el-option label="已通过" value="approved" />
+            <el-option label="已打款" value="paid" />
             <el-option label="已拒绝" value="rejected" />
             <el-option label="全部" value="" />
           </el-select>
@@ -111,9 +112,14 @@
                 </div>
               </template>
             </el-table-column>
-            <el-table-column label="金额(钻石)" width="120">
+            <el-table-column label="金额(分)" width="120">
               <template #default="{ row }">
                 <span class="diamond-text">💎 {{ row.amount }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="渠道" width="100">
+              <template #default="{ row }">
+                {{ row.extra?.channel === 'alipay' ? '支付宝' : '微信' }}
               </template>
             </el-table-column>
             <el-table-column prop="createdAt" label="申请时间" width="170" />
@@ -124,11 +130,14 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="180" fixed="right">
+            <el-table-column label="操作" width="260" fixed="right">
               <template #default="{ row }">
                 <template v-if="(row.extra?.status || 'pending') === 'pending'">
                   <el-button size="small" type="success" @click="onAuditWithdraw(row, 'approve')">通过</el-button>
                   <el-button size="small" type="danger" @click="onAuditWithdraw(row, 'reject')">拒绝</el-button>
+                </template>
+                <template v-else-if="row.extra?.status === 'approved'">
+                  <el-button size="small" type="primary" @click="onAuditWithdraw(row, 'paid')">确认打款</el-button>
                 </template>
                 <span v-else class="text-muted">已处理</span>
               </template>
@@ -250,8 +259,8 @@ const withdrawList = ref([])
 const withdrawLoading = ref(false)
 const withdrawStatus = ref('pending')
 
-const statusLabel = (s) => ({ pending: '待审核', approved: '已通过', rejected: '已拒绝' }[s] || '待审核')
-const statusTagType = (s) => ({ pending: 'warning', approved: 'success', rejected: 'danger' }[s] || 'warning')
+const statusLabel = (s) => ({ pending: '待审核', approved: '已通过', paid: '已打款', rejected: '已拒绝' }[s] || '待审核')
+const statusTagType = (s) => ({ pending: 'warning', approved: 'success', paid: '', rejected: 'danger' }[s] || 'warning')
 
 const loadWithdrawals = async () => {
   withdrawLoading.value = true
@@ -265,10 +274,19 @@ const loadWithdrawals = async () => {
 }
 
 const onAuditWithdraw = async (row, action) => {
-  const label = action === 'approve' ? '通过' : '拒绝'
+  const labelMap = { approve: '通过', paid: '确认打款', reject: '拒绝' }
+  const label = labelMap[action] || action
+  const typeMap = { approve: 'success', paid: 'primary', reject: 'warning' }
   try {
-    await ElMessageBox.confirm(`确认${label}该提现申请？`, '审核确认', { type: action === 'approve' ? 'success' : 'warning' })
-    await giftManageApi.withdrawAudit(row.id, { action })
+    await ElMessageBox.confirm(`确认${label}该提现申请？`, '审核确认', { type: typeMap[action] || 'info' })
+    let remark = ''
+    try {
+      const { value } = await ElMessageBox.prompt('请输入审核备注（可选）', '审核备注', {
+        confirmButtonText: '确定', cancelButtonText: '跳过', inputPlaceholder: '备注信息', type: 'info'
+      })
+      remark = value || ''
+    } catch (_) { /* 跳过备注 */ }
+    await giftManageApi.withdrawAudit(row.id, { action, remark })
     ElMessage.success(`已${label}`); loadWithdrawals()
   } catch (e) { if (e !== 'cancel') ElMessage.error('审核失败: ' + (e.message || '')) }
 }

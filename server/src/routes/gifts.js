@@ -103,6 +103,9 @@ router.post('/send', auth, async (req, res, next) => {
 
     await t.commit()
 
+    // 每日任务：标记送礼
+    try { const { markGiftSent } = require('./tasks'); markGiftSent(req.userId) } catch (_) {}
+
     // 事务后：WS 推送给双方
     try {
       const io = req.app.get('io')
@@ -161,8 +164,24 @@ router.get('/income', auth, async (req, res, next) => {
 /** 礼物排行榜 */
 router.get('/rank', async (req, res, next) => {
   try {
-    const { side = 'received', period = 'all', limit = 50 } = req.query
+    const { side = 'received', period = 'all', limit = 50, type } = req.query
     const lim = Math.min(50, Math.max(1, Number(limit) || 50))
+
+    if (type === 'charm') {
+      const users = await User.findAll({
+        attributes: ['id', 'nickname', 'avatar', 'charmValue'],
+        where: { status: 1 },
+        order: [['charmValue', 'DESC']],
+        limit: lim
+      })
+      const rank = users.map((u, i) => ({
+        rank: i + 1,
+        user: { id: u.id, nickname: u.nickname, avatar: u.avatar },
+        totalDiamond: Number(u.charmValue) || 0,
+        totalCount: 0
+      }))
+      return success(res, rank)
+    }
 
     let whereClause = {}
     if (period === 'day') {
@@ -232,7 +251,7 @@ router.get('/records', auth, async (req, res, next) => {
 router.post('/withdraw', auth, async (req, res, next) => {
   const transaction = await sequelize.transaction()
   try {
-    const { amount } = req.body
+    const { amount, channel } = req.body
     const amountNum = Number(amount)
     if (!amountNum || amountNum <= 0) return fail(res, '提现金额无效')
 
@@ -253,7 +272,8 @@ router.post('/withdraw', auth, async (req, res, next) => {
       amount: amountNum,
       currency: 'fen',
       balanceAfter: newBalance,
-      remark: '礼物收入提现申请'
+      remark: '礼物收入提现申请',
+      extra: { channel: channel || 'wechat', status: 'pending' }
     }, { transaction })
 
     await transaction.commit()

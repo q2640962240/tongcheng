@@ -137,6 +137,8 @@ router.post('/', auth, sensitiveFilter(['text', 'content', 'tags', 'remark']), a
       commentCount: 0,
       online: true
     })
+    // 每日任务：标记发动态
+    try { const { markPostCreated } = require('./tasks'); markPostCreated(req.userId) } catch (_) {}
     success(res, post.toJSON(), '发布成功')
   } catch (e) { next(e) }
 })

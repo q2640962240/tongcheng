@@ -11,8 +11,10 @@ export const getUsers = (params) => http.get('/admin/users', { params })
 export const getUserDetail = (id) => http.get(`/admin/users/${id}`)
 export const createUser = (data) => http.post('/admin/users', data)
 export const updateUser = (id, data) => http.put(`/admin/users/${id}`, data)
-export const updateUserStatus = (id, status) => http.put(`/admin/users/${id}/status`, { status })
+export const updateUserStatus = (id, status, reason) => http.put(`/admin/users/${id}/status`, { status, reason })
 export const auditElite = (id, approved) => http.put(`/admin/users/${id}/elite`, { approved })
+export const adjustBalance = (id, data) => http.post(`/admin/users/${id}/adjust-balance`, data)
+export const getBalanceHistory = (id, params) => http.get(`/admin/users/${id}/balance-history`, { params })
 
 // 服务管理
 export const getServices = (params) => http.get('/admin/services', { params })
@@ -104,4 +106,8 @@ export const giftManageApi = {
   getConfig: () => http.get('/admin/gifts/config'),
   updateConfig: (data) => http.put('/admin/gifts/config', data),
 }
+
+// ==================== 系统公告 ====================
+export const sendAnnouncement = (data) => http.post('/admin/announcements', data)
+export const getAnnouncements = (params) => http.get('/admin/announcements', { params })
 

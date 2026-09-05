@@ -47,6 +47,11 @@
       </view>
     </view>
 
+    <!-- 魅力值 -->
+    <view class="charm-bar" v-if="charmValue > 0">
+      <text class="charm-text">🌟 魅力值 {{ charmValue }}</text>
+    </view>
+
     <!-- 操作按钮 -->
     <view class="actions" v-if="!isSelf">
       <view class="action-btn action-greet" @tap="onGreet">
@@ -132,8 +137,7 @@
       <!-- 相册 -->
       <view v-if="activeTab === 'album'" class="empty-tip">
         <text class="empty-icon">📷</text>
-        <text class="empty-text">暂无相册</text>
-        <text class="empty-sub">敬请期待后续更新</text>
+        <text class="empty-text">该用户暂无相册</text>
       </view>
     </view>
 
@@ -214,6 +218,7 @@ const isRealPerson = computed(() => {
 const followingCount = computed(() => toNum(profile.value.followingCount, 0))
 const followersCount = computed(() => toNum(profile.value.followersCount, 0))
 const postsCount = computed(() => toNum(profile.value.postsCount, posts.value.length))
+const charmValue = computed(() => toNum(profile.value.charmValue, 0))
 const isSelf = computed(() => {
   const myId = toStr(userStore.userId, '')
   return myId && userId.value && String(myId) === String(userId.value)
@@ -294,7 +299,10 @@ const onGoFollow = (type) => {
 }
 
 const onPostTap = (post) => {
-  // 动态详情暂不跳转
+  const text = toStr(post.content, '')
+  if (text) {
+    uni.showToast({ title: text.length > 40 ? text.slice(0, 40) + '…' : text, icon: 'none', duration: 2000 })
+  }
 }
 
 const formatNum = (n) => {
@@ -433,6 +441,21 @@ onMounted(() => {
   width: 2rpx; height: 56rpx;
   background: linear-gradient(180deg, transparent 0%, $by-border-strong 50%, transparent 100%);
   flex-shrink: 0;
+}
+
+/* ===== 魅力值 ===== */
+.charm-bar {
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 $by-page-pad-x 24rpx;
+  padding: 20rpx;
+  background: linear-gradient(135deg, color.adjust($by-gold, $alpha: 0.08) 0%, color.adjust($by-aurora-a, $alpha: 0.06) 100%);
+  border-radius: $by-radius-lg;
+  border: 1rpx solid color.adjust($by-gold, $alpha: 0.2);
+}
+.charm-text {
+  font-size: 28rpx; font-weight: 600;
+  color: $by-gold;
+  letter-spacing: 2rpx;
 }
 
 /* ===== 操作按钮 ===== */

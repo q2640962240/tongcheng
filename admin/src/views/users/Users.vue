@@ -138,6 +138,9 @@
                 <el-tag :type="detail.status === 1 ? 'success' : 'danger'" size="small">
                   {{ detail.status === 1 ? '正常' : '禁用' }}
                 </el-tag>
+                <span v-if="detail.status !== 1 && detail.meta?.banReason" style="margin-left: 8px; color: #f56c6c; font-size: 13px;">
+                  原因：{{ detail.meta.banReason }}
+                </span>
               </el-descriptions-item>
               <el-descriptions-item label="简介" :span="2">{{ detail.bio || '-' }}</el-descriptions-item>
               <el-descriptions-item label="邀请码">{{ detail.inviteCode || '-' }}</el-descriptions-item>
@@ -199,6 +202,84 @@
                 </div>
               </el-col>
             </el-row>
+          </div>
+
+          <!-- 礼物数据 -->
+          <div class="detail-section">
+            <div class="section-title">礼物数据</div>
+            <el-row :gutter="16">
+              <el-col :span="8">
+                <div class="stat-card">
+                  <div class="stat-num">{{ detail.sentCount || 0 }}</div>
+                  <div class="stat-label">送出礼物</div>
+                </div>
+              </el-col>
+              <el-col :span="8">
+                <div class="stat-card">
+                  <div class="stat-num">{{ detail.receivedCount || 0 }}</div>
+                  <div class="stat-label">收到礼物</div>
+                </div>
+              </el-col>
+              <el-col :span="8">
+                <div class="stat-card">
+                  <div class="stat-num">🌟 {{ detail.charmValue || 0 }}</div>
+                  <div class="stat-label">魅力值</div>
+                </div>
+              </el-col>
+            </el-row>
+            <el-row :gutter="16" style="margin-top: 12px;">
+              <el-col :span="12">
+                <div class="stat-card">
+                  <div class="stat-num">💎 {{ detail.totalSentDiamond || 0 }}</div>
+                  <div class="stat-label">累计送出钻石</div>
+                </div>
+              </el-col>
+              <el-col :span="12">
+                <div class="stat-card">
+                  <div class="stat-num">💰 {{ yuan(detail.totalReceivedDiamond) }}</div>
+                  <div class="stat-label">累计收到钻石</div>
+                </div>
+              </el-col>
+            </el-row>
+          </div>
+
+          <!-- 余额调整 -->
+          <div class="detail-section">
+            <div class="section-title">余额调整</div>
+            <el-form :inline="true" size="default" style="margin-bottom: 12px;">
+              <el-form-item label="货币">
+                <el-select v-model="adjustForm.currency" style="width: 140px;">
+                  <el-option label="钻石" value="diamond" />
+                  <el-option label="礼物收入" value="giftIncome" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="金额">
+                <el-input-number v-model="adjustForm.delta" :precision="0" style="width: 160px;" placeholder="正数增加，负数扣减" />
+              </el-form-item>
+              <el-form-item label="备注">
+                <el-input v-model="adjustForm.remark" placeholder="调整原因" style="width: 180px;" />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="warning" :loading="adjustSubmitting" @click="onAdjustBalance">确认调整</el-button>
+              </el-form-item>
+            </el-form>
+            <el-table :data="balanceHistory" size="small" border v-loading="historyLoading" style="width: 100%;">
+              <el-table-column prop="createdAt" label="时间" width="170">
+                <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+              </el-table-column>
+              <el-table-column label="货币" width="100">
+                <template #default="{ row }">{{ row.extra?.currency === 'diamond' ? '钻石' : '礼物收入' }}</template>
+              </el-table-column>
+              <el-table-column label="变动" width="120">
+                <template #default="{ row }">
+                  <span :style="{ color: row.amount > 0 ? '#67c23a' : '#f56c6c' }">
+                    {{ row.amount > 0 ? '+' : '' }}{{ row.amount }}
+                  </span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="balanceAfter" label="调整后" width="120" />
+              <el-table-column prop="remark" label="备注" show-overflow-tooltip />
+            </el-table>
           </div>
 
           <!-- AI 用户专属配置 -->
@@ -373,7 +454,7 @@ import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   getUsers, getUserDetail, createUser, updateUser,
-  updateUserStatus, auditElite
+  updateUserStatus, auditElite, adjustBalance, getBalanceHistory
 } from '../../api'
 
 const loading = ref(false)
@@ -419,13 +500,23 @@ const loadData = async () => {
 onMounted(loadData)
 
 const onToggleStatus = async (row) => {
+  const isBanning = row.status === 1
   try {
-    await ElMessageBox.confirm(`确认${row.status === 1 ? '封禁' : '解封'}用户 ${row.nickname}?`, '提示', { type: 'warning' })
-    await updateUserStatus(row.id, row.status === 1 ? 0 : 1)
+    await ElMessageBox.confirm(`确认${isBanning ? '封禁' : '解封'}用户 ${row.nickname}?`, '提示', { type: 'warning' })
+    let reason = ''
+    if (isBanning) {
+      try {
+        const { value } = await ElMessageBox.prompt('请输入封禁原因（可选）', '封禁原因', {
+          confirmButtonText: '确定', cancelButtonText: '跳过', inputPlaceholder: '封禁原因', type: 'warning'
+        })
+        reason = value || ''
+      } catch (_) { /* 跳过 */ }
+    }
+    await updateUserStatus(row.id, isBanning ? 0 : 1, reason)
     ElMessage.success('操作成功')
     loadData()
     if (detail.value && Number(detail.value.id) === Number(row.id)) {
-      detail.value.status = row.status === 1 ? 0 : 1
+      detail.value.status = isBanning ? 0 : 1
     }
   } catch (e) {}
 }
@@ -458,10 +549,45 @@ const onDetail = async (row) => {
   try {
     const res = await getUserDetail(row.id)
     detail.value = (res.data) || {}
+    loadBalanceHistory(row.id)
   } catch (e) {
     ElMessage.error('加载用户详情失败')
   } finally {
     detailLoading.value = false
+  }
+}
+
+const adjustForm = reactive({ currency: 'diamond', delta: 0, remark: '' })
+const adjustSubmitting = ref(false)
+const balanceHistory = ref([])
+const historyLoading = ref(false)
+
+const loadBalanceHistory = async (userId) => {
+  historyLoading.value = true
+  try {
+    const res = await getBalanceHistory(userId || detail.value.id)
+    balanceHistory.value = res.data?.list || []
+  } catch (e) { balanceHistory.value = [] } finally {
+    historyLoading.value = false
+  }
+}
+
+const onAdjustBalance = async () => {
+  if (!adjustForm.delta) return ElMessage.warning('请输入调整金额')
+  const label = adjustForm.currency === 'diamond' ? '钻石' : '礼物收入'
+  const action = adjustForm.delta > 0 ? '增加' : '扣减'
+  try {
+    await ElMessageBox.confirm(`确认${action} ${Math.abs(adjustForm.delta)} ${label}？`, '余额调整', { type: 'warning' })
+    adjustSubmitting.value = true
+    await adjustBalance(detail.value.id, { ...adjustForm })
+    ElMessage.success('余额调整成功')
+    adjustForm.delta = 0
+    adjustForm.remark = ''
+    await loadBalanceHistory()
+    const res = await getUserDetail(detail.value.id)
+    detail.value = (res.data) || {}
+  } catch (e) {} finally {
+    adjustSubmitting.value = false
   }
 }
 

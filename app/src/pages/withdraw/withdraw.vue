@@ -91,7 +91,7 @@ const onWithdraw = () => {
       if (res.confirm) {
         submitting.value = true
         try {
-          await giftApi.withdraw({ amount: Number(amount.value) * 100 })
+          await giftApi.withdraw({ amount: Number(amount.value) * 100, channel: method.value })
           uni.showToast({ title: '提现申请已提交', icon: 'success' })
           amount.value = null
           await walletStore.fetchBalance()

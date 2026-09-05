@@ -87,6 +87,10 @@
             <view class="wallet-action withdraw-btn" @tap="onIncome">提现</view>
           </view>
         </view>
+        <view class="charm-row" v-if="charmValue > 0">
+          <text class="charm-label">🌟 魅力值</text>
+          <text class="charm-num">{{ charmValue }}</text>
+        </view>
       </view>
 
       <!-- 5. 功能入口 8 宫格 (2行×4列) -->
@@ -111,9 +115,9 @@
           <view class="m-icon-wrap"><text class="m-icon">🏆</text></view>
           <text class="m-label">礼物排行</text>
         </view>
-        <view class="module-item" @tap="onCustomerService">
-          <view class="m-icon-wrap"><text class="m-icon">🎧</text></view>
-          <text class="m-label">联系客服</text>
+        <view class="module-item" @tap="showTaskPanel = true">
+          <view class="m-icon-wrap"><text class="m-icon">🎯</text></view>
+          <text class="m-label">每日任务</text>
         </view>
         <view class="module-item" @tap="onNav('/pages/feedback/feedback')">
           <view class="m-icon-wrap"><text class="m-icon">📋</text></view>
@@ -130,6 +134,8 @@
 
       <view class="bottom-safe"></view>
     </scroll-view>
+
+    <DailyTaskPanel v-model:visible="showTaskPanel" />
   </view>
 </template>
 
@@ -143,6 +149,7 @@ import {
   guard, unwrap, toObj, toStr, toNum, toBool,
   requireLogin, requireElite, avatarUrl
 } from '../../utils/fallback'
+import DailyTaskPanel from '../../components/DailyTaskPanel.vue'
 
 const userStore = useUserStore()
 const walletStore = useWalletStore()
@@ -179,6 +186,8 @@ const socialStats = ref({
   followersCount: 0,
   postsCount: 0
 })
+const charmValue = ref(0)
+const showTaskPanel = ref(false)
 
 // ---- 字段收敛：cert ----
 const cert = ref({ realPerson: 'none', identity: 'none' })
@@ -217,6 +226,7 @@ const refreshSocialStats = async () => {
       followersCount: toNum(obj.followersCount, 0),
       postsCount: toNum(obj.postsCount, 0)
     }
+    charmValue.value = toNum(obj.charmValue, 0)
   } catch (_) {
     /* 静默 */
   }
@@ -543,6 +553,17 @@ onShow(() => {
   width: 2rpx;
   background: linear-gradient(180deg, transparent 0%, $by-border-strong 50%, transparent 100%);
   flex-shrink: 0;
+}
+.charm-row {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: center; gap: 12rpx;
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid $by-border;
+}
+.charm-label { font-size: 24rpx; color: $by-text-2; }
+.charm-num {
+  font-size: 30rpx; font-weight: 700; color: $by-gold;
 }
 
 /* ===== Modules (4 列 × 2 行 = 8 格) ===== */

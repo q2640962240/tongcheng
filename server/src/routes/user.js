@@ -47,7 +47,8 @@ router.get('/profile', auth, async (req, res, next) => {
       realPersonStatus: user.realPersonStatus,
       identityStatus: user.identityStatus,
       inviteCode: user.inviteCode,
-      inviterId: user.inviterId
+      inviterId: user.inviterId,
+      charmValue: user.charmValue || 0
     })
   } catch (err) { next(err) }
 })
@@ -289,7 +290,7 @@ router.get('/:id/public-profile', async (req, res, next) => {
   try {
     const userId = Number(req.params.id)
     const user = await User.findByPk(userId, {
-      attributes: ['id', 'nickname', 'avatar', 'gender', 'city', 'bio', 'isElite', 'realPersonStatus', 'createdAt']
+      attributes: ['id', 'nickname', 'avatar', 'gender', 'city', 'bio', 'isElite', 'realPersonStatus', 'createdAt', 'charmValue']
     })
     if (!user) return fail(res, '用户不存在', 404)
     success(res, user)

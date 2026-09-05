@@ -92,6 +92,12 @@ const routes = [
         meta: { title: 'Banner 管理', icon: 'PictureFilled' }
       },
       {
+        path: 'operations/announcements',
+        name: 'Announcements',
+        component: () => import('../views/operations/Announcements.vue'),
+        meta: { title: '系统公告', icon: 'Bell' }
+      },
+      {
         path: 'auth/certifications',
         name: 'Certifications',
         component: () => import('../views/auth/Certifications.vue'),

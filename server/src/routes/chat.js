@@ -496,6 +496,11 @@ router.post('/', auth, async (req, res, next) => {
     // 腾讯云 IM 转发：接收方若使用官方 TUIKit，只能通过 TIM 收消息（异步，不阻塞）
     setImmediate(() => forwardToIM(req.userId, receiverId, type, content))
 
+    // 每日任务：累计发消息数
+    if (type === 'text') {
+      try { const { markChat } = require('./tasks'); markChat(req.userId) } catch (_) {}
+    }
+
     // 离线推送（接收方不在线时收到推送通知）
     const sender = await User.findByPk(req.userId)
     const senderName = sender ? sender.nickname : '新消息'

@@ -14,8 +14,8 @@
       </view>
     </view>
 
-    <!-- 时段切换 -->
-    <view class="period-bar">
+    <!-- 时段切换（仅豪礼榜显示） -->
+    <view class="period-bar" v-if="side === 'sent'">
       <view class="period-item" :class="{ active: period === 'day' }" @tap="period = 'day'">
         <text class="period-text">今日</text>
       </view>
@@ -102,7 +102,14 @@ const loading = ref(false)
 async function loadRank() {
   loading.value = true
   try {
-    const res = await giftApi.rank({ side: side.value, period: period.value, limit: 50 })
+    const params = { limit: 50 }
+    if (side.value === 'received') {
+      params.type = 'charm'
+    } else {
+      params.side = 'sent'
+      params.period = period.value
+    }
+    const res = await giftApi.rank(params)
     rankList.value = res.data || []
   } catch (e) {
     console.warn('[gift-rank] load fail', e)

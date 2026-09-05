@@ -85,6 +85,10 @@
               <el-icon><PictureFilled /></el-icon>
               <span>Banner 管理</span>
             </el-menu-item>
+            <el-menu-item index="/operations/announcements">
+              <el-icon><Bell /></el-icon>
+              <span>系统公告</span>
+            </el-menu-item>
           </el-sub-menu>
 
           <!-- 认证管理（子菜单：实名认证） -->
@@ -148,7 +152,7 @@ import {
   Goods, List, Menu,
   Compass, ChatDotRound, UserFilled,
   Promotion, PictureFilled,
-  Key, Avatar, Present
+  Key, Avatar, Present, Bell
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -176,6 +180,7 @@ const groupByRoute = {
   '/discover/posts': 'discover',
   '/discover/groups': 'discover',
   '/operations/banners': 'operations',
+  '/operations/announcements': 'operations',
   '/auth/certifications': 'auth'
 }
 const defaultOpeneds = ref([])

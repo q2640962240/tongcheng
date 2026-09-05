@@ -46,6 +46,7 @@
                   <text class="gift-card-price">{{ parseGiftContent(m).diamondAmount || 0 }}💎</text>
                 </view>
                 <text v-if="(parseGiftContent(m).quantity || 0) > 1" class="gift-card-qty">×{{ parseGiftContent(m).quantity }}</text>
+                <text v-if="!isMine(m) && parseGiftContent(m).diamondAmount" class="gift-card-charm">+{{ Math.floor(parseGiftContent(m).diamondAmount * (parseGiftContent(m).quantity || 1) * 0.7) }} 魅力</text>
               </view>
             </template>
             <template v-else>
@@ -814,6 +815,12 @@ onUnload(() => {
   color: #FFD700;
   font-weight: 600;
   margin-left: 12rpx;
+}
+.gift-card-charm {
+  font-size: 20rpx;
+  color: #FF80AB;
+  margin-left: 8rpx;
+  white-space: nowrap;
 }
 
 /* #ifdef APP-PLUS */

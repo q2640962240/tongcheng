@@ -35,6 +35,7 @@ const Follow = require('./Follow')
 const Greeting = require('./Greeting')
 const Gift = require('./Gift')
 const GiftRecord = require('./GiftRecord')
+const DailyTask = require('./DailyTask')
 
 // 2. 声明关联关系（仅当 Sequelize 原生支持时生效；JSON 层在 routes 里 in-memory join）
 if (sequelize.usingMysql) {
@@ -113,6 +114,10 @@ if (sequelize.usingMysql) {
   GiftRecord.belongsTo(User, { foreignKey: 'receiverId', as: 'receiver' })
   GiftRecord.belongsTo(Gift, { foreignKey: 'giftId', as: 'gift' })
 
+  // DailyTask
+  DailyTask.belongsTo(User, { foreignKey: 'userId', as: 'user' })
+  User.hasMany(DailyTask, { foreignKey: 'userId', as: 'dailyTasks' })
+
   // Greeting
   User.hasMany(Greeting, { as: 'sentGreetings', foreignKey: 'senderId' })
   User.hasMany(Greeting, { as: 'receivedGreetings', foreignKey: 'receiverId' })
@@ -153,7 +158,7 @@ const db = {
   Admin, User, Wallet, Service, ServiceCategory, Order, Transaction,
   Review, Invite, Message, Config, Feedback, Banner,
   Post, Comment, Group, GroupJoin, EliteOrder, SignIn,
-  Follow, Greeting, Gift, GiftRecord
+  Follow, Greeting, Gift, GiftRecord, DailyTask
 }
 
 module.exports = db

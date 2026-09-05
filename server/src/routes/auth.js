@@ -66,6 +66,8 @@ async function doLoginResponse(res, user, extraMeta = {}) {
   const token = signToken(user.id)
   const refreshToken = signRefreshToken(user.id)
   await user.update({ lastLoginAt: new Date().toISOString() })
+  // 每日任务：标记登录
+  try { const { markLogin } = require('./tasks'); markLogin(user.id) } catch (_) {}
   // 登录/注册成功后异步导入 IM 账号（fire-and-forget，不阻塞登录返回）
   importUserToIM(user)
   success(res, {

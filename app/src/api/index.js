@@ -77,6 +77,14 @@ export const giftApi = {
   records: (params) => get('/gifts/records', params),
 }
 
+// ==================== 每日任务 ====================
+export const taskApi = {
+  today: () => get('/tasks/today'),
+  claim: (taskId) => post(`/tasks/${taskId}/claim`),
+  claimAllDone: () => post('/tasks/all-done-claim'),
+  share: () => post('/tasks/share'),
+}
+
 // ==================== 反馈 ====================
 export const feedbackApi = {
   types: () => get('/feedback/types'),

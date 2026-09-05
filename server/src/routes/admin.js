@@ -141,20 +141,44 @@ router.get('/users/:id', async (req, res, next) => {
     const orderCount = await Order.count({
       where: { [Op.or]: [{ userId: user.id }, { providerId: user.id }] }
     })
+
+    const sentCount = await GiftRecord.count({ where: { senderId: user.id } })
+    const receivedCount = await GiftRecord.count({ where: { receiverId: user.id } })
+    const totalSentDiamond = (await GiftRecord.sum('diamondAmount', { where: { senderId: user.id } })) || 0
+    const totalReceivedDiamond = (await GiftRecord.sum('diamondAmount', { where: { receiverId: user.id } })) || 0
+
     const json = user.toJSON()
     json.hasPassword = !!json.passwordHash
     delete json.passwordHash
-    success(res, { ...json, wallet: wallet ? wallet.toJSON() : null, inviteeCount: invitees.length, orderCount })
+    success(res, {
+      ...json,
+      wallet: wallet ? wallet.toJSON() : null,
+      inviteeCount: invitees.length,
+      orderCount,
+      sentCount,
+      receivedCount,
+      totalSentDiamond,
+      totalReceivedDiamond,
+      charmValue: json.charmValue || 0
+    })
   } catch (err) { next(err) }
 })
 
 /** 封禁/解封 */
 router.put('/users/:id/status', async (req, res, next) => {
   try {
-    const { status } = req.body
+    const { status, reason } = req.body
     const user = await User.findByPk(req.params.id)
     if (!user) return fail(res, '用户不存在', 404)
-    await user.update({ status })
+    const meta = user.meta || {}
+    if (status === 0 && reason) {
+      meta.banReason = reason
+      meta.bannedAt = new Date().toISOString()
+    } else if (status === 1) {
+      delete meta.banReason
+      delete meta.bannedAt
+    }
+    await user.update({ status, meta })
     success(res, null, status === 1 ? '已解封' : '已封禁')
   } catch (err) { next(err) }
 })
@@ -171,6 +195,68 @@ router.put('/users/:id/elite', async (req, res, next) => {
       realPersonStatus: approved ? 'passed' : user.realPersonStatus
     })
     success(res, null, approved ? '精英认证已通过' : '精英认证已拒绝')
+  } catch (err) { next(err) }
+})
+
+/** 手动调整用户余额（钻石 / 礼物收入） */
+router.post('/users/:id/adjust-balance', async (req, res, next) => {
+  const { sequelize } = require('../models')
+  const t = await sequelize.transaction()
+  try {
+    const { currency, delta, remark } = req.body
+    if (!currency || !['diamond', 'giftIncome'].includes(currency)) return fail(res, '货币类型无效')
+    const deltaNum = Number(delta)
+    if (!deltaNum || isNaN(deltaNum)) return fail(res, '调整金额无效')
+
+    const user = await User.findByPk(req.params.id, { transaction: t })
+    if (!user) { await t.rollback(); return fail(res, '用户不存在', 404) }
+
+    let balanceAfter
+    if (currency === 'diamond') {
+      const wallet = await Wallet.findOne({ where: { userId: user.id }, transaction: t })
+      if (!wallet) { await t.rollback(); return fail(res, '钱包不存在', 404) }
+      const newDiamond = wallet.diamond + deltaNum
+      if (newDiamond < 0) { await t.rollback(); return fail(res, '钻石余额不足，无法扣减至负数') }
+      await wallet.update({ diamond: newDiamond }, { transaction: t })
+      balanceAfter = newDiamond
+    } else {
+      const newIncome = (user.giftIncome || 0) + deltaNum
+      if (newIncome < 0) { await t.rollback(); return fail(res, '礼物收入不足，无法扣减至负数') }
+      await user.update({ giftIncome: newIncome }, { transaction: t })
+      balanceAfter = newIncome
+    }
+
+    await Transaction.create({
+      userId: user.id,
+      type: 'admin_adjustment',
+      amount: deltaNum,
+      currency: currency === 'diamond' ? 'diamond' : 'fen',
+      balanceAfter,
+      remark: remark || '管理员手动调整',
+      extra: { currency, delta: deltaNum, operatorId: req.adminId }
+    }, { transaction: t })
+
+    await t.commit()
+    success(res, { balanceAfter }, '余额调整成功')
+  } catch (err) {
+    await t.rollback()
+    next(err)
+  }
+})
+
+/** 查询用户余额调整历史 */
+router.get('/users/:id/balance-history', async (req, res, next) => {
+  try {
+    const { page = 1, pageSize = 20 } = req.query
+    const pg = Math.max(1, Number(page) || 1)
+    const ps = Math.min(50, Math.max(1, Number(pageSize) || 20))
+    const { count, rows } = await Transaction.findAndCountAll({
+      where: { userId: req.params.id, type: 'admin_adjustment' },
+      order: [['createdAt', 'DESC']],
+      limit: ps,
+      offset: (pg - 1) * ps
+    })
+    success(res, { list: rows, total: count, page: pg, pageSize: ps })
   } catch (err) { next(err) }
 })
 
@@ -1729,20 +1815,24 @@ router.get('/gifts/withdrawals', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-/** 审核礼物提现（通过/拒绝） */
+/** 审核礼物提现（通过/打款/拒绝） */
 router.put('/gifts/withdrawals/:id/audit', async (req, res, next) => {
   try {
-    const { action } = req.body // approve | reject
-    if (!['approve', 'reject'].includes(action)) return fail(res, '操作参数无效', 400)
+    const { action, remark } = req.body // approve | paid | reject
+    if (!['approve', 'paid', 'reject'].includes(action)) return fail(res, '操作参数无效', 400)
     const tx = await Transaction.findByPk(req.params.id)
     if (!tx) return fail(res, '提现记录不存在', 404)
     const curStatus = (tx.extra && tx.extra.status) || 'pending'
-    if (curStatus !== 'pending') return fail(res, '当前状态不可操作')
+    if (curStatus !== 'pending' && !(curStatus === 'approved' && action === 'paid')) return fail(res, '当前状态不可操作')
 
-    const status = action === 'approve' ? 'approved' : 'rejected'
+    let status, msg
+    if (action === 'approve') { status = 'approved'; msg = '提现已审核通过' }
+    else if (action === 'paid') { status = 'paid'; msg = '提现已打款' }
+    else { status = 'rejected'; msg = '提现已拒绝（礼物收入已退还）' }
+
     const extra = { ...tx.extra, status, handledAt: new Date().toISOString(), handledBy: req.adminId }
+    if (remark) extra.auditRemark = remark
 
-    // 拒绝时退还礼物收入
     if (action === 'reject') {
       const user = await User.findByPk(tx.userId)
       if (user) {
@@ -1752,10 +1842,10 @@ router.put('/gifts/withdrawals/:id/audit', async (req, res, next) => {
     }
 
     await tx.update({
-      remark: action === 'approve' ? '礼物提现已审核通过' : '礼物提现已拒绝（礼物收入已退还）',
+      remark: remark ? `${msg}（备注：${remark}）` : msg,
       extra
     })
-    success(res, null, action === 'approve' ? '提现已通过' : '提现已拒绝，礼物收入已退还')
+    success(res, null, msg)
   } catch (err) { next(err) }
 })
 
@@ -1812,6 +1902,60 @@ router.put('/gifts/config', async (req, res, next) => {
     await setModule('gift', { withdrawRatio: Number(withdrawRatio) })
     const cfg = await getModuleConfig('gift')
     success(res, { withdrawRatio: cfg?.withdrawRatio ?? 0.7 }, '配置已保存')
+  } catch (err) { next(err) }
+})
+
+/** 发送系统公告 */
+router.post('/announcements', async (req, res, next) => {
+  try {
+    const { title, content, targetUsers } = req.body
+    if (!title || !content) return fail(res, '标题和内容不能为空', 400)
+
+    let userIds
+    if (targetUsers && targetUsers.length > 0) {
+      userIds = targetUsers
+    } else {
+      const allUsers = await User.findAll({ attributes: ['id'], where: { status: 1 } })
+      userIds = allUsers.map(u => u.id)
+    }
+
+    const messages = []
+    for (const uid of userIds) {
+      const msg = await Message.create({
+        senderId: null,
+        receiverId: uid,
+        type: 'system',
+        content: JSON.stringify({ title, body: content })
+      })
+      messages.push(msg)
+      try {
+        const { emitToUser } = require('../app')
+        emitToUser(uid, 'system_notice', { title, content, messageId: msg.id })
+      } catch (_) { /* 离线用户不推送 */ }
+    }
+
+    success(res, { sentCount: messages.length }, `公告已发送给 ${messages.length} 位用户`)
+  } catch (err) { next(err) }
+})
+
+/** 系统公告历史 */
+router.get('/announcements', async (req, res, next) => {
+  try {
+    const { page = 1, pageSize = 20 } = req.query
+    const pg = Math.max(1, Number(page) || 1)
+    const ps = Math.min(50, Math.max(1, Number(pageSize) || 20))
+    const { count, rows } = await Message.findAndCountAll({
+      where: { type: 'system', senderId: null },
+      order: [['createdAt', 'DESC']],
+      limit: ps,
+      offset: (pg - 1) * ps
+    })
+    const list = rows.map(m => {
+      let parsed = { title: '系统通知', body: m.content }
+      try { parsed = JSON.parse(m.content) } catch (_) {}
+      return { id: m.id, title: parsed.title || '系统通知', content: parsed.body || m.content, receiverId: m.receiverId, createdAt: m.createdAt }
+    })
+    success(res, { list, total: count, page: pg, pageSize: ps })
   } catch (err) { next(err) }
 })
 

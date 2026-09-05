@@ -65,8 +65,8 @@
 
       <view class="filter-row">
         <view class="filter-chip" @tap="showGender = !showGender">{{ genderText }} ▾</view>
-        <view class="filter-chip">年龄 ▾</view>
-        <view class="filter-chip">星座 ▾</view>
+        <view class="filter-chip" @tap="onAgeFilter">{{ ageText }} ▾</view>
+        <view class="filter-chip" @tap="onZodiacFilter">{{ zodiacText }} ▾</view>
         <view class="filter-chip filter-chip--ghost" @tap="goPublishFilter">🎯 发布需求</view>
       </view>
 
@@ -292,25 +292,24 @@
       <view class="act-card card">
         <view class="act-title-row">
           <text class="act-title">🎉 限时活动</text>
-          <text class="act-more">更多 ›</text>
         </view>
         <view class="act-grid">
-          <view class="act-item ai-1" @tap="onComingSoon">
+          <view class="act-item ai-1" @tap="onActNewbie">
             <text class="act-emoji">📣</text>
             <text class="act-label">新人专享礼</text>
             <text class="act-reward">领 100 钻石</text>
           </view>
-          <view class="act-item ai-2" @tap="onComingSoon">
+          <view class="act-item ai-2" @tap="onActInvite">
             <text class="act-emoji">🎁</text>
             <text class="act-label">邀请好友</text>
             <text class="act-reward">双方得特权</text>
           </view>
-          <view class="act-item ai-3" @tap="onComingSoon">
+          <view class="act-item ai-3" @tap="onActTask">
             <text class="act-emoji">🎯</text>
             <text class="act-label">每日任务</text>
             <text class="act-reward">最高 50 钻</text>
           </view>
-          <view class="act-item ai-4" @tap="onComingSoon">
+          <view class="act-item ai-4" @tap="onActRank">
             <text class="act-emoji">🏆</text>
             <text class="act-label">周榜争霸</text>
             <text class="act-reward">实物大奖</text>
@@ -334,6 +333,8 @@
     </view>
 
     <view class="bottom-safe"></view>
+
+    <DailyTaskPanel v-model:visible="showTaskPanel" />
   </view>
 </template>
 
@@ -347,8 +348,10 @@ import {
   guard, truncate, formatTime as ft, avatarUrl, coverUrl, pickTags,
   debounce, requireLogin, requireElite, resolveCityViaPipeline, safeMap
 } from '@/utils/fallback'
+import DailyTaskPanel from '../../components/DailyTaskPanel.vue'
 
 const CITY_KEY = 'baiye_city'
+const showTaskPanel = ref(false)
 
 /* 城市定位请求包装：对接 locationApi.reverse / guessByIp，供 4 级流水线使用 */
 const cityRequestFn = async (opts) => {
@@ -762,8 +765,35 @@ const onSign = async () => {
   await updateSignState()
   signLoading.value = false
 }
-const onRainRemind = () => uni.showToast({ title: toStr('已开启开播提醒'), icon: 'none' })
-const onComingSoon = () => uni.showToast({ title: toStr('即将上线，敬请期待'), icon: 'none' })
+const onRainRemind = () => uni.showToast({ title: toStr('已开启红包雨提醒'), icon: 'none' })
+
+/* ---- 年龄筛选 ---- */
+const ageRanges = ['全部年龄', '18-22岁', '23-27岁', '28-35岁', '36岁+']
+const ageRange = ref(0)
+const ageText = computed(() => ageRanges[ageRange.value] || '全部年龄')
+const onAgeFilter = () => {
+  uni.showActionSheet({
+    itemList: ageRanges,
+    success: (res) => { ageRange.value = res.tapIndex }
+  })
+}
+
+/* ---- 星座筛选 ---- */
+const zodiacSigns = ['全部星座', '白羊座', '金牛座', '双子座', '巨蟹座', '狮子座', '处女座', '天秤座', '天蝎座', '射手座', '摩羯座', '水瓶座', '双鱼座']
+const zodiacIndex = ref(0)
+const zodiacText = computed(() => zodiacSigns[zodiacIndex.value] || '全部星座')
+const onZodiacFilter = () => {
+  uni.showActionSheet({
+    itemList: zodiacSigns,
+    success: (res) => { zodiacIndex.value = res.tapIndex }
+  })
+}
+
+/* ---- 活动跳转 ---- */
+const onActNewbie = () => uni.navigateTo({ url: '/pages/recharge/recharge?firstOrder=1' })
+const onActInvite = () => uni.navigateTo({ url: '/pages/invite/invite' })
+const onActTask = () => { showTaskPanel.value = true }
+const onActRank = () => uni.navigateTo({ url: '/pages/gift-rank/gift-rank' })
 </script>
 
 <style lang="scss" scoped>

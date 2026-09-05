@@ -103,6 +103,17 @@ const CONFIG_TEMPLATES = {
     { key: 'cloudSecretId',   value: '',                 type: 'secret',  description: '腾讯云 API SecretId：用于调用 v3 服务端 REST(账号导入、单发消息等)，非必填' },
     { key: 'cloudSecretKey',  value: '',                 type: 'secret',  description: '腾讯云 API SecretKey：配合 cloudSecretId 使用' },
     { key: 'imRegion',        value: 'ap-guangzhou',     type: 'string',  description: '接入地域：默认 ap-guangzhou (华南广州)' }
+  ],
+
+  // 8. 每日任务
+  tasks: [
+    { key: 'enabled',         value: 'true',  type: 'boolean', description: '是否启用每日任务系统' },
+    { key: 'login_reward',    value: '2',     type: 'number',  description: '每日登录奖励钻石数' },
+    { key: 'chat_reward',     value: '5',     type: 'number',  description: '发 3 条消息奖励钻石数' },
+    { key: 'gift_reward',     value: '5',     type: 'number',  description: '送 1 个礼物奖励钻石数' },
+    { key: 'post_reward',     value: '3',     type: 'number',  description: '发 1 条动态奖励钻石数' },
+    { key: 'share_reward',    value: '2',     type: 'number',  description: '分享 1 次奖励钻石数' },
+    { key: 'all_done_reward', value: '10',    type: 'number',  description: '全部完成额外奖励钻石数' }
   ]
 }
 
@@ -459,15 +470,26 @@ async function ensureBanners({ transaction }) {
 
 // ============ 礼物种子数据 ============
 const DEFAULT_GIFTS = [
-  { name: '小红花', imageUrl: '🌹', price: 10, sort: 1, active: true, animationLevel: 1 },
-  { name: '爱心',   imageUrl: '❤️',  price: 50, sort: 2, active: true, animationLevel: 1 },
-  { name: '皇冠',   imageUrl: '👑', price: 100, sort: 3, active: true, animationLevel: 2 },
-  { name: '火箭',   imageUrl: '🚀', price: 500, sort: 4, active: true, animationLevel: 3 }
+  { name: '棒棒糖',   imageUrl: '🍭',   price: 1,     sort: 1,  active: true, animationLevel: 0 },
+  { name: '小红花',   imageUrl: '🌹',   price: 10,    sort: 2,  active: true, animationLevel: 1 },
+  { name: '冰淇淋',   imageUrl: '🍦',   price: 20,    sort: 3,  active: true, animationLevel: 0 },
+  { name: '爱心',     imageUrl: '❤️',   price: 50,    sort: 4,  active: true, animationLevel: 1 },
+  { name: '蛋糕',     imageUrl: '🎂',   price: 80,    sort: 5,  active: true, animationLevel: 1 },
+  { name: '皇冠',     imageUrl: '👑',   price: 100,   sort: 6,  active: true, animationLevel: 2 },
+  { name: '钻石戒指', imageUrl: '💍',   price: 200,   sort: 7,  active: true, animationLevel: 2 },
+  { name: '烟花',     imageUrl: '🎆',   price: 300,   sort: 8,  active: true, animationLevel: 2 },
+  { name: '城堡',     imageUrl: '🏰',   price: 500,   sort: 9,  active: true, animationLevel: 2 },
+  { name: '火箭',     imageUrl: '🚀',   price: 500,   sort: 10, active: true, animationLevel: 3 },
+  { name: '游艇',     imageUrl: '🛥️',  price: 1000,  sort: 11, active: true, animationLevel: 3 },
+  { name: '跑车',     imageUrl: '🏎️',  price: 2000,  sort: 12, active: true, animationLevel: 3 },
+  { name: '私人飞机', imageUrl: '✈️',   price: 5000,  sort: 13, active: true, animationLevel: 3 },
+  { name: '火箭舰队', imageUrl: '🚀🚀', price: 10000, sort: 14, active: true, animationLevel: 3 },
+  { name: '星球',     imageUrl: '🪐',   price: 20000, sort: 15, active: true, animationLevel: 3 },
+  { name: '银河',     imageUrl: '🌌',   price: 50000, sort: 16, active: true, animationLevel: 3 }
 ]
 async function ensureGifts({ transaction }) {
   const existing = await Gift.findAll({ transaction })
   if (existing.length > 0) {
-    // 修复旧数据：将本地 png 路径更新为 emoji + 补齐 animationLevel
     let patched = 0
     const giftMap = {}
     for (const g of DEFAULT_GIFTS) giftMap[g.name] = g
@@ -494,6 +516,25 @@ async function ensureGifts({ transaction }) {
     await Gift.create(g, { transaction })
   }
   console.log(`  🎁  礼物：新增 ${DEFAULT_GIFTS.length} 个默认礼物`)
+}
+
+async function upgradeGifts({ transaction }) {
+  const existing = await Gift.findAll({ transaction })
+  const nameMap = {}
+  for (const g of existing) nameMap[g.name] = g
+
+  let created = 0, updated = 0
+  for (const def of DEFAULT_GIFTS) {
+    const row = nameMap[def.name]
+    if (!row) {
+      await Gift.create(def, { transaction })
+      created++
+    } else if (row.sort !== def.sort) {
+      await row.update({ sort: def.sort }, { transaction })
+      updated++
+    }
+  }
+  console.log(`  🎁  礼物升级：新增 ${created} 个，更新排序 ${updated} 个（共 ${DEFAULT_GIFTS.length} 个）`)
 }
 
 /**
@@ -548,6 +589,7 @@ async function seed() {
       await ensureAiPosts({ transaction })
       await ensureBanners({ transaction })
       await ensureGifts({ transaction })
+      await upgradeGifts({ transaction })
       await transaction.commit()
     } catch (e) {
       await transaction.rollback()
@@ -564,6 +606,7 @@ async function seed() {
     await ensureAiPosts({ transaction: undefined })
     await ensureBanners({ transaction: undefined })
     await ensureGifts({ transaction: undefined })
+    await upgradeGifts({ transaction: undefined })
   }
   // 事务/写入全部完成后再做 IM 账号导入（需读最新数据，且不纳入事务；失败不阻塞启动）
   await importAllUsersToIM()
