@@ -243,6 +243,7 @@ function onMessageListUpdate(messageList: IMessageModel[]) {
           diamondAmount: data.diamondAmount,
           quantity: data.quantity || 1,
           animationLevel: data.animationLevel || 1,
+          effectImage: data.effectImage || '',
           senderName: data.senderName || ''
         });
       }
@@ -266,6 +267,7 @@ function onGiftAnimationDirect(giftData: any) {
     diamondAmount: giftData.diamondAmount,
     quantity: giftData.quantity || 1,
     animationLevel: giftData.animationLevel || 1,
+    effectImage: giftData.effectImage || '',
     senderName: giftData.senderName || ''
   })
 }

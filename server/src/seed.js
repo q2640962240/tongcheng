@@ -475,17 +475,17 @@ const DEFAULT_GIFTS = [
   { name: '冰淇淋',   imageUrl: '🍦',   price: 20,    sort: 3,  active: true, animationLevel: 0 },
   { name: '爱心',     imageUrl: '❤️',   price: 50,    sort: 4,  active: true, animationLevel: 1 },
   { name: '蛋糕',     imageUrl: '🎂',   price: 80,    sort: 5,  active: true, animationLevel: 1 },
-  { name: '皇冠',     imageUrl: '/static/gifts/crown.png',        price: 100,   sort: 6,  active: true, animationLevel: 2 },
-  { name: '钻石戒指', imageUrl: '/static/gifts/diamond-ring.png', price: 200,   sort: 7,  active: true, animationLevel: 2 },
-  { name: '烟花',     imageUrl: '/static/gifts/fireworks.png',   price: 300,   sort: 8,  active: true, animationLevel: 2 },
-  { name: '城堡',     imageUrl: '/static/gifts/castle.png',      price: 500,   sort: 9,  active: true, animationLevel: 2 },
-  { name: '火箭',     imageUrl: '/static/gifts/rocket.png',      price: 500,   sort: 10, active: true, animationLevel: 3 },
-  { name: '游艇',     imageUrl: '/static/gifts/yacht.png',       price: 1000,  sort: 11, active: true, animationLevel: 3 },
-  { name: '跑车',     imageUrl: '/static/gifts/sports-car.png',  price: 2000,  sort: 12, active: true, animationLevel: 3 },
-  { name: '私人飞机', imageUrl: '/static/gifts/private-jet.png', price: 5000,  sort: 13, active: true, animationLevel: 3 },
-  { name: '火箭舰队', imageUrl: '🚀🚀', price: 10000, sort: 14, active: true, animationLevel: 3 },
-  { name: '星球',     imageUrl: '🪐',   price: 20000, sort: 15, active: true, animationLevel: 3 },
-  { name: '银河',     imageUrl: '🌌',   price: 50000, sort: 16, active: true, animationLevel: 3 }
+  { name: '皇冠',     imageUrl: '/static/gifts/crown.png',        price: 100,   sort: 6,  active: true, animationLevel: 2, effectImage: '/assets/gift-effect-l2.png' },
+  { name: '钻石戒指', imageUrl: '/static/gifts/diamond-ring.png', price: 200,   sort: 7,  active: true, animationLevel: 2, effectImage: '/assets/gift-effect-l2.png' },
+  { name: '烟花',     imageUrl: '/static/gifts/fireworks.png',   price: 300,   sort: 8,  active: true, animationLevel: 2, effectImage: '/assets/gift-effect-l2.png' },
+  { name: '城堡',     imageUrl: '/static/gifts/castle.png',      price: 500,   sort: 9,  active: true, animationLevel: 2, effectImage: '/assets/gift-effect-l2.png' },
+  { name: '火箭',     imageUrl: '/static/gifts/rocket.png',      price: 500,   sort: 10, active: true, animationLevel: 3, effectImage: '/assets/gift-effect-l3-crown.png' },
+  { name: '游艇',     imageUrl: '/static/gifts/yacht.png',       price: 1000,  sort: 11, active: true, animationLevel: 3, effectImage: '/assets/gift-effect-l3-diamond.png' },
+  { name: '跑车',     imageUrl: '/static/gifts/sports-car.png',  price: 2000,  sort: 12, active: true, animationLevel: 3, effectImage: '/assets/gift-effect-l3-crown.png' },
+  { name: '私人飞机', imageUrl: '/static/gifts/private-jet.png', price: 5000,  sort: 13, active: true, animationLevel: 3, effectImage: '/assets/gift-effect-l3-diamond.png' },
+  { name: '火箭舰队', imageUrl: '🚀🚀', price: 10000, sort: 14, active: true, animationLevel: 3, effectImage: '/assets/gift-effect-l3-crown.png' },
+  { name: '星球',     imageUrl: '🪐',   price: 20000, sort: 15, active: true, animationLevel: 3, effectImage: '/assets/gift-effect-l3-diamond.png' },
+  { name: '银河',     imageUrl: '🌌',   price: 50000, sort: 16, active: true, animationLevel: 3, effectImage: '/assets/gift-effect-l3-crown.png' }
 ]
 async function ensureGifts({ transaction }) {
   const existing = await Gift.findAll({ transaction })
@@ -534,6 +534,7 @@ async function upgradeGifts({ transaction }) {
       if (row.sort !== def.sort) upd.sort = def.sort
       if (row.imageUrl !== def.imageUrl) upd.imageUrl = def.imageUrl
       if (row.animationLevel !== def.animationLevel) upd.animationLevel = def.animationLevel
+      if (row.effectImage !== def.effectImage) upd.effectImage = def.effectImage
       if (Object.keys(upd).length > 0) {
         await row.update(upd, { transaction })
         updated++

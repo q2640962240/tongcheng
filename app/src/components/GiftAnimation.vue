@@ -1,13 +1,13 @@
 <template>
-  <view class="gift-anim-layer" v-if="current.id">
-    <canvas
-      v-if="current.level >= 2"
-      class="gift-canvas"
-      ref="canvasRef"
-      :style="{ width: screenW + 'px', height: screenH + 'px' }"
-    ></canvas>
+  <view class="gift-anim-layer" v-if="current.id" :class="'gift-anim-l' + current.level">
+    <view
+      v-if="current.level >= 2 && current.effectImage"
+      class="gift-effect-bg"
+      :class="'gift-effect-bg-l' + current.level"
+      :style="{ backgroundImage: 'url(' + current.effectImage + ')' }"
+    ></view>
 
-    <view class="gift-bg-overlay" v-if="current.level >= 3"></view>
+    <view v-if="current.level >= 3" class="gift-bg-overlay"></view>
 
     <view v-if="current.level >= 1" class="gift-banner" :class="'gift-banner-l' + current.level">
       <view class="gift-banner-shimmer"></view>
@@ -33,30 +33,14 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onUnmounted } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 
 const queue = ref([])
 const current = ref({})
 const playing = ref(false)
-const canvasRef = ref(null)
-const screenW = ref(375)
-const screenH = ref(667)
 let timerId = null
-let animId = null
-let particles = []
-let beams = []
-let shocks = []
-let sparkles = []
-let startTime = 0
-let canvasCtx = null
 const MAX_QUEUE = 5
 const durations = { 0: 0, 1: 2500, 2: 4000, 3: 6000 }
-
-const COLORS = [
-  '#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#FF69B4',
-  '#FFA500', '#96CEB4', '#DDA0DD', '#FF4500', '#00CED1',
-  '#FF1493', '#7B68EE', '#FFD700', '#FF6347', '#00FA9A'
-]
 
 const isEmojiStr = (s) => {
   if (!s) return true
@@ -75,253 +59,9 @@ const play = (gift) => {
     isEmoji: isEmojiStr(imgUrl),
     giftName: gift.giftName || gift.name || '礼物',
     senderName: gift.senderName || '',
-    quantity: gift.quantity || 1
+    quantity: gift.quantity || 1,
+    effectImage: gift.effectImage || ''
   })
-}
-
-const initCanvas = () => {
-  const canvas = canvasRef.value
-  if (!canvas) return null
-  try {
-    const dpr = uni.getSystemInfoSync().pixelRatio || 2
-    screenW.value = uni.getSystemInfoSync().windowWidth
-    screenH.value = uni.getSystemInfoSync().windowHeight
-    canvas.width = screenW.value * dpr
-    canvas.height = screenH.value * dpr
-    const ctx = canvas.getContext('2d')
-    ctx.scale(dpr, dpr)
-    canvasCtx = ctx
-    return ctx
-  } catch (e) {
-    return null
-  }
-}
-
-const addParticles = (cx, cy, count, opts = {}) => {
-  const {
-    speedMin = 2, speedMax = 10,
-    sizeMin = 2, sizeMax = 7,
-    gravity = 0.12, friction = 0.98,
-    lifeMin = 50, lifeMax = 110,
-    trails = true, colorSet = null
-  } = opts
-  for (let i = 0; i < count; i++) {
-    const angle = Math.random() * Math.PI * 2
-    const speed = speedMin + Math.random() * (speedMax - speedMin)
-    const colors = colorSet || COLORS
-    particles.push({
-      x: cx, y: cy,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      size: sizeMin + Math.random() * (sizeMax - sizeMin),
-      color: colors[Math.floor(Math.random() * colors.length)],
-      alpha: 1,
-      life: lifeMin + Math.random() * (lifeMax - lifeMin),
-      maxLife: 0,
-      gravity, friction,
-      trails,
-      history: []
-    })
-    const p = particles[particles.length - 1]
-    p.maxLife = p.life
-  }
-}
-
-const addShockwave = (cx, cy, opts = {}) => {
-  const { color = '#FFD700', maxRadius = 200, width = 4, speed = 6 } = opts
-  shocks.push({ x: cx, y: cy, radius: 5, maxRadius, alpha: 0.9, color, width, speed })
-}
-
-const addBeams = (cx, cy, count = 12) => {
-  for (let i = 0; i < count; i++) {
-    beams.push({
-      x: cx, y: cy,
-      angle: (i / count) * Math.PI * 2,
-      length: 120 + Math.random() * 180,
-      width: 1.5 + Math.random() * 3,
-      color: COLORS[Math.floor(Math.random() * COLORS.length)],
-      alpha: 0.5 + Math.random() * 0.4,
-      rotSpeed: (Math.random() - 0.5) * 0.04
-    })
-  }
-}
-
-const addSparkles = (cx, cy, count = 5) => {
-  for (let i = 0; i < count; i++) {
-    sparkles.push({
-      x: cx + (Math.random() - 0.5) * 80,
-      y: cy + (Math.random() - 0.5) * 80,
-      vx: (Math.random() - 0.5) * 3,
-      vy: -2 - Math.random() * 4,
-      size: 1.5 + Math.random() * 3,
-      color: '#FFD700',
-      alpha: 0.8 + Math.random() * 0.2,
-      life: 25 + Math.random() * 35
-    })
-  }
-}
-
-const render = () => {
-  const ctx = canvasCtx
-  if (!ctx) { animId = requestAnimationFrame(render); return }
-  const w = screenW.value
-  const h = screenH.value
-  const cx = w / 2
-  const cy = h * 0.38
-  const elapsed = Date.now() - startTime
-
-  ctx.clearRect(0, 0, w, h)
-  ctx.globalCompositeOperation = 'lighter'
-
-  for (let i = beams.length - 1; i >= 0; i--) {
-    const b = beams[i]
-    const fadeOut = elapsed > 3000 ? Math.max(0, 1 - (elapsed - 3000) / 1500) : 1
-    b.angle += b.rotSpeed
-    const grad = ctx.createLinearGradient(
-      b.x, b.y,
-      b.x + Math.cos(b.angle) * b.length,
-      b.y + Math.sin(b.angle) * b.length
-    )
-    grad.addColorStop(0, b.color)
-    grad.addColorStop(1, 'transparent')
-    ctx.globalAlpha = b.alpha * fadeOut
-    ctx.beginPath()
-    ctx.moveTo(b.x, b.y)
-    ctx.lineTo(
-      b.x + Math.cos(b.angle) * b.length,
-      b.y + Math.sin(b.angle) * b.length
-    )
-    ctx.lineWidth = b.width
-    ctx.strokeStyle = grad
-    ctx.stroke()
-    if (fadeOut <= 0) beams.splice(i, 1)
-  }
-
-  for (let i = shocks.length - 1; i >= 0; i--) {
-    const s = shocks[i]
-    s.radius += s.speed
-    s.alpha *= 0.96
-    ctx.globalAlpha = s.alpha
-    ctx.beginPath()
-    ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2)
-    ctx.lineWidth = s.width
-    ctx.strokeStyle = s.color
-    ctx.stroke()
-    if (s.radius > s.maxRadius || s.alpha < 0.01) shocks.splice(i, 1)
-  }
-
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i]
-    if (p.trails && p.history.length > 1) {
-      for (let j = 1; j < p.history.length; j++) {
-        const t = j / p.history.length
-        ctx.globalAlpha = t * p.alpha * 0.4
-        ctx.beginPath()
-        ctx.arc(p.history[j].x, p.history[j].y, p.size * t * 0.6, 0, Math.PI * 2)
-        ctx.fillStyle = p.color
-        ctx.fill()
-      }
-    }
-    p.vx *= p.friction
-    p.vy *= p.friction
-    p.vy += p.gravity
-    p.x += p.vx
-    p.y += p.vy
-    p.life--
-    p.alpha = Math.max(0, p.life / p.maxLife)
-    if (p.trails) {
-      p.history.push({ x: p.x, y: p.y })
-      if (p.history.length > 8) p.history.shift()
-    }
-    ctx.globalAlpha = p.alpha
-    ctx.beginPath()
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
-    ctx.fillStyle = p.color
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2)
-    ctx.fillStyle = p.color
-    ctx.globalAlpha = p.alpha * 0.15
-    ctx.fill()
-    if (p.life <= 0) particles.splice(i, 1)
-  }
-
-  for (let i = sparkles.length - 1; i >= 0; i--) {
-    const s = sparkles[i]
-    s.x += s.vx
-    s.y += s.vy
-    s.vy += 0.06
-    s.life--
-    s.alpha *= 0.96
-    ctx.globalAlpha = s.alpha
-    ctx.beginPath()
-    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2)
-    ctx.fillStyle = s.color
-    ctx.fill()
-    if (s.life <= 0) sparkles.splice(i, 1)
-  }
-
-  if (current.value.level >= 3 && elapsed < 4500) {
-    addSparkles(cx, cy, 3)
-  }
-
-  ctx.globalAlpha = 1
-  ctx.globalCompositeOperation = 'source-over'
-  animId = requestAnimationFrame(render)
-}
-
-const startEffects = (level) => {
-  const ctx = initCanvas()
-  if (!ctx && level >= 2) return
-  const w = screenW.value
-  const h = screenH.value
-  const cx = w / 2
-  const cy = h * 0.38
-  startTime = Date.now()
-  particles = []
-  beams = []
-  shocks = []
-  sparkles = []
-
-  if (level >= 2) {
-    addParticles(cx, cy, 60, { speedMax: 8, sizeMax: 5, gravity: 0.1, lifeMax: 80 })
-    addShockwave(cx, cy, { color: '#FFD700', maxRadius: Math.max(w, h) * 0.5, speed: 5 })
-    setTimeout(() => addShockwave(cx, cy, { color: '#FF69B4', maxRadius: Math.max(w, h) * 0.4, speed: 4 }), 150)
-  }
-
-  if (level >= 3) {
-    setTimeout(() => {
-      addParticles(cx, cy, 100, { speedMin: 3, speedMax: 14, sizeMin: 2, sizeMax: 8, gravity: 0.08, lifeMin: 60, lifeMax: 130 })
-      addShockwave(cx, cy, { color: '#4ECDC4', maxRadius: Math.max(w, h) * 0.7, width: 5, speed: 7 })
-      addBeams(cx, cy, 16)
-    }, 200)
-    setTimeout(() => {
-      addParticles(cx, cy, 50, { speedMin: 1, speedMax: 6, sizeMin: 3, sizeMax: 9, gravity: 0.15, lifeMin: 40, lifeMax: 90 })
-      addShockwave(cx, cy, { color: '#FF6B6B', maxRadius: Math.max(w, h) * 0.5, speed: 4 })
-    }, 600)
-    setTimeout(() => {
-      addParticles(cx * 0.5, cy * 0.7, 35, { speedMax: 6, lifeMax: 70 })
-      addParticles(cx * 1.5, cy * 0.7, 35, { speedMax: 6, lifeMax: 70 })
-    }, 1000)
-    setTimeout(() => {
-      addParticles(cx, cy, 40, { speedMin: 4, speedMax: 12, sizeMax: 7, gravity: 0.06, lifeMax: 100 })
-      addShockwave(cx, cy, { color: '#DDA0DD', maxRadius: Math.max(w, h) * 0.6, speed: 5 })
-    }, 1500)
-  }
-
-  animId = requestAnimationFrame(render)
-}
-
-const stopEffects = () => {
-  if (animId) {
-    cancelAnimationFrame(animId)
-    animId = null
-  }
-  particles = []
-  beams = []
-  shocks = []
-  sparkles = []
-  canvasCtx = null
 }
 
 const clearTimer = () => {
@@ -335,9 +75,8 @@ watch(queue, (q) => {
   if (q.length > 0 && !playing.value) playNext()
 }, { deep: true })
 
-const playNext = async () => {
+const playNext = () => {
   clearTimer()
-  stopEffects()
   if (queue.value.length === 0) {
     playing.value = false
     current.value = {}
@@ -345,11 +84,6 @@ const playNext = async () => {
   }
   playing.value = true
   current.value = queue.value[0]
-
-  if (current.value.level >= 2) {
-    await nextTick()
-    setTimeout(() => startEffects(current.value.level), 50)
-  }
 
   const dur = durations[current.value.level] || 2500
   timerId = setTimeout(() => {
@@ -359,14 +93,12 @@ const playNext = async () => {
     } else {
       playing.value = false
       current.value = {}
-      stopEffects()
     }
   }, dur)
 }
 
 onUnmounted(() => {
   clearTimer()
-  stopEffects()
   queue.value = []
   current.value = {}
   playing.value = false
@@ -384,17 +116,93 @@ defineExpose({ play })
   overflow: hidden;
 }
 
-.gift-canvas {
+/* ========== 全屏特效背景 (L2/L3) ========== */
+.gift-effect-bg {
   position: absolute;
-  top: 0; left: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   z-index: 1;
+}
+
+.gift-effect-bg-l2 {
+  animation: effectBgL2 4s ease-out forwards;
+}
+
+.gift-effect-bg-l3 {
+  animation: effectBgL3 6s ease-out forwards;
+}
+
+@keyframes effectBgL2 {
+  0% {
+    opacity: 0;
+    transform: scale(1.3);
+    filter: brightness(2) blur(8px);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.05);
+    filter: brightness(1.3) blur(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1.1);
+  }
+  85% {
+    opacity: 1;
+    transform: scale(1.02);
+    filter: brightness(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.05);
+    filter: brightness(0.8);
+  }
+}
+
+@keyframes effectBgL3 {
+  0% {
+    opacity: 0;
+    transform: scale(1.5) rotate(-2deg);
+    filter: brightness(2.5) blur(12px) saturate(0.5);
+  }
+  10% {
+    opacity: 1;
+    filter: brightness(1.8) blur(0) saturate(1.2);
+  }
+  25% {
+    transform: scale(1.05) rotate(0deg);
+    filter: brightness(1.3) saturate(1.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08) rotate(0.5deg);
+    filter: brightness(1.15) saturate(1.2);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(1.03) rotate(-0.3deg);
+    filter: brightness(1.1) saturate(1.1);
+  }
+  90% {
+    opacity: 0.8;
+    transform: scale(1.06);
+    filter: brightness(0.9) saturate(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.1);
+    filter: brightness(0.6);
+  }
 }
 
 .gift-bg-overlay {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.2) 50%, transparent 80%);
-  z-index: 0;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.1) 50%, transparent 80%);
+  z-index: 2;
   animation: bgFadeIn 0.5s ease-out;
 }
 

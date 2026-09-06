@@ -12,7 +12,7 @@ router.get('/', async (req, res, next) => {
     const gifts = await Gift.findAll({
       where: { active: true },
       order: [['sort', 'ASC']],
-      attributes: ['id', 'name', 'imageUrl', 'price', 'sort', 'animationLevel']
+      attributes: ['id', 'name', 'imageUrl', 'price', 'sort', 'animationLevel', 'effectImage']
     })
     success(res, gifts)
   } catch (err) { next(err) }
@@ -100,7 +100,8 @@ router.post('/send', auth, async (req, res, next) => {
       diamondAmount: gift.price,
       quantity: qty,
       totalDiamond,
-      animationLevel: gift.animationLevel || 1
+      animationLevel: gift.animationLevel || 1,
+      effectImage: gift.effectImage || ''
     })
     const message = await Message.create({
       sessionId: sortedIds.join('-'),
@@ -162,6 +163,7 @@ router.post('/send', auth, async (req, res, next) => {
       diamondAmount: totalDiamond,
       quantity: qty,
       animationLevel: gift.animationLevel || 1,
+      effectImage: gift.effectImage || '',
       receiverId: Number(receiverId),
       messageId: message.id
     }, '礼物发送成功')

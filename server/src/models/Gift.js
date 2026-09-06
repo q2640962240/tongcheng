@@ -34,6 +34,11 @@ const Gift = sequelize.define('Gift', {
     type: DataTypes.TINYINT,
     defaultValue: 1,
     comment: '动画等级: 0无 1小型飘动 2中型横幅 3全屏'
+  },
+  effectImage: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: '全屏特效背景图(L2/L3使用)'
   }
 }, {
   tableName: 'gifts',

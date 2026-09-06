@@ -538,7 +538,8 @@ function onGiftCardTap(m) {
       giftImage: gc.giftImage,
       diamondAmount: gc.diamondAmount,
       quantity: gc.quantity || 1,
-      animationLevel: gc.animationLevel || 1
+      animationLevel: gc.animationLevel || 1,
+      effectImage: gc.effectImage || ''
     })
   }
 }
@@ -553,7 +554,8 @@ function onGiftSent(gift) {
       giftImage: gift.giftImage || gift.imageUrl,
       diamondAmount: gift.diamondAmount || gift.price,
       quantity: gift.quantity || 1,
-      animationLevel: gift.animationLevel || 1
+      animationLevel: gift.animationLevel || 1,
+      effectImage: gift.effectImage || ''
     })
   }
 }
@@ -566,7 +568,8 @@ function triggerGiftAnimation(msg) {
       giftImage: gc.giftImage,
       diamondAmount: gc.diamondAmount,
       quantity: gc.quantity || 1,
-      animationLevel: gc.animationLevel || 1
+      animationLevel: gc.animationLevel || 1,
+      effectImage: gc.effectImage || ''
     })
   }
 }
