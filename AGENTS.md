@@ -102,6 +102,10 @@ cd app && npm install && npm run dev:h5
 3. 钻石充值接入微信/支付宝支付
 4. 礼物素材正式设计 (当前 emoji 占位)
 5. 会话列表深色主题适配
+6. **`diamondAmount` 字段语义不一致** — `gifts.js` 写入消息体的 `giftContent.diamondAmount` 是**单价** (`gift.price`)，而 API 响应 / WS 广播里的 `diamondAmount` 是**总价** (`totalDiamond`)。多件礼物时聊天卡片显示单价且不显示数量（如送 2 个游艇、实付 2000，卡片显示「游艇 💎 1000」）。需先决定以哪个为准，再统一两端并让卡片显示数量
+7. **会话列表礼物摘要显示「[自定义消息]」** — Lite SDK 的 `conversation.lastMessage.messageForShow` 不取 `TIMCustomElem.Desc`（服务端已传 `送出了N个XX`，无效）。需在会话列表摘要渲染处按 `businessID === 'gift'` 自行映射为「[礼物] XX」
+8. **清理礼物特效验证期间的测试数据** — `gift_records` 43-46（20→23 一条、13→23 三条）及对应 `messages` 245-248；用户 13/20 钱包被充值（现余 500/1500）；用户 23 的 `gift_income`(3783570 分) 与 `charm_value`(54051) 含测试污染。IM 云端消息无法通过 REST 删除，会残留在会话里
+9. **TUIKit 首屏偶发空白竞态** — 容器重建后首次加载偶发 `Error in event handler for sdkStateReady: e.chat.getConversationList is not a function`，聊天页停在约 75 个 DOM 元素不渲染，再刷新一次即恢复。属引擎内部时序问题，与业务代码无关，尚未修复
 
 ## 文档索引
 
