@@ -59,8 +59,9 @@ cd app && npm install && npm run dev:h5
 
 - **送礼**: POST /api/gifts/send → 事务(扣钻→加收入→创建GiftRecord→创建Message) → WS广播 → IM转发
 - **动画**: GiftAnimation 组件，4级效果 (L0无/L1小飘/L2横幅/L3全屏)
-- **经济**: 钻石(充值) → 送礼消耗 → 收礼获 giftIncome(分) → 提现
-- **关键文件**: `server/src/routes/gifts.js`, `app/src/components/GiftPanel.vue`, `app/src/components/GiftAnimation.vue`
+- **经济**: 钻石(充值) → 送礼消耗 → 收礼获 giftIncome(分) → 提现（需先绑定收款账号）
+- **收款绑定**: 提现前必须绑定支付宝/微信收款账号+二维码，换绑需短信验证（payment_bind）
+- **关键文件**: `server/src/routes/gifts.js`, `app/src/components/GiftPanel.vue`, `app/src/components/GiftAnimation.vue`, `app/src/pages/withdraw/payment-bind.vue`
 
 详见 `docs/HANDOVER.md` 第三/三½节。
 
@@ -74,6 +75,10 @@ cd app && npm install && npm run dev:h5
 6. **APK 需 HBuilderX 本地打包** — TUIKit 需本地编译
 7. **giftIncome 单位为分** — API/存储用分，UI ÷100 显示元
 8. **im-sync 跳过自定义消息** — 防止礼物消息双写入
+9. **管理后台数据解包** — `admin/src/api/http.js` 返回 `{ code, message, data }` 信封，页面必须用 `r.data?.list || r.data` 提取数据，不能直接 `r.list || r`
+10. **admin vite @ 别名** — `admin/vite.config.js` 已配置 `@` → `src` 别名，新增页面可用 `@/api` 等导入路径
+11. **提现需绑定收款账号** — 用户提现前必须绑定支付宝/微信收款账号（含二维码），换绑需短信验证（场景 payment_bind）
+12. **Banner 管理 API 路径** — admin 前端调 `/banners/admin/list` 和 `/banners/admin/banners`，走 `/api/banners` 挂载点下的 admin 路由
 
 ## 服务器信息
 

@@ -1,7 +1,7 @@
 # 白夜陪玩 — AI 交接文档 (HANDOVER)
 
-> **文档版本**: v3.0 (2026-09-06)
-> **项目整体完成度**: ~97%（代码 100%，部署 100%，IM 95%）
+> **文档版本**: v3.1 (2026-09-06)
+> **项目整体完成度**: ~98%（代码 100%，部署 100%，IM 95%）
 > **本文档目的**: 让下一位 AI 同事在 10 分钟内掌握项目全貌、当前状态、未完成事项和注意事项
 
 ---
@@ -70,7 +70,7 @@ companion-play-app/
 | HTTPS | https://zyb001.cn → 200 OK |
 | API | https://zyb001.cn/api/health → `{"status":"ok","driver":"mysql","dbOk":true}` |
 | 容器 | 6 个全部运行 (gateway, server, admin, h5, mysql, redis) |
-| 种子数据 | 11 用户, 15 约玩, 1 管理员, 14 分类, 3 Banner, 11 帖子, 6 礼物, 55 配置 |
+| 种子数据 | 11 用户, 15 约玩, 1 管理员, 14 分类, 3 Banner, 11 帖子, 16 礼物, 55 配置 |
 | 部署目录 | /opt/baiye |
 
 ### 紧急恢复
@@ -188,6 +188,7 @@ AI 自动回复
 | `app/src/components/GiftAnimation.vue` | 分级 CSS 动画组件，队列序列化 |
 | `app/src/pages/gift-rank/` | 排行榜：魅力榜+豪礼榜，日/周/总切换 |
 | `app/src/pages/gift-shop/` | 礼物商城 |
+| `app/src/pages/withdraw/payment-bind.vue` | 收款账号绑定页（支付宝/微信+二维码） |
 
 ### 经济模型
 
@@ -196,7 +197,9 @@ AI 自动回复
 | 钻石 | 充值获得，送礼消耗 |
 | giftIncome | 收礼获得（单位：分），可提现 |
 | charmValue | 魅力值 = 累计收到钻石数，只增不减 |
-| 提现 | giftApi.withdraw → 管理员审核 → 通过后扣 giftIncome |
+| 收款绑定 | 提现前必须绑定收款账号（支付宝/微信+二维码），存储在 `user.meta.paymentBinding` |
+| 换绑 | 需短信验证码（场景: payment_bind），防止恶意换绑 |
+| 提现 | giftApi.withdraw → 校验绑定状态 → 管理员审核 → 通过后扣 giftIncome |
 
 ---
 
@@ -328,6 +331,10 @@ curl -sk https://zyb001.cn/ | grep -o 'index-[A-Za-z0-9_-]*\.js'
 14. **送礼消息双通道**: viaIM=true 走 TUIKit（IM→im-sync→DB），viaIM=false 走自建（DB→WS→IM）
 15. **im-sync 跳过自定义消息**: 防止礼物消息通过 IM 和 DB 双写入（tuilogin.js 配置）
 16. **钻石双花风险**: /gifts/send 事务内需 LOCK.UPDATE 锁 wallet 行，并发场景需压测验证
+17. **管理后台数据解包**: `admin/src/api/http.js` 返回 `{ code, message, data }` 信封，页面必须用 `r.data?.list || r.data` 提取数据，不能直接 `r.list || r`
+18. **admin vite @ 别名**: `admin/vite.config.js` 已配置 `@` → `src` 别名，新增页面可用 `@/api` 等导入路径
+19. **提现需绑定收款账号**: 用户提现前必须绑定支付宝/微信收款账号（含二维码），换绑需短信验证（场景 payment_bind）
+20. **Banner 管理 API 路径**: admin 前端调 `/banners/admin/list` 和 `/banners/admin/banners`，走 `/api/banners` 挂载点下的 admin 路由
 
 ---
 
@@ -364,10 +371,13 @@ curl -sk https://zyb001.cn/ | grep -o 'index-[A-Za-z0-9_-]*\.js'
 - [x] AI 自动回复
 - [x] 礼物商城 + 排行榜 (魅力榜/豪礼榜)
 - [x] 钻石经济 (送礼扣钻/收礼获收入/提现)
+- [x] 收款账号绑定 (提现前必须绑定支付宝/微信+二维码，换绑需短信验证)
 - [x] 在线状态 (WS 活跃检测)
 - [x] 精英会员体系
 - [x] 管理后台 (用户/约玩/订单/礼物/内容/聊天/财务/配置)
-- [x] 种子数据完整 (含 6 个默认礼物)
+- [x] 管理后台数据解析修复 (6文件8处，列表/提现审核/送礼记录正常展示)
+- [x] Banner 管理 (增删改查，API 路由已修复)
+- [x] 种子数据完整 (含 16 个默认礼物)
 - [x] HTTPS + 自动续期
 - [x] Docker 6 容器编排
 
