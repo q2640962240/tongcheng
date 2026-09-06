@@ -58,6 +58,29 @@
       <text class="tips-line">· 反馈采纳可获得钻石奖励</text>
     </view>
 
+    <!-- 交易记录 -->
+    <view class="section">
+      <view class="history-header">
+        <text class="section-title" style="margin-bottom:0">交易记录</text>
+        <view class="history-more" @tap="goTransactions">全部 →</view>
+      </view>
+      <view v-if="txLoading" class="tx-loading">加载中…</view>
+      <view v-else-if="txList.length === 0" class="tx-empty">暂无交易记录</view>
+      <view v-else class="tx-list">
+        <view v-for="t in txList" :key="t.id" class="tx-item">
+          <view class="tx-icon" :class="t.type">{{ t.type === 'recharge' ? '💎' : t.type === 'consume' ? '🛒' : '⇄' }}</view>
+          <view class="tx-info">
+            <text class="tx-title">{{ t.label }}</text>
+            <text class="tx-remark">{{ t.remark }}</text>
+          </view>
+          <view class="tx-right">
+            <text class="tx-amount" :class="t.type === 'recharge' ? 'in' : 'out'">{{ t.type === 'recharge' ? '+' : '-' }}{{ t.amountText }}</text>
+            <text class="tx-time">{{ t.time }}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- 充值按钮 -->
     <view class="submit-btn" :class="{ disabled: !selected }" @tap="onRecharge">
       确认充值 ¥{{ selectedPrice }}
@@ -69,12 +92,16 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useWalletStore } from '../../store/wallet'
+import { walletApi } from '../../api'
 
 const walletStore = useWalletStore()
 const wallet = computed(() => ({
   diamond: walletStore.diamond,
   starCoin: walletStore.starCoin
 }))
+
+const txList = ref([])
+const txLoading = ref(false)
 
 const plans = [
   { diamond: 60, price: 6, gift: 0 },
@@ -88,6 +115,57 @@ const selected = ref(680)
 const selectedPrice = computed(() => plans.find(p => p.diamond === selected.value)?.price || 0)
 const payMethod = ref('wechat')
 
+const labelMap = {
+  recharge: '充值', consume: '消费', exchange: '兑换',
+  gift_send: '送礼', refund: '退款', reward: '奖励'
+}
+
+const formatDate = (str) => {
+  if (!str) return ''
+  const d = new Date(str)
+  if (isNaN(d.getTime())) return ''
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${m}-${day} ${h}:${min}`
+}
+
+const fetchTransactions = async () => {
+  txLoading.value = true
+  try {
+    const res = await walletApi.transactions({ page: 1, pageSize: 10 })
+    const list = res?.data?.list || res?.list || []
+    txList.value = list.map(item => {
+      const type = item.type || 'consume'
+      const amt = item.amount || 0
+      const currency = item.currency || 'starCoin'
+      let amountText
+      if (currency === 'fen') {
+        amountText = `¥${(amt / 100).toFixed(2)}`
+      } else {
+        amountText = `${Math.abs(amt)} ${currency === 'diamond' ? '钻石' : '星币'}`
+      }
+      return {
+        id: item.id,
+        type,
+        label: labelMap[type] || '交易',
+        remark: item.remark || '',
+        amountText,
+        time: formatDate(item.createdAt || item.created_at)
+      }
+    })
+  } catch (e) {
+    txList.value = []
+  } finally {
+    txLoading.value = false
+  }
+}
+
+const goTransactions = () => {
+  uni.navigateTo({ url: '/pages/transactions/transactions' })
+}
+
 const onRecharge = async () => {
   if (!selected.value) return
   try {
@@ -100,6 +178,7 @@ const onRecharge = async () => {
 
 onShow(() => {
   walletStore.fetchBalance().catch(() => {})
+  fetchTransactions()
 })
 </script>
 
@@ -153,4 +232,26 @@ onShow(() => {
   &:active { opacity: 0.85; }
   &.disabled { background: $by-bg-soft; color: $by-text-mute; box-shadow: none; }
 }
+.history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20rpx; }
+.history-more { font-size: 24rpx; color: $by-text-3; }
+.tx-loading, .tx-empty { font-size: 26rpx; color: $by-text-3; text-align: center; padding: 32rpx 0; }
+.tx-list { display: flex; flex-direction: column; gap: 12rpx; }
+.tx-item {
+  display: flex; align-items: center; gap: 16rpx;
+  background: $by-surface; border-radius: 20rpx; padding: 20rpx 24rpx;
+  border: 1rpx solid $by-border;
+}
+.tx-icon {
+  width: 64rpx; height: 64rpx; border-radius: 9999rpx;
+  background: $by-soft-card; display: flex; align-items: center; justify-content: center;
+  font-size: 32rpx; flex-shrink: 0;
+  &.recharge { background: color.adjust($by-gold, $alpha: 0.16); }
+  &.consume { background: color.adjust($by-aurora-a, $alpha: 0.16); }
+}
+.tx-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4rpx; }
+.tx-title { font-size: 26rpx; font-weight: 600; color: $by-text-1; }
+.tx-remark { font-size: 22rpx; color: $by-text-3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx-right { display: flex; flex-direction: column; gap: 4rpx; align-items: flex-end; flex-shrink: 0; }
+.tx-amount { font-size: 28rpx; font-weight: 700; &.in { color: $by-gold; } &.out { color: $by-text-2; } }
+.tx-time { font-size: 22rpx; color: $by-text-muted; }
 </style>

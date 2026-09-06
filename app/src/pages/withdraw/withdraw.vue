@@ -61,6 +61,28 @@
       <text class="tips-line">· 提现手续费全免</text>
     </view>
 
+    <!-- 提现记录 -->
+    <view class="card history-card">
+      <view class="history-header">
+        <text class="card-title" style="margin-bottom:0">提现记录</text>
+        <view class="history-more" @tap="goTransactions">全部 →</view>
+      </view>
+      <view v-if="historyLoading" class="history-loading">加载中…</view>
+      <view v-else-if="history.length === 0" class="history-empty">暂无提现记录</view>
+      <view v-else class="history-list">
+        <view v-for="item in history" :key="item.id" class="history-item">
+          <view class="history-left">
+            <text class="history-amount">-¥{{ item.yuan }}</text>
+            <text class="history-channel">{{ item.channel === 'alipay' ? '支付宝' : '微信零钱' }}</text>
+          </view>
+          <view class="history-right">
+            <text class="history-status" :class="item.status">{{ item.statusText }}</text>
+            <text class="history-time">{{ item.time }}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <!-- 提交 -->
     <view class="submit-btn" :class="{ disabled: !canSubmit }" @tap="onWithdraw">
       {{ submitting ? '提交中...' : '确认提现' }}
@@ -72,7 +94,7 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useWalletStore } from '../../store/wallet'
-import { giftApi, paymentApi } from '../../api'
+import { giftApi, paymentApi, walletApi } from '../../api'
 import { fenToYuan } from '../../utils/format'
 
 const walletStore = useWalletStore()
@@ -81,6 +103,9 @@ const amount = ref(null)
 const method = ref('wechat')
 const submitting = ref(false)
 const bindingBound = ref(false)
+
+const history = ref([])
+const historyLoading = ref(false)
 
 const incomeYuan = computed(() => (Number(walletStore.giftIncome) / 100))
 const remainYuan = computed(() => {
@@ -92,6 +117,46 @@ const canSubmit = computed(() => {
   const a = Number(amount.value)
   return a >= 1 && a <= incomeYuan.value
 })
+
+const fetchHistory = async () => {
+  historyLoading.value = true
+  try {
+    const res = await walletApi.transactions({ type: 'gift_withdraw', page: 1, pageSize: 10 })
+    const list = res?.data?.list || res?.list || []
+    history.value = list.map(item => {
+      const extra = item.extra || {}
+      const statusMap = { pending: '审核中', approved: '已到账', rejected: '已拒绝' }
+      const st = extra.status || 'pending'
+      return {
+        id: item.id,
+        yuan: ((item.amount || 0) / 100).toFixed(2),
+        channel: extra.channel || 'wechat',
+        status: st,
+        statusText: statusMap[st] || '审核中',
+        time: formatDate(item.createdAt || item.created_at)
+      }
+    })
+  } catch (e) {
+    history.value = []
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+const formatDate = (str) => {
+  if (!str) return ''
+  const d = new Date(str)
+  if (isNaN(d.getTime())) return ''
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${m}-${day} ${h}:${min}`
+}
+
+const goTransactions = () => {
+  uni.navigateTo({ url: '/pages/transactions/transactions' })
+}
 
 
 const fetchBinding = async () => {
@@ -133,6 +198,7 @@ const onWithdraw = () => {
 onShow(() => {
   walletStore.fetchBalance().catch(() => {})
   fetchBinding()
+  fetchHistory()
 })
 </script>
 
@@ -193,4 +259,25 @@ onShow(() => {
   &:active { opacity: 0.85; }
   &.disabled { background: #e5e5e5; color: #a3a3a3; }
 }
+.history-card { padding-bottom: 16rpx; }
+.history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20rpx; }
+.history-more { font-size: 24rpx; color: #a3a3a3; }
+.history-loading, .history-empty { font-size: 26rpx; color: #a3a3a3; text-align: center; padding: 32rpx 0; }
+.history-list { display: flex; flex-direction: column; gap: 16rpx; }
+.history-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20rpx 0; border-bottom: 1rpx solid #f0f0f0;
+  &:last-child { border-bottom: none; }
+}
+.history-left { display: flex; flex-direction: column; gap: 4rpx; }
+.history-amount { font-size: 30rpx; font-weight: 700; color: #171717; }
+.history-channel { font-size: 22rpx; color: #a3a3a3; }
+.history-right { display: flex; flex-direction: column; gap: 4rpx; align-items: flex-end; }
+.history-status {
+  font-size: 24rpx; font-weight: 500;
+  &.pending { color: #b45309; }
+  &.approved { color: #16a34a; }
+  &.rejected { color: #dc2626; }
+}
+.history-time { font-size: 22rpx; color: #d4d4d4; }
 </style>

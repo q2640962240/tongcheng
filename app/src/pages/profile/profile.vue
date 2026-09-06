@@ -87,6 +87,10 @@
             <view class="wallet-action withdraw-btn" @tap="onIncome">提现</view>
           </view>
         </view>
+        <view class="wallet-detail-link" @tap="onNav('/pages/transactions/transactions')">
+          <text class="detail-link-text">交易明细</text>
+          <text class="detail-link-arrow">→</text>
+        </view>
         <view class="charm-row" v-if="charmValue > 0">
           <text class="charm-label">🌟 魅力值</text>
           <text class="charm-num">{{ charmValue }}</text>
@@ -554,6 +558,18 @@ onShow(() => {
   background: linear-gradient(180deg, transparent 0%, $by-border-strong 50%, transparent 100%);
   flex-shrink: 0;
 }
+.wallet-detail-link {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 16rpx;
+  padding: 16rpx 20rpx;
+  background: color.adjust($by-gold, $alpha: -0.88);
+  border-radius: 16rpx;
+  border: 1rpx solid color.adjust($by-gold, $alpha: -0.75);
+  &:active { opacity: 0.8; }
+}
+.detail-link-text { font-size: 26rpx; color: $by-gold; font-weight: 500; }
+.detail-link-arrow { font-size: 26rpx; color: $by-gold; }
 .charm-row {
   position: relative; z-index: 1;
   display: flex; align-items: center; justify-content: center; gap: 12rpx;
