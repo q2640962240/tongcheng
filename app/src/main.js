@@ -1,6 +1,10 @@
 ﻿import { createSSRApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
+// 导入原生 uni-h5 事件函数，用于 polyfill 委托（避免创建独立事件总线）
+// #ifdef H5
+import { $emit as nativeEmit, $on as nativeOn, $off as nativeOff } from '@dcloudio/uni-h5'
+// #endif
 
 /**
  * TUIKit H5 Polyfill
@@ -312,26 +316,17 @@ function _tuiPolyfillUni() {
     }
   }
 
-  // 事件通信 API：uni.$emit/$on/$off 用于跨组件通信（礼物动画触发等），
-  // H5 端缺失时用简单事件总线实现
+  // 事件通信 API：uni.$emit/$on/$off 用于跨组件通信（礼物动画触发等）。
+  // 关键：必须委托给原生 @dcloudio/uni-h5 的 Emitter（vp.on/vp.emit），
+  // 不能创建独立的闭包事件总线——否则 window.uni.$emit 和编译后代码的 uni.$on
+  // 会走两条互不相通的事件通道，导致礼物动画等跨组件事件丢失。
+  // #ifdef H5
   if (typeof U.$emit !== 'function') {
-    const eventBus = {}
-    U.$on = (eventName, callback) => {
-      if (!eventBus[eventName]) eventBus[eventName] = []
-      eventBus[eventName].push(callback)
-    }
-    U.$off = (eventName, callback) => {
-      if (!eventBus[eventName]) return
-      if (!callback) { delete eventBus[eventName]; return }
-      eventBus[eventName] = eventBus[eventName].filter(cb => cb !== callback)
-    }
-    U.$emit = (eventName, data) => {
-      if (!eventBus[eventName]) return
-      eventBus[eventName].forEach(cb => {
-        try { cb(data) } catch (e) { console.error('[uni.$emit] handler error:', e) }
-      })
-    }
+    U.$on = nativeOn
+    U.$off = nativeOff
+    U.$emit = nativeEmit
   }
+  // #endif
 }
 // 立即 + 多级延迟 + DOMContentLoaded 兜底：uni-app 运行时会异步初始化 window.uni（window.uni={}），
 // 过早执行 polyfill 会被覆盖，因此多级延迟重试；polyfill 幂等（仅当 API 缺失时才覆盖），安全无副作用。

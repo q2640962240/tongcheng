@@ -73,7 +73,6 @@
             @changeToolbarDisplayType="changeToolbarDisplayType"
           />
         </template>
-        <MessageGiftEffect ref="giftEffectRef" />
         <GiftAnimation ref="giftAnimRef" />
       </div>
     </div>
@@ -93,7 +92,6 @@ import TUICore, { TUIConstants, ExtensionInfo } from '@tencentcloud/tui-core-lit
 import ChatHeader from './chat-header/index.vue';
 import MessageList from './message-list/index.vue';
 import MessageInput from './message-input/index.vue';
-import MessageGiftEffect from './message-list/message-elements/message-gift-effect.vue';
 import GiftAnimation from '@/components/GiftAnimation.vue';
 import MultipleSelectPanel from './mulitple-select-panel/index.vue';
 import Forward from './forward/index.vue';
@@ -175,7 +173,6 @@ const isMultipleSelectMode = ref(false);
 const inputToolbarDisplayType = ref<ToolbarDisplayType>('none');
 const messageInputRef = ref();
 const messageListRef = ref<InstanceType<typeof MessageList>>();
-const giftEffectRef = ref<InstanceType<typeof MessageGiftEffect>>();
 const giftAnimRef = ref<InstanceType<typeof GiftAnimation>>();
 const headerExtensionList = ref<ExtensionInfo[]>([]);
 const featureConfig = TUIChatConfig.getFeatureConfig();

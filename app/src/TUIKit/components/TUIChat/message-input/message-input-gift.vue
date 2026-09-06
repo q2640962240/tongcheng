@@ -102,6 +102,7 @@ const sendGift = async () => {
         giftImage: gift.imageUrl,
         diamondAmount: gift.price,
         animationLevel: giftData.animationLevel || gift.animationLevel || 1,
+        effectImage: giftData.effectImage || gift.effectImage || '',
         senderName: currentUserProfile.value?.nick || currentUserProfile.value?.userID || '',
       }),
       description: `送出了${gift.name}`,
@@ -128,6 +129,7 @@ const sendGift = async () => {
         diamondAmount: gift.price,
         quantity: 1,
         animationLevel: giftData.animationLevel || gift.animationLevel || 1,
+        effectImage: giftData.effectImage || gift.effectImage || '',
         senderName: currentUserProfile.value?.nick || currentUserProfile.value?.userID || '',
       })
     } catch (_) {}
