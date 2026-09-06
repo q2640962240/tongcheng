@@ -5,7 +5,8 @@
         <!-- L1: 小飘动 + 横幅 -->
         <view v-if="current.level >= 1" class="gift-anim-l1">
           <view class="gift-anim-l1-banner">
-            <text class="gift-anim-l1-emoji">{{ current.image }}</text>
+            <text v-if="current.isEmoji" class="gift-anim-l1-emoji">{{ current.image }}</text>
+            <image v-else class="gift-anim-l1-img" :src="current.image" mode="aspectFit" />
             <text class="gift-anim-l1-text">{{ current.senderName }} 送出 {{ current.giftName }}{{ current.quantity > 1 ? ' ×' + current.quantity : '' }}</text>
           </view>
         </view>
@@ -17,7 +18,8 @@
         <view v-if="current.level >= 3" class="gift-anim-l3">
           <view v-for="i in 12" :key="i" class="gift-anim-l3-particle" :style="particleStyle(i)"></view>
           <view class="gift-anim-l3-center">
-            <text class="gift-anim-l3-emoji">{{ current.image }}</text>
+            <text v-if="current.isEmoji" class="gift-anim-l3-emoji">{{ current.image }}</text>
+            <image v-else class="gift-anim-l3-img" :src="current.image" mode="aspectFit" />
           </view>
         </view>
       </view>
@@ -34,13 +36,20 @@ const playing = ref(false)
 
 const durations = { 0: 0, 1: 2500, 2: 3500, 3: 5000 }
 
+const isEmojiStr = (s) => {
+  if (!s) return true
+  return !s.startsWith('http') && !s.startsWith('/') && !s.startsWith('data:')
+}
+
 const play = (gift) => {
   const level = gift.animationLevel || 1
   if (level <= 0) return
+  const imgUrl = gift.imageUrl || gift.giftImage || '🎁'
   queue.value.push({
     id: Date.now() + Math.random(),
     level,
-    image: gift.imageUrl || gift.giftImage || '🎁',
+    image: imgUrl,
+    isEmoji: isEmojiStr(imgUrl),
     giftName: gift.giftName || gift.name || '礼物',
     senderName: gift.senderName || '',
     quantity: gift.quantity || 1
@@ -140,6 +149,11 @@ defineExpose({ play })
   font-size: 28px;
 }
 
+.gift-anim-l1-img {
+  width: 36px;
+  height: 36px;
+}
+
 .gift-anim-l1-text {
   font-size: 14px;
   font-weight: 600;
@@ -215,6 +229,12 @@ defineExpose({ play })
 
 .gift-anim-l3-emoji {
   font-size: 80px;
+  filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.6));
+}
+
+.gift-anim-l3-img {
+  width: 100px;
+  height: 100px;
   filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.6));
 }
 

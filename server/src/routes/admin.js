@@ -55,29 +55,38 @@ router.get('/dashboard', async (req, res, next) => {
     const pendingServices = await Service.count({ where: { status: 'pending' } })
     const refundingOrders = await Order.count({ where: { status: 'refunding' } })
 
-    // 收入统计
-    const allTx = await Transaction.findAll({ where: { type: 'income' } })
-    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-    const todayStart = new Date(new Date().toISOString().slice(0, 10)).toISOString()
+    // 收入统计（订单收入 + 礼物收入）
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    const todayStart = new Date(new Date().toISOString().slice(0, 10))
+    const incomeTx = await Transaction.findAll({
+      where: { type: { [Op.in]: ['income', 'gift_income'] } }
+    })
     let monthIncome = 0, todayIncome = 0
-    for (const t of allTx) {
+    for (const t of incomeTx) {
       const amt = Number(t.amount) || 0
-      if (t.createdAt >= monthStart) monthIncome += amt
-      if (t.createdAt >= todayStart) todayIncome += amt
+      if (t.createdAt >= monthStart.toISOString()) monthIncome += amt
+      if (t.createdAt >= todayStart.toISOString()) todayIncome += amt
     }
 
     // 平台累计充值/提现
     const rechargeTx = await Transaction.findAll({ where: { type: 'recharge' } })
-    const withdrawTx = await Transaction.findAll({ where: { type: 'withdraw' } })
+    const withdrawTx = await Transaction.findAll({ where: { type: { [Op.in]: ['withdraw', 'gift_withdraw'] } } })
     const totalRecharge = rechargeTx.reduce((s, t) => s + Number(t.amount), 0)
     const totalWithdraw = withdrawTx.reduce((s, t) => s + Number(t.amount), 0)
+
+    // 平台收入 = 累计充值 - 累计提现 - 礼物收入（礼物收入从钻石消耗中已扣平台抽成）
+    const totalGiftDiamond = await GiftRecord.sum('diamondAmount').catch(() => 0) || 0
+    const totalGiftIncomeFen = await Transaction.findAll({ where: { type: 'gift_income' } })
+      .then(list => list.reduce((s, t) => s + (Number(t.amount) || 0), 0))
+      .catch(() => 0)
+    const platformIncome = totalRecharge - totalWithdraw - Math.floor(totalGiftIncomeFen / 100)
 
     success(res, {
       userCount, orderCount, serviceCount,
       pendingFeedback, pendingServices, refundingOrders,
       todayIncome, monthIncome,
       totalRecharge, totalWithdraw,
-      platformIncome: Math.floor(totalRecharge * 0.2),  // 平台抽成 20%
+      platformIncome,
       // T11 新增：白夜 v2 广场化指标
       postCount: await Post.count().catch(() => 0),
       groupCount: await Group.count().catch(() => 0),

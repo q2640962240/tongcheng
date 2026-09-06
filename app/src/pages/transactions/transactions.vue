@@ -63,18 +63,20 @@ const total = ref(0)
 
 const typeMap = {
   recharge: '充值', exchange: '兑换', consume: '消费',
-  income: '礼物收入', withdraw: '提现', refund: '退款', reward: '奖励',
+  income: '收入', withdraw: '提现', refund: '退款', reward: '奖励',
+  gift_send: '送礼', gift_income: '礼物收入',
   gift_withdraw: '礼物提现', elite_pay: '精英开通', diamond_unlock_wechat: '解锁微信',
   admin_adjustment: '管理员调整'
 }
 
-const INCOME_TYPES = ['recharge', 'income', 'refund', 'reward']
+const INCOME_TYPES = ['recharge', 'income', 'gift_income', 'refund', 'reward']
 
 const getTypeLabel = (t) => toStr(typeMap[t], '其他交易')
 
 const typeIcon = (t) => ({
   recharge: '💎', exchange: '⇄', consume: '🛒',
   income: '💼', withdraw: '🏧', refund: '↩️', reward: '🎁',
+  gift_send: '🎁', gift_income: '💰',
   gift_withdraw: '🎁', elite_pay: '🌟', diamond_unlock_wechat: '🔓',
   admin_adjustment: '⚙️'
 }[t] || '💰')

@@ -172,6 +172,10 @@
                 <div class="w-label">可提现</div>
               </div>
               <div class="w-card">
+                <div class="w-num">¥ {{ yuan(detail.giftIncome || 0) }}</div>
+                <div class="w-label">礼物收入</div>
+              </div>
+              <div class="w-card">
                 <div class="w-num">¥ {{ yuan(detail.wallet.totalWithdraw) }}</div>
                 <div class="w-label">累计提现</div>
               </div>

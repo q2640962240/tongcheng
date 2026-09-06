@@ -262,7 +262,7 @@ onShow(loadData)
 .inv-time { font-size: 22rpx; color: $by-text-3; }
 .inv-badge {
   padding: 6rpx 16rpx; border-radius: 9999rpx;
-  background: color.change($by-success, $alpha: .15); color: $by-success;
+  background: color.change($by-success, $alpha: .15); color: darken($by-success, 15%);
   font-size: 22rpx; font-weight: 700;
 }
 

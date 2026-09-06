@@ -404,9 +404,9 @@ onShow(() => { loadCertStatus() })
 .cert-status-text {
   font-size: 22rpx; font-weight: 600;
   .tag-none & { color: $by-text-3; }
-  .tag-pending & { color: $by-warning; }
-  .tag-passed & { color: $by-success; }
-  .tag-rejected & { color: $by-error; }
+  .tag-pending & { color: darken($by-warning, 12%); }
+  .tag-passed & { color: darken($by-success, 15%); }
+  .tag-rejected & { color: darken($by-error, 12%); }
 }
 
 .cert-desc {
@@ -476,9 +476,9 @@ onShow(() => { loadCertStatus() })
 .hint-icon { font-size: 28rpx; }
 .hint-text {
   font-size: 26rpx;
-  .pending-hint & { color: $by-warning; }
-  .passed-hint & { color: $by-success; }
-  .rejected-hint & { color: $by-error; }
+  .pending-hint & { color: darken($by-warning, 12%); }
+  .passed-hint & { color: darken($by-success, 15%); }
+  .rejected-hint & { color: darken($by-error, 12%); }
 }
 
 /* ===== 真人认证表单 ===== */

@@ -408,7 +408,7 @@ onShow(() => {
 }
 .real-badge {
   background: color.adjust($by-success, $alpha: 0.16);
-  color: $by-success;
+  color: darken($by-success, 15%);
   border: 1rpx solid color.adjust($by-success, $alpha: 0.3);
 }
 .auth-row { margin-top: 12rpx; }
@@ -481,7 +481,7 @@ onShow(() => {
 }
 .real-tag {
   background: color.adjust($by-success, $alpha: 0.16);
-  color: $by-success;
+  color: darken($by-success, 15%);
   border: 1rpx solid color.adjust($by-success, $alpha: 0.3);
 }
 .cert-action {

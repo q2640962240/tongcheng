@@ -174,11 +174,14 @@ const transactions = ref([])
 
 const typeMap = {
   recharge: '充值', exchange: '兑换', consume: '消费', income: '收入',
-  withdraw: '提现', refund: '退款', reward: '奖励'
+  withdraw: '提现', refund: '退款', reward: '奖励',
+  gift_send: '送礼', gift_income: '礼物收入', gift_withdraw: '礼物提现',
+  admin_adjustment: '管理调整', elite_pay: '精选付费', diamond_unlock_wechat: '钻石解锁'
 }
 const typeTag = (t) => ({
-  recharge: 'success', income: 'success', reward: 'success',
-  withdraw: 'warning', consume: 'info', refund: 'danger', exchange: ''
+  recharge: 'success', income: 'success', reward: 'success', gift_income: 'success',
+  withdraw: 'warning', consume: 'info', refund: 'danger', gift_send: 'warning',
+  gift_withdraw: 'warning', admin_adjustment: '', elite_pay: 'primary', diamond_unlock_wechat: 'primary', exchange: ''
 })[t] || 'info'
 
 // 提现审核

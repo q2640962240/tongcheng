@@ -65,11 +65,11 @@
           <div class="income-info">
             <div class="income-item">
               <div class="income-label">今日收入</div>
-              <div class="income-value">¥{{ stats.todayIncome }}</div>
+              <div class="income-value">¥{{ ((stats.todayIncome || 0) / 100).toFixed(2) }}</div>
             </div>
             <div class="income-item">
               <div class="income-label">本月收入</div>
-              <div class="income-value">¥{{ stats.monthIncome }}</div>
+              <div class="income-value">¥{{ ((stats.monthIncome || 0) / 100).toFixed(2) }}</div>
             </div>
           </div>
         </div>

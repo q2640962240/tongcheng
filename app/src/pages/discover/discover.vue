@@ -789,9 +789,9 @@ const onZodiacFilter = () => {
   padding: 4rpx 16rpx; border-radius: 9999rpx;
   font-size: 22rpx; font-weight: 700;
 }
-.group-status.status-open { background: color.change($by-success, $alpha: .18); color: $by-success; }
-.group-status.status-full { background: color.change($by-warning, $alpha: .18); color: $by-warning; }
-.group-status.status-closed, .group-status.status-canceled { background: color.change($by-error, $alpha: .18); color: $by-error; }
+.group-status.status-open { background: color.change($by-success, $alpha: .18); color: darken($by-success, 15%); }
+.group-status.status-full { background: color.change($by-warning, $alpha: .18); color: darken($by-warning, 12%); }
+.group-status.status-closed, .group-status.status-canceled { background: color.change($by-error, $alpha: .18); color: darken($by-error, 12%); }
 .group-hot { font-size: 22rpx; color: $by-error; }
 .group-title { font-size: 32rpx; font-weight: 800; color: $by-text-1; }
 .group-desc { font-size: 24rpx; color: $by-text-3; line-height: 1.5; }

@@ -401,7 +401,7 @@ onMounted(() => {
 }
 .badge-real {
   background: color.adjust($by-success, $alpha: 0.16);
-  color: $by-success;
+  color: darken($by-success, 15%);
   border: 1rpx solid color.adjust($by-success, $alpha: 0.3);
 }
 .meta-row {

@@ -7,7 +7,7 @@ const Transaction = sequelize.define('Transaction', {
     allowNull: true
   },
   type: {
-    type: DataTypes.ENUM('recharge', 'exchange', 'consume', 'income', 'withdraw', 'refund', 'reward', 'gift_withdraw', 'admin_adjustment', 'elite_pay', 'diamond_unlock_wechat')
+    type: DataTypes.ENUM('recharge', 'exchange', 'consume', 'income', 'withdraw', 'refund', 'reward', 'gift_send', 'gift_income', 'gift_withdraw', 'admin_adjustment', 'elite_pay', 'diamond_unlock_wechat')
   },
   amount: {
     type: DataTypes.BIGINT,

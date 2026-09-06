@@ -496,16 +496,16 @@ onMounted(loadHistory)
 .hot-tag {
   font-size: 20rpx; padding: 4rpx 10rpx; border-radius: 8rpx; font-weight: 700;
   &.hot { background: rgba(220,38,38,0.10); color: #DC2626; }
-  &.new { background: color.adjust($by-aurora-a, $alpha: -0.88); color: $by-aurora-a; }
+  &.new { background: color.adjust($by-aurora-a, $alpha: -0.88); color: lighten($by-aurora-a, 10%); }
 }
 
 /* ---- 用户结果 ---- */
 .t-tag {
   padding: 6rpx 16rpx; border-radius: 9999rpx; font-size: 22rpx;
-  &.tc-0 { background: color.adjust($by-gold, $alpha: -0.88); color: $by-gold; }
-  &.tc-1 { background: color.adjust($by-aurora-a, $alpha: -0.88); color: $by-aurora-a; }
-  &.tc-2 { background: color.adjust($by-aurora-c, $alpha: -0.88); color: $by-aurora-c; }
-  &.tc-3 { background: color.adjust($by-aurora-b, $alpha: -0.88); color: $by-aurora-b; }
+  &.tc-0 { background: color.adjust($by-gold, $alpha: -0.88); color: lighten($by-gold, 10%); }
+  &.tc-1 { background: color.adjust($by-aurora-a, $alpha: -0.88); color: lighten($by-aurora-a, 10%); }
+  &.tc-2 { background: color.adjust($by-aurora-c, $alpha: -0.88); color: lighten($by-aurora-c, 10%); }
+  &.tc-3 { background: color.adjust($by-aurora-b, $alpha: -0.88); color: lighten($by-aurora-b, 10%); }
 }
 .user-row {
   display: flex; gap: 20rpx; align-items: center;
@@ -519,8 +519,8 @@ onMounted(loadHistory)
 .u-tags { display: flex; flex-wrap: wrap; gap: 10rpx; margin-top: 4rpx; }
 .tag {
   padding: 4rpx 12rpx; border-radius: 8rpx; font-size: 22rpx; font-weight: 600;
-  &.tag-yellow { background: color.adjust($by-gold, $alpha: -0.86); color: $by-gold; }
-  &.tag-success { background: color.adjust($by-success, $alpha: -0.86); color: $by-success; }
+  &.tag-yellow { background: color.adjust($by-gold, $alpha: -0.86); color: lighten($by-gold, 10%); }
+  &.tag-success { background: color.adjust($by-success, $alpha: -0.86); color: lighten($by-success, 10%); }
 }
 .u-btn {
   padding: 12rpx 24rpx; border-radius: 9999rpx;

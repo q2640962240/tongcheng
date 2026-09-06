@@ -5,6 +5,8 @@
  *   import { toList, toObj, toStr, toNum, pickCity, safeMap, retry, guard } from '@/utils/fallback'
  */
 
+import { BASE_URL } from './request'
+
 /* ==================== 类型收敛 ==================== */
 
 /** 保证返回数组 */
@@ -281,15 +283,29 @@ export function requireElite(redirect) {
 const FALLBACK_AVATAR = '/static/sucai/profile-xiaokui.jpg'
 const FALLBACK_COVER = '/static/sucai/post-game1.jpg'
 
+function resolveOrigin() {
+  const u = String(BASE_URL || '')
+  if (u.startsWith('http')) return u.replace(/\/api\/?$/, '')
+  return ''
+}
+
 export function avatarUrl(raw) {
   const s = toStr(raw, '')
   if (!s) return FALLBACK_AVATAR
+  if (s.startsWith('/uploads/')) {
+    const origin = resolveOrigin()
+    if (origin) return origin + s
+  }
   return s
 }
 
 export function coverUrl(raw) {
   const s = toStr(raw, '')
   if (!s) return FALLBACK_COVER
+  if (s.startsWith('/uploads/')) {
+    const origin = resolveOrigin()
+    if (origin) return origin + s
+  }
   return s
 }
 

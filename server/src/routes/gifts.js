@@ -70,6 +70,26 @@ router.post('/send', auth, async (req, res, next) => {
       { transaction: t }
     )
 
+    // b2. 创建交易记录（审计追踪）
+    await Transaction.create({
+      userId: req.userId,
+      type: 'gift_send',
+      amount: -totalDiamond,
+      currency: 'diamond',
+      balanceAfter: wallet.diamond - totalDiamond,
+      remark: `送出${qty}个${gift.name}`,
+      extra: { receiverId: Number(receiverId), giftId: gift.id, giftName: gift.name, quantity: qty, diamondAmount: totalDiamond }
+    }, { transaction: t })
+    await Transaction.create({
+      userId: Number(receiverId),
+      type: 'gift_income',
+      amount: receiverIncome,
+      currency: 'fen',
+      balanceAfter: (receiver.giftIncome || 0) + receiverIncome,
+      remark: `收到${qty}个${gift.name}`,
+      extra: { senderId: req.userId, giftId: gift.id, giftName: gift.name, quantity: qty, diamondAmount: totalDiamond, incomeFen: receiverIncome }
+    }, { transaction: t })
+
     // c. 创建聊天消息（type='gift'）
     const sortedIds = [Number(req.userId), Number(receiverId)].sort((a, b) => a - b)
     const giftContent = JSON.stringify({
@@ -191,16 +211,15 @@ router.get('/rank', async (req, res, next) => {
     }
 
     const groupField = side === 'sent' ? 'senderId' : 'receiverId'
-    const idField = side === 'sent' ? 'sender_id' : 'receiver_id'
 
     const results = await GiftRecord.findAll({
       where: whereClause,
       attributes: [
         [groupField, 'userId'],
-        [sequelize.fn('SUM', sequelize.col('diamond_amount')), 'totalDiamond'],
+        [sequelize.fn('SUM', sequelize.col('diamondAmount')), 'totalDiamond'],
         [sequelize.fn('COUNT', sequelize.col('id')), 'totalCount']
       ],
-      group: [idField],
+      group: [groupField],
       order: [[sequelize.literal('totalDiamond'), 'DESC']],
       limit: lim,
       raw: true
