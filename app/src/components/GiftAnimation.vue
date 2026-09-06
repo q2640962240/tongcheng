@@ -1,13 +1,25 @@
 <template>
   <view class="gift-anim-layer" v-if="current.id" :class="'gift-anim-l' + current.level">
+    <!-- #ifdef H5 || APP-PLUS -->
+    <SvgaStage
+      v-if="current.effectSvga"
+      :key="'svga-' + current.uid"
+      :src="current.effectSvga"
+      :level="current.level"
+      :uid="current.uid"
+      @fail="onSvgaFail"
+      @end="onSvgaEnd"
+    />
+    <!-- #endif -->
+
     <view
-      v-if="current.level >= 2 && current.effectImage"
+      v-if="!current.effectSvga && current.level >= 2 && current.effectImage"
       class="gift-effect-bg"
       :class="'gift-effect-bg-l' + current.level"
       :style="{ backgroundImage: 'url(' + current.effectImage + ')' }"
     ></view>
 
-    <view v-if="current.level >= 3" class="gift-bg-overlay"></view>
+    <view v-if="!current.effectSvga && current.level >= 3" class="gift-bg-overlay"></view>
 
     <view v-if="current.level >= 1" class="gift-banner" :class="'gift-banner-l' + current.level">
       <view class="gift-banner-shimmer"></view>
@@ -34,17 +46,46 @@
 
 <script setup>
 import { ref, watch, onUnmounted } from 'vue'
+import { getCurrentBaseURL } from '@/utils/request'
+// #ifdef H5 || APP-PLUS
+import SvgaStage from './SvgaStage.vue'
+// #endif
+
+// renderjs 只在 H5 / App-vue 可用，小程序端保持 CSS 特效
+let SVGA_SUPPORTED = false
+// #ifdef H5 || APP-PLUS
+SVGA_SUPPORTED = true
+// #endif
 
 const queue = ref([])
 const current = ref({})
 const playing = ref(false)
 let timerId = null
+let uidSeq = 0
 const MAX_QUEUE = 5
 const durations = { 0: 0, 1: 2500, 2: 4000, 3: 6000 }
+// SVGA 由 onFinished 驱动切换，这里只是「结束事件丢失」时的兜底。
+// 最长的素材（心动）本身 8s，计时又从下载前就开始，所以留到 15s
+const SVGA_MAX = 15000
 
 const isEmojiStr = (s) => {
   if (!s) return true
   return !s.startsWith('http') && !s.startsWith('/') && !s.startsWith('data:')
+}
+
+// App 端 webview 源是 file://，相对路径取不到站点静态资源
+function siteOrigin() {
+  // #ifdef H5
+  return ''
+  // #endif
+  // #ifndef H5
+  return String(getCurrentBaseURL() || '').replace(/\/api\/?$/, '') || 'https://zyb001.cn'
+  // #endif
+}
+
+const resolveSvga = (effectImage) => {
+  if (!SVGA_SUPPORTED || !effectImage || !/\.svga$/i.test(effectImage)) return ''
+  return /^https?:\/\//i.test(effectImage) ? effectImage : siteOrigin() + effectImage
 }
 
 const play = (gift) => {
@@ -54,13 +95,15 @@ const play = (gift) => {
   if (queue.value.length >= MAX_QUEUE) queue.value.shift()
   queue.value.push({
     id: Date.now() + Math.random(),
+    uid: ++uidSeq,
     level,
     image: imgUrl,
     isEmoji: isEmojiStr(imgUrl),
     giftName: gift.giftName || gift.name || '礼物',
     senderName: gift.senderName || '',
     quantity: gift.quantity || 1,
-    effectImage: gift.effectImage || ''
+    effectImage: gift.effectImage || '',
+    effectSvga: resolveSvga(gift.effectImage)
   })
 }
 
@@ -75,6 +118,17 @@ watch(queue, (q) => {
   if (q.length > 0 && !playing.value) playNext()
 }, { deep: true })
 
+const advance = () => {
+  clearTimer()
+  queue.value.shift()
+  if (queue.value.length > 0) {
+    playNext()
+  } else {
+    playing.value = false
+    current.value = {}
+  }
+}
+
 const playNext = () => {
   clearTimer()
   if (queue.value.length === 0) {
@@ -85,16 +139,22 @@ const playNext = () => {
   playing.value = true
   current.value = queue.value[0]
 
-  const dur = durations[current.value.level] || 2500
-  timerId = setTimeout(() => {
-    queue.value.shift()
-    if (queue.value.length > 0) {
-      playNext()
-    } else {
-      playing.value = false
-      current.value = {}
-    }
-  }, dur)
+  const dur = current.value.effectSvga ? SVGA_MAX : (durations[current.value.level] || 2500)
+  timerId = setTimeout(advance, dur)
+}
+
+// SVGA 播完（或兜底超时已到）就切下一个
+const onSvgaEnd = () => {
+  if (playing.value && current.value.effectSvga) advance()
+}
+
+// 加载/解码失败：退回 CSS 特效，别让整条队列卡住
+const onSvgaFail = () => {
+  if (!playing.value) return
+  current.value.effectSvga = ''
+  current.value.effectImage = ''
+  clearTimer()
+  timerId = setTimeout(advance, durations[current.value.level] || 2500)
 }
 
 onUnmounted(() => {

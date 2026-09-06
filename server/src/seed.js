@@ -469,25 +469,30 @@ async function ensureBanners({ transaction }) {
 }
 
 // ============ 礼物种子数据 ============
+// 图标/特效统一放 app/src/static 下并用绝对 /static/ 路径：H5 与 App(iOS/Android) 双端都能解析。
+// 不要用 /assets/ —— 那是 Vite H5 专用目录，App 端只打包 src/static，会加载不到。
+// effectImage 指向 .svga（SVGA 矢量动画），由 app/src/components/SvgaStage.vue 用 renderjs 播放；
+// 小程序端不支持 renderjs，会自动降级为纯 CSS 特效层。
+// ⚠️ price / sort 是金额与排序字段，改动需用户批准。
+// ⚠️ ensureGifts / upgradeGifts 都按 name 匹配，改名后直接在生产跑 seed 会插入重复行；
+//    生产库改名必须走「按 sort 定向 UPDATE」，见 AGENTS.md 待办。
 const DEFAULT_GIFTS = [
-  { name: '棒棒糖',   imageUrl: '🍭',   price: 1,     sort: 1,  active: true, animationLevel: 0 },
-  { name: '小红花',   imageUrl: '🌹',   price: 10,    sort: 2,  active: true, animationLevel: 1 },
-  { name: '冰淇淋',   imageUrl: '🍦',   price: 20,    sort: 3,  active: true, animationLevel: 0 },
-  { name: '爱心',     imageUrl: '❤️',   price: 50,    sort: 4,  active: true, animationLevel: 1 },
-  { name: '蛋糕',     imageUrl: '🎂',   price: 80,    sort: 5,  active: true, animationLevel: 1 },
-  // 图标/特效统一放 app/src/static 下并用绝对 /static/ 路径：H5 与 App(iOS/Android) 双端都能解析。
-  // 不要用 /assets/ —— 那是 Vite H5 专用目录，App 端只打包 src/static，会加载不到。
-  { name: '皇冠',     imageUrl: '/static/gifts/crown.jpg',        price: 100,   sort: 6,  active: true, animationLevel: 2, effectImage: '/static/gift-effects/l2.jpg' },
-  { name: '钻石戒指', imageUrl: '/static/gifts/diamond-ring.jpg', price: 200,   sort: 7,  active: true, animationLevel: 2, effectImage: '/static/gift-effects/l2.jpg' },
-  { name: '烟花',     imageUrl: '/static/gifts/fireworks.jpg',    price: 300,   sort: 8,  active: true, animationLevel: 2, effectImage: '/static/gift-effects/l2.jpg' },
-  { name: '城堡',     imageUrl: '/static/gifts/castle.jpg',       price: 500,   sort: 9,  active: true, animationLevel: 2, effectImage: '/static/gift-effects/l2.jpg' },
-  { name: '火箭',     imageUrl: '/static/gifts/rocket.jpg',       price: 500,   sort: 10, active: true, animationLevel: 3, effectImage: '/static/gift-effects/l3-crown.jpg' },
-  { name: '游艇',     imageUrl: '/static/gifts/yacht.jpg',        price: 1000,  sort: 11, active: true, animationLevel: 3, effectImage: '/static/gift-effects/l3-diamond.jpg' },
-  { name: '跑车',     imageUrl: '/static/gifts/sports-car.jpg',   price: 2000,  sort: 12, active: true, animationLevel: 3, effectImage: '/static/gift-effects/l3-crown.jpg' },
-  { name: '私人飞机', imageUrl: '/static/gifts/private-jet.jpg',  price: 5000,  sort: 13, active: true, animationLevel: 3, effectImage: '/static/gift-effects/l3-diamond.jpg' },
-  { name: '火箭舰队', imageUrl: '🚀🚀', price: 10000, sort: 14, active: true, animationLevel: 3, effectImage: '/static/gift-effects/l3-crown.jpg' },
-  { name: '星球',     imageUrl: '🪐',   price: 20000, sort: 15, active: true, animationLevel: 3, effectImage: '/static/gift-effects/l3-diamond.jpg' },
-  { name: '银河',     imageUrl: '🌌',   price: 50000, sort: 16, active: true, animationLevel: 3, effectImage: '/static/gift-effects/l3-crown.jpg' }
+  { name: '点赞',     imageUrl: '/static/gifts/dianzan.png',        price: 1,     sort: 1,  active: true, animationLevel: 1, effectImage: '/static/svga/dianzan.svga' },
+  { name: '比心',     imageUrl: '/static/gifts/bixin.png',          price: 10,    sort: 2,  active: true, animationLevel: 1, effectImage: '/static/svga/bixin.svga' },
+  { name: '星际少女', imageUrl: '/static/gifts/xingji.png',         price: 20,    sort: 3,  active: true, animationLevel: 1, effectImage: '/static/svga/xingji.svga' },
+  { name: '玫瑰',     imageUrl: '/static/gifts/meigui.png',         price: 50,    sort: 4,  active: true, animationLevel: 2, effectImage: '/static/svga/meigui.svga' },
+  { name: '心动',     imageUrl: '/static/gifts/xindong.png',        price: 80,    sort: 5,  active: true, animationLevel: 2, effectImage: '/static/svga/xindong.svga' },
+  { name: '一剑穿心', imageUrl: '/static/gifts/yijian.png',         price: 100,   sort: 6,  active: true, animationLevel: 2, effectImage: '/static/svga/yijian.svga' },
+  { name: '钻石',     imageUrl: '/static/gifts/zuanshi.png',        price: 200,   sort: 7,  active: true, animationLevel: 2, effectImage: '/static/svga/zuanshi.svga' },
+  { name: '天使',     imageUrl: '/static/gifts/tianshi.png',        price: 300,   sort: 8,  active: true, animationLevel: 2, effectImage: '/static/svga/tianshi.svga' },
+  { name: '花好月圆', imageUrl: '/static/gifts/huahao.png',         price: 500,   sort: 9,  active: true, animationLevel: 2, effectImage: '/static/svga/huahao.svga' },
+  { name: '福袋',     imageUrl: '/static/gifts/fudai.png',          price: 500,   sort: 10, active: true, animationLevel: 3, effectImage: '/static/svga/fudai.svga' },
+  { name: '皇冠',     imageUrl: '/static/gifts/huangguan.png',      price: 1000,  sort: 11, active: true, animationLevel: 3, effectImage: '/static/svga/huangguan.svga' },
+  { name: '水晶球',   imageUrl: '/static/gifts/shuijingqiu.png',    price: 2000,  sort: 12, active: true, animationLevel: 3, effectImage: '/static/svga/shuijingqiu.svga' },
+  { name: '独角兽',   imageUrl: '/static/gifts/dushou.png',         price: 5000,  sort: 13, active: true, animationLevel: 3, effectImage: '/static/svga/dushou.svga' },
+  { name: '跑车',     imageUrl: '/static/gifts/paoche.png',         price: 10000, sort: 14, active: true, animationLevel: 3, effectImage: '/static/svga/paoche.svga' },
+  { name: '旋转木马', imageUrl: '/static/gifts/xuanzhuanmuma.png',  price: 20000, sort: 15, active: true, animationLevel: 3, effectImage: '/static/svga/xuanzhuanmuma.svga' },
+  { name: '流星雨',   imageUrl: '/static/gifts/liuxingyu.png',      price: 50000, sort: 16, active: true, animationLevel: 3, effectImage: '/static/svga/liuxingyu.svga' }
 ]
 async function ensureGifts({ transaction }) {
   const existing = await Gift.findAll({ transaction })
