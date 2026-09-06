@@ -87,8 +87,8 @@
             <view class="wallet-action withdraw-btn" @tap="onIncome">提现</view>
           </view>
         </view>
-        <view class="wallet-detail-link" @tap="onNav('/pages/transactions/transactions')">
-          <text class="detail-link-text">交易明细</text>
+        <view class="wallet-detail-link" @tap="onNav('/pages/wallet/wallet')">
+          <text class="detail-link-text">我的钱包</text>
           <text class="detail-link-arrow">→</text>
         </view>
         <view class="charm-row" v-if="charmValue > 0">

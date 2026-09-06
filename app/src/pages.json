@@ -96,6 +96,12 @@
       }
     },
     {
+      "path": "pages/wallet/wallet",
+      "style": {
+        "navigationBarTitleText": "我的钱包"
+      }
+    },
+    {
       "path": "pages/recharge/recharge",
       "style": {
         "navigationBarTitleText": "充值"
