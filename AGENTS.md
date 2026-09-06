@@ -109,6 +109,8 @@ cd app && npm install && npm run dev:h5
 7. **会话列表礼物摘要显示「[自定义消息]」** — Lite SDK 的 `conversation.lastMessage.messageForShow` 不取 `TIMCustomElem.Desc`（服务端已传 `送出了N个XX`，无效）。需在会话列表摘要渲染处按 `businessID === 'gift'` 自行映射为「[礼物] XX」
 8. **清理礼物特效验证期间的测试数据** — `gift_records` 43-46（20→23 一条、13→23 三条）及对应 `messages` 245-248；用户 13/20 钱包被充值（现余 500/1500）；用户 23 的 `gift_income`(3783570 分) 与 `charm_value`(54051) 含测试污染。IM 云端消息无法通过 REST 删除，会残留在会话里
 9. **TUIKit 首屏偶发空白竞态** — 容器重建后首次加载偶发 `Error in event handler for sdkStateReady: e.chat.getConversationList is not a function`，聊天页停在约 75 个 DOM 元素不渲染，再刷新一次即恢复。属引擎内部时序问题，与业务代码无关，尚未修复
+10. **微信分享未配置，iOS 上必然失败** — `manifest.json` 有 `modules.Share: {}`，但 `sdkConfigs` 里**没有 `share` 节点**（缺微信 appid / UniversalLinks）。`invite.vue` 的 `uni.share({ provider: 'weixin' })` 在 App 端会走 `fail`，而 fail 回调统一提示「分享取消」，把「未配置」伪装成「用户取消」。上线前需补 `sdkConfigs.share.weixin`（appid + UniversalLinks），或在未配置时隐藏微信分享入口
+11. **iOS ATS 与「服务器地址」热切换冲突** — `request.js` 支持在 App 内把 BASE_URL 改成 `http://电脑IP:3000/api` 便于联调，但 iOS App Transport Security 默认禁止明文 HTTP。打包后该调试入口在 iOS 上会静默失败，需确认 HBuilderX 生成的 Info.plist 是否含 `NSAllowsArbitraryLoads`，或联调时改用 HTTPS 隧道
 
 ## 文档索引
 
