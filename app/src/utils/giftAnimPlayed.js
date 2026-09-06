@@ -4,7 +4,7 @@
  * 特效每条礼物只播一次：发送方送出时播、接收方实时到达时播、接收方首次打开会话时
  * 补播最新一条。内存 Set 扛不住刷新/切会话/重启，所以落在本地存储并按用户隔离。
  */
-import { getUser } from './auth'
+import { getUserId } from './auth'
 
 const KEY_PREFIX = 'gift_anim_played_'
 const MAX_ENTRIES = 200
@@ -14,12 +14,8 @@ let cacheList = []
 let cacheSet = new Set()
 
 function currentUid() {
-  try {
-    const u = getUser()
-    return u && u.id ? String(u.id) : 'anon'
-  } catch (_) {
-    return 'anon'
-  }
+  const id = getUserId()
+  return id ? String(id) : 'anon'
 }
 
 function load(uid) {

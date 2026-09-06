@@ -165,6 +165,7 @@ import { ensureTUILogin, getTUILoginContext } from '@/utils/tuilogin'
 import GiftPanel from '@/components/GiftPanel.vue'
 import GiftAnimation from '@/components/GiftAnimation.vue'
 import { isGiftPlayed, markGiftPlayed } from '@/utils/giftAnimPlayed'
+import { getUserId } from '@/utils/auth'
 
 const userStore = useUserStore()
 
@@ -253,7 +254,10 @@ function resolveUrl(u) {
 }
 
 function isMine(m) {
-  return String(m.senderId) === String(userStore.userId)
+  // userStore.userId 来自 getUser().id，H5 端刷新后恒为 undefined（见 utils/auth.js 的 getUserId 注释），
+  // 兜底解 JWT 取 id，否则自己送出的礼物会被当成收礼补播一遍
+  const uid = userStore.userId || getUserId()
+  return !!uid && String(m.senderId) === String(uid)
 }
 
 function avatarOf(m, mine) {
