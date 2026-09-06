@@ -222,7 +222,7 @@ const loadGifts = async () => {
   giftLoading.value = true
   try {
     const r = await giftManageApi.list()
-    giftList.value = r.list || r.rows || r || []
+    giftList.value = Array.isArray(r.data) ? r.data : (r.data?.list || [])
   } catch (e) { ElMessage.error('加载礼物列表失败: ' + (e.message || '')) }
   finally { giftLoading.value = false }
 }
@@ -268,7 +268,7 @@ const loadWithdrawals = async () => {
     const params = { page: 1, pageSize: 100 }
     if (withdrawStatus.value) params.status = withdrawStatus.value
     const r = await giftManageApi.withdrawList(params)
-    withdrawList.value = r.list || r.rows || r || []
+    withdrawList.value = r.data?.list || []
   } catch (e) { ElMessage.error('加载提现列表失败: ' + (e.message || '')) }
   finally { withdrawLoading.value = false }
 }
@@ -306,7 +306,7 @@ const loadRecords = async () => {
       params.endDate = recordFilter.dateRange[1]
     }
     const r = await giftManageApi.records(params)
-    recordList.value = r.list || r.rows || r || []
+    recordList.value = r.data?.list || []
   } catch (e) { ElMessage.error('加载礼物记录失败: ' + (e.message || '')) }
   finally { recordLoading.value = false }
 }
@@ -318,7 +318,7 @@ const configSaving = ref(false)
 const loadConfig = async () => {
   try {
     const r = await giftManageApi.getConfig()
-    if (r && r.withdrawRatio !== undefined) configForm.withdrawRatio = Number(r.withdrawRatio)
+    if (r.data && r.data.withdrawRatio !== undefined) configForm.withdrawRatio = Number(r.data.withdrawRatio)
   } catch (e) { /* 首次可能为空，保持默认 */ }
 }
 

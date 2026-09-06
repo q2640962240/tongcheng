@@ -68,7 +68,7 @@ const load = async () => {
   loading.value = true
   try {
     const r = await bannersApi.list({ page: 1, pageSize: 100 })
-    list.value = r.list || r.rows || r || []
+    list.value = r.data?.list || []
   } catch (e) { ElMessage.error('加载失败: ' + (e.message || '')) }
   finally { loading.value = false }
 }

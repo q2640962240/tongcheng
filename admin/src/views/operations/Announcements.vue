@@ -61,7 +61,7 @@ const loadHistory = async () => {
   historyLoading.value = true
   try {
     const r = await getAnnouncements({ page: 1, pageSize: 50 })
-    historyList.value = r.list || r.rows || r || []
+    historyList.value = r.data?.list || []
   } catch (e) { ElMessage.error('加载历史失败') }
   finally { historyLoading.value = false }
 }

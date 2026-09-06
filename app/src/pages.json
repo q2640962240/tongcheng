@@ -109,6 +109,12 @@
       }
     },
     {
+      "path": "pages/withdraw/payment-bind",
+      "style": {
+        "navigationBarTitleText": "收款账号"
+      }
+    },
+    {
       "path": "pages/transactions/transactions",
       "style": {
         "navigationBarTitleText": "交易记录"

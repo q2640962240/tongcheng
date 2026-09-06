@@ -74,10 +74,10 @@ export const groupsApi = {
 
 // ==================== Banner 管理 (白夜 v2) ====================
 export const bannersApi = {
-  list: (params) => http.get('/admin/banners', { params }),
-  create: (data) => http.post('/admin/banners', data),
-  update: (id, data) => http.put(`/admin/banners/${id}`, data),
-  del: (id) => http.delete(`/admin/banners/${id}`)
+  list: (params) => http.get('/banners/admin/list', { params }),
+  create: (data) => http.post('/banners/admin/banners', data),
+  update: (id, data) => http.put(`/banners/admin/banners/${id}`, data),
+  del: (id) => http.delete(`/banners/admin/banners/${id}`)
 }
 
 // ==================== 精英订单 (白夜 v2) ====================

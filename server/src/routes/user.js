@@ -392,4 +392,99 @@ router.post('/:id/greet', auth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+
+// ========== 收款账号绑定 ==========
+
+/** 获取绑定状态（脱敏） */
+router.get('/payment/info', auth, async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.userId)
+    if (!user) return fail(res, '用户不存在', 404)
+    const meta = user.meta || {}
+    const binding = meta.paymentBinding
+    if (!binding) return success(res, { bound: false })
+    const maskAccount = (acc) => {
+      if (!acc || acc.length <= 6) return acc
+      return acc.slice(0, 3) + '****' + acc.slice(-4)
+    }
+    success(res, {
+      bound: true,
+      type: binding.type,
+      account: maskAccount(binding.account),
+      realName: binding.realName ? (binding.realName[0] + '**') : '',
+      qrCode: binding.qrCode || '',
+      boundAt: binding.boundAt
+    })
+  } catch (err) { next(err) }
+})
+
+/** 首次绑定收款账号 */
+router.post('/payment/bind', auth, async (req, res, next) => {
+  try {
+    const { type, account, realName, qrCode } = req.body
+    if (!type || !['alipay', 'wechat'].includes(type)) return fail(res, '收款方式无效')
+    if (!account) return fail(res, '请填写收款账号')
+    if (!realName) return fail(res, '请填写真实姓名')
+
+    const user = await User.findByPk(req.userId)
+    if (!user) return fail(res, '用户不存在', 404)
+
+    const meta = user.meta || {}
+    if (meta.paymentBinding) return fail(res, '已绑定收款账号，如需修改请先验证手机号')
+
+    meta.paymentBinding = {
+      type, account, realName,
+      qrCode: qrCode || '',
+      boundAt: new Date().toISOString()
+    }
+    await user.update({ meta })
+    success(res, null, '绑定成功')
+  } catch (err) { next(err) }
+})
+
+/** 发送换绑验证码 */
+router.post('/payment/send-rebind-code', auth, async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.userId)
+    if (!user) return fail(res, '用户不存在', 404)
+    const meta = user.meta || {}
+    if (!meta.paymentBinding) return fail(res, '尚未绑定收款账号')
+
+    const sms = require('../utils/sms')
+    const result = await sms.sendCode(user.phone, 'payment_bind')
+    if (!result.success) return fail(res, result.message)
+    success(res, null, '验证码已发送')
+  } catch (err) { next(err) }
+})
+
+/** 换绑收款账号（需短信验证） */
+router.post('/payment/rebind', auth, async (req, res, next) => {
+  try {
+    const { code, type, account, realName, qrCode } = req.body
+    if (!code) return fail(res, '请填写短信验证码')
+
+    const user = await User.findByPk(req.userId)
+    if (!user) return fail(res, '用户不存在', 404)
+
+    const sms = require('../utils/sms')
+    const verified = await sms.verifyCode(user.phone, code, 'payment_bind')
+    if (!verified) return fail(res, '验证码无效或已过期')
+
+    const meta = user.meta || {}
+    const newBinding = {
+      type: type || meta.paymentBinding?.type || 'alipay',
+      account: account || meta.paymentBinding?.account,
+      realName: realName || meta.paymentBinding?.realName,
+      qrCode: qrCode !== undefined ? qrCode : (meta.paymentBinding?.qrCode || ''),
+      boundAt: new Date().toISOString()
+    }
+    if (!newBinding.account) return fail(res, '请填写收款账号')
+    if (!newBinding.realName) return fail(res, '请填写真实姓名')
+
+    meta.paymentBinding = newBinding
+    await user.update({ meta })
+    success(res, null, '换绑成功')
+  } catch (err) { next(err) }
+})
+
 module.exports = router

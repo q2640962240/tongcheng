@@ -91,8 +91,8 @@ const load = async () => {
     if (kw.value) params.kw = kw.value
     if (statusFilter.value) params.auditStatus = statusFilter.value
     const r = await postsApi.list(params)
-    list.value = r.list || r.rows || []
-    total.value = Number(r.total || 0)
+    list.value = r.data?.list || []
+    total.value = Number(r.data?.total || 0)
   } catch (e) {
     ElMessage.error('加载失败: ' + (e.message || '网络错误'))
   } finally {

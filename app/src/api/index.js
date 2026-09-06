@@ -64,18 +64,20 @@ export const inviteApi = {
 
 // ==================== 礼物 ====================
 export const giftApi = {
-  // 获取礼物列表
   list: () => get('/gifts'),
-  // 发送礼物
   send: (data) => post('/gifts/send', data),
-  // 查询礼物收入
   income: () => get('/gifts/income'),
-  // 申请提现
   withdraw: (data) => post('/gifts/withdraw', data),
-  // 排行榜
   rank: (params) => get('/gifts/rank', params),
-  // 送礼记录
   records: (params) => get('/gifts/records', params),
+}
+
+// ==================== 收款账号绑定 ====================
+export const paymentApi = {
+  getInfo: () => get('/user/payment/info'),
+  bind: (data) => post('/user/payment/bind', data),
+  sendRebindCode: () => post('/user/payment/send-rebind-code'),
+  rebind: (data) => post('/user/payment/rebind', data),
 }
 
 // ==================== 每日任务 ====================
@@ -179,6 +181,7 @@ export default {
   chat: chatApi,
   invite: inviteApi,
   gift: giftApi,
+  payment: paymentApi,
   feedback: feedbackApi,
   upload: uploadApi,
   push: pushApi,

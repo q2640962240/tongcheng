@@ -98,9 +98,9 @@ const load = async () => {
     if (channelFilter.value) params.channel = channelFilter.value
     if (statusFilter.value) params.status = statusFilter.value
     const r = await eliteOrdersApi.list(params)
-    list.value = r.list || r.rows || []
-    total.value = Number(r.total || 0)
-    const st = r.stats || {}
+    list.value = r.data?.list || []
+    total.value = Number(r.data?.total || 0)
+    const st = r.data?.stats || {}
     stats.total = st.total || 0
     stats.paidCount = st.paidCount || 0
     stats.revenue = (st.revenueFen || 0) / 100

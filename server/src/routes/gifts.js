@@ -252,6 +252,9 @@ router.post('/withdraw', auth, async (req, res, next) => {
   const transaction = await sequelize.transaction()
   try {
     const { amount, channel } = req.body
+    const user0 = await User.findByPk(req.userId)
+    const meta0 = user0?.meta || {}
+    if (!meta0.paymentBinding) { await transaction.rollback(); return fail(res, "请先绑定收款账号，再申请提现") }
     const amountNum = Number(amount)
     if (!amountNum || amountNum <= 0) return fail(res, '提现金额无效')
 
@@ -273,7 +276,7 @@ router.post('/withdraw', auth, async (req, res, next) => {
       currency: 'fen',
       balanceAfter: newBalance,
       remark: '礼物收入提现申请',
-      extra: { channel: channel || 'wechat', status: 'pending' }
+      extra: { channel: channel || 'wechat', status: 'pending', paymentBinding: user.meta?.paymentBinding || null }
     }, { transaction })
 
     await transaction.commit()

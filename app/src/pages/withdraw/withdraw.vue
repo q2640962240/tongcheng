@@ -7,6 +7,16 @@
       <text class="bal-tip">收到礼物后平台按分成比例结算的金额</text>
     </view>
 
+
+    <!-- 收款账号绑定提示 -->
+    <view v-if="!bindingBound" class="bind-prompt" @tap="goBind">
+      <view class="bind-prompt-left">
+        <text class="bind-prompt-icon">⚠️</text>
+        <text class="bind-prompt-text">请先绑定收款账号再提现</text>
+      </view>
+      <text class="bind-prompt-btn">去绑定</text>
+    </view>
+
     <!-- 提现金额 -->
     <view class="card">
       <text class="card-title">提现金额</text>
@@ -62,7 +72,7 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useWalletStore } from '../../store/wallet'
-import { giftApi } from '../../api'
+import { giftApi, paymentApi } from '../../api'
 import { fenToYuan } from '../../utils/format'
 
 const walletStore = useWalletStore()
@@ -70,6 +80,7 @@ const wallet = computed(() => ({ giftIncome: walletStore.giftIncome }))
 const amount = ref(null)
 const method = ref('wechat')
 const submitting = ref(false)
+const bindingBound = ref(false)
 
 const incomeYuan = computed(() => (Number(walletStore.giftIncome) / 100))
 const remainYuan = computed(() => {
@@ -82,8 +93,23 @@ const canSubmit = computed(() => {
   return a >= 1 && a <= incomeYuan.value
 })
 
+
+const fetchBinding = async () => {
+  try {
+    const r = await paymentApi.getInfo()
+    bindingBound.value = !!r.data?.bound
+  } catch (e) {
+    bindingBound.value = false
+  }
+}
+
+const goBind = () => {
+  uni.navigateTo({ url: '/pages/withdraw/payment-bind' })
+}
+
 const onWithdraw = () => {
   if (!canSubmit.value || submitting.value) return
+  if (!bindingBound.value) { goBind(); return }
   uni.showModal({
     title: '确认提现',
     content: `提现 ¥${Number(amount.value).toFixed(2)} 到${method.value === 'wechat' ? '微信零钱' : '支付宝'}？`,
@@ -106,6 +132,7 @@ const onWithdraw = () => {
 
 onShow(() => {
   walletStore.fetchBalance().catch(() => {})
+  fetchBinding()
 })
 </script>
 
@@ -150,6 +177,14 @@ onShow(() => {
 .tips { padding: 8rpx 24rpx; display: flex; flex-direction: column; gap: 8rpx; }
 .tips-title { font-size: 26rpx; font-weight: 600; color: #525252; margin-bottom: 8rpx; }
 .tips-line { font-size: 24rpx; color: #a3a3a3; line-height: 1.6; }
+.bind-prompt {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #fff3cd; border-radius: 16rpx; padding: 24rpx 28rpx; margin-bottom: 24rpx;
+}
+.bind-prompt-left { display: flex; align-items: center; gap: 12rpx; }
+.bind-prompt-icon { font-size: 32rpx; }
+.bind-prompt-text { font-size: 26rpx; color: #856404; }
+.bind-prompt-btn { font-size: 26rpx; color: #b45309; font-weight: 600; }
 .submit-btn {
   position: fixed; left: 32rpx; right: 32rpx; bottom: calc(48rpx + env(safe-area-inset-bottom));
   height: 96rpx; background: #ffd60a; color: #171717;
