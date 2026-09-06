@@ -150,6 +150,21 @@
 
 > **部署后的一次性行为**：所有存量用户的已播放记录都是空的，因此更新后每人**在每个会话首次打开时会看到一次最近收到的礼物特效**，之后归于沉寂。这是需求的直接推论，不是 bug。
 
+### 实测证据（2026-09-07，H5 生产站）
+
+| 场景 | 观测 | 结论 |
+|---|---|---|
+| 收方 25 首开 C2C27（已播放集清空 + 整页刷新） | `.gift-anim-layer` 出现 1 次；`.svga` 请求仅 `liuxingyu.svga` 1 条；canvas 1 个 655×773，`alphaMax=255`；层内 `.svga-stage`=1，`.gift-banner`/`.gift-center`/`.gift-bottom-banner`/`*-img`/`.gift-effect-bg`/`.gift-bg-overlay`/`uni-image`/`img` **全为 0**；`gift_anim_played_25` 写入 20 条 | 补播恰好一次，且画面里只有动画 |
+| 收方 25 离开会话再回来（同一文档） | 无动画层，无新增 `.svga` 请求，已播放集仍 20 条 | 不重复 |
+| 收方 25 整页刷新后停在 C2C27 | 聊天正常渲染（721 DOM / 252 消息节点），`.svga` 请求 **0 条** | 跨重启不重复 |
+| 发方 27 打开 C2C25 | `.svga` 请求 0 条，但 `gift_anim_played_27` 写入 20 条 | 自己送出的只登记不播 |
+| 发方 27 点「送给TA」送 1 个点赞 | 动画层出现/消失 **1 个 episode**，点击后约 1s 出现（不等 IM 往返）；`.svga` 请求仅 `dianzan.svga` 1 条；层内同样只有 `.svga-stage`+canvas；已播放集 20→21 | 发送方看到且只看到一次 |
+
+**验证方法上的两个坑**（下次别重犯）：
+
+- `navigate_page` 到与当前**完全相同**的 URL 不会重载文档，`performance` 的 resource buffer 因此不会清空，会把上一次播放的 `.svga` 条目误读成「又播了一次」。判断是否真的重载要靠 `performance.getEntriesByType('navigation')[0].type` 配合自造的 `sessionStorage` 启动标记，不能只看 hash。
+- 待办 #9 的首屏空白竞态会让这类测试**假通过**：命中时页面停在 75 个 DOM 节点、消息列表根本没加载，自然不会有动画。任何「断言没有播放」的测试都必须同时断言 `domNodes` 与消息节点数已达正常量级（本次约 721 / 252），否则等于什么都没测。
+
 ## 连带发现：部署即改生产数据
 
 这次验证时发现线上 `gifts` 表变成了 **30 行**：`server/Dockerfile` 的 ENTRYPOINT 每次容器启动都跑完整 `seed.js`，而每次部署都会重建 server 容器，于是 `upgradeGifts()` 按 name 匹配不到改名后的旧行、新建了 14 行，另有 2 行（皇冠/跑车）name 撞上被就地改了 sort 与素材路径但 price 保持旧值。
