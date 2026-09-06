@@ -223,33 +223,34 @@ onUnmounted(() => {
   reset();
 });
 
-// 检测新礼物消息并触发特效
-let lastMessageCount = 0;
+// 检测新礼物消息并触发特效（用 Set 去重，防止 TUIKit 重排消息导致重复触发）
+const processedGiftIds = new Set()
 function onMessageListUpdate(messageList: IMessageModel[]) {
-  if (!messageList || messageList.length <= lastMessageCount) {
-    lastMessageCount = messageList?.length || 0;
-    return;
-  }
-  const newMessages = messageList.slice(lastMessageCount);
-  lastMessageCount = messageList.length;
-  for (const msg of newMessages) {
-    if (msg?.type === TUIChatEngine.TYPES.MSG_CUSTOM) {
-      try {
-        const data = typeof msg.payload.data === 'string' ? JSON.parse(msg.payload.data) : msg.payload.data;
-        if (data?.businessID === 'gift') {
-          giftEffectRef.value?.show(data);
-          giftAnimRef.value?.play({
-            giftName: data.giftName,
-            giftImage: data.giftImage,
-            diamondAmount: data.diamondAmount,
-            quantity: data.quantity || 1,
-            animationLevel: data.animationLevel || 1
-          });
-        }
-      } catch (e) {
-        // ignore parse error
+  if (!messageList) return
+  for (const msg of messageList) {
+    if (msg?.type !== TUIChatEngine.TYPES.MSG_CUSTOM) continue
+    if (processedGiftIds.has(msg.id)) continue
+    try {
+      const data = typeof msg.payload.data === 'string' ? JSON.parse(msg.payload.data) : msg.payload.data;
+      if (data?.businessID === 'gift') {
+        processedGiftIds.add(msg.id)
+        giftAnimRef.value?.play({
+          giftName: data.giftName,
+          giftImage: data.giftImage,
+          diamondAmount: data.diamondAmount,
+          quantity: data.quantity || 1,
+          animationLevel: data.animationLevel || 1,
+          senderName: data.senderName || ''
+        });
       }
+    } catch (e) {
+      // ignore parse error
     }
+  }
+  if (processedGiftIds.size > 200) {
+    const arr = [...processedGiftIds]
+    processedGiftIds.clear()
+    arr.slice(-100).forEach(id => processedGiftIds.add(id))
   }
 }
 
@@ -354,7 +355,6 @@ function updateUIUserNotInGroup(conversation: IConversationModel) {
 }
 
 function onCurrentConversationUpdate(conversation: IConversationModel) {
-  lastMessageCount = 0;
   updateUIUserNotInGroup(conversation);
   // return when currentConversation is null
   if (!conversation) {

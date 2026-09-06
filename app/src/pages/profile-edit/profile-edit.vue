@@ -12,7 +12,7 @@
         <view class="row" @tap="onUploadAvatar">
           <text class="row-label">头像</text>
           <view class="row-value avatar-row">
-            <image class="avatar" :src="avatarFull || '/static/avatar-user.png'" mode="aspectFill" />
+            <image class="avatar" :src="avatarFull || '/static/avatar-user.png'" @error="avatarFull = ''" mode="aspectFill" />
             <text class="arrow">›</text>
           </view>
         </view>

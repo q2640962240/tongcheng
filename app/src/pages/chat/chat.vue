@@ -72,6 +72,9 @@
         <text class="plus-icon">🖼</text>
       </view>
       <view class="btn-gift" @tap="showGiftPanel = true">
+        <view v-if="giftSentToast" class="gift-sent-toast">
+          <text class="gift-sent-toast-text">{{ giftSentToast }}</text>
+        </view>
         <text class="gift-icon">🎁</text>
       </view>
       <input
@@ -160,6 +163,7 @@ const playingId = ref('')
 const scrollAnchor = ref('')
 const connected = ref(false)
 const showGiftPanel = ref(false)
+const giftSentToast = ref('')
 const giftAnimRef = ref(null)
 
 const showSearch = ref(false)
@@ -491,6 +495,8 @@ function onGiftCardTap(m) {
 
 function onGiftSent(gift) {
   showGiftPanel.value = false
+  giftSentToast.value = `已送出 ${gift.giftName || gift.name || '礼物'}`
+  setTimeout(() => { giftSentToast.value = '' }, 2300)
   if (gift && gift.animationLevel > 0 && giftAnimRef.value) {
     giftAnimRef.value.play({
       giftName: gift.giftName,
@@ -797,6 +803,7 @@ onUnload(() => {
 }
 
 .input-bar {
+  position: relative;
   display: flex;
   align-items: center;
   padding: 16rpx 20rpx;
@@ -845,14 +852,47 @@ onUnload(() => {
 }
 
 .btn-gift {
+  position: relative;
   width: 72rpx;
   height: 72rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  animation: giftBtnBreathe 2.5s ease-in-out infinite;
 }
 .gift-icon { font-size: 44rpx; }
+
+@keyframes giftBtnBreathe {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); }
+  50% { transform: scale(1.08); filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5)); }
+}
+
+.gift-sent-toast {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8rpx 20rpx;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.95), rgba(255, 165, 0, 0.9));
+  border-radius: 20rpx;
+  white-space: nowrap;
+  animation: giftToastIn 0.3s ease-out, giftToastOut 0.3s ease-in 2s forwards;
+  box-shadow: 0 4px 16px rgba(255, 165, 0, 0.3);
+}
+.gift-sent-toast-text {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #1A1A2E;
+}
+@keyframes giftToastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10rpx); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes giftToastOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
 
 .gift-card {
   display: flex;

@@ -291,10 +291,16 @@ defineExpose({
   margin-right: 2px;
   border-radius: 50%;
   transition: background 0.2s;
+  animation: tuiGiftBreathe 2.5s ease-in-out infinite;
 
   &:active {
     background: rgba(0, 0, 0, 0.06);
   }
+}
+
+@keyframes tuiGiftBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
 
 .gift-entry-icon {
