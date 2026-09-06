@@ -414,6 +414,9 @@ const onPostTap = (p) => uni.navigateTo({ url: `/pages/discover/discover?tab=pos
 .page {
   min-height: 100vh;
   height: 100vh;
+  /* iOS Safari 的 100vh 是工具栏收起后的大视口，配 overflow:hidden 会把底部内容裁掉；
+     dvh 跟随实际可视高度。不支持 dvh 的浏览器忽略此行，回落到上面的 100vh。 */
+  height: 100dvh;
   background: $by-bg;
   display: flex;
   flex-direction: column;

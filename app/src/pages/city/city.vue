@@ -672,21 +672,6 @@ onLoad(() => {
   // nothing: 已在模块级从 storage 恢复
 })
 _onMounted(async () => {
-  // DEBUG: 暴露到全局用于浏览器调试（生产可移除）
-  try {
-    window.__BAIYE_CITY_STATE__ = {
-      BUILTIN_FALLBACK_CITIES,
-      get hotCities() { return hotCities.value },
-      get allCities() { return allCities.value },
-      get provinces() { return provinces.value },
-      get cityGroups() { return cityGroups.value },
-      get provinceGroups() { return provinceGroups.value },
-      get letters() { return letters.value },
-      get searched() { return searched.value },
-      get listMode() { return listMode.value },
-      get expandedProvinces() { return expandedProvinces.value },
-    }
-  } catch (_) { /* ignore (SSR/wx) */ }
   // 并行启动：拉全国行政区划 + 尝试自动定位（互不阻塞，都有兜底）
   const p1 = loadRegionTree()
   const p2 = (async () => {

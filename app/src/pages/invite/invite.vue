@@ -82,6 +82,21 @@ import { inviteApi } from '../../api'
 import {
   toStr, toNum, toObj, toList, getPath, safeMap, avatarUrl
 } from '@/utils/fallback'
+import { getCurrentBaseURL } from '@/utils/request'
+
+/**
+ * 邀请链接的站点源。App/小程序逻辑层跑在 JSCore，没有 window，
+ * 直接用 window.location.origin 会抛 ReferenceError 让分享/复制静默失效。
+ * H5 优先用真实 origin（可能是内网调试地址），其余端从 BASE_URL 去掉 /api 推导。
+ */
+function siteOrigin() {
+  // #ifdef H5
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    return window.location.origin
+  }
+  // #endif
+  return String(getCurrentBaseURL() || '').replace(/\/api\/?$/, '') || 'https://zyb001.cn'
+}
 
 const onBack = () => uni.navigateBack()
 
@@ -125,7 +140,7 @@ const copyCode = () => {
 const copyLink = () => {
   const code = inviteCode.value
   if (!code) return uni.showToast({ title: '暂无邀请码', icon: 'none' })
-  const link = `${window.location.origin}/#/pages/login/login?inviteCode=${code}`
+  const link = `${siteOrigin()}/#/pages/login/login?inviteCode=${code}`
   uni.setClipboardData({
     data: link,
     success: () => uni.showToast({ title: '邀请链接已复制', icon: 'success' })
@@ -149,7 +164,7 @@ const onInvite = () => {
           type: 0,
           title: shareInfoData.value.shareTitle || '来白夜，一起社交',
           summary: shareInfoData.value.shareDesc || '邀请好友注册，双方各获3天精英体验',
-          href: `${window.location.origin}/#/pages/login/login?inviteCode=${code}`,
+          href: `${siteOrigin()}/#/pages/login/login?inviteCode=${code}`,
           imageUrl: '',
           success: () => uni.showToast({ title: '分享成功', icon: 'success' }),
           fail: () => uni.showToast({ title: '分享取消', icon: 'none' })
@@ -272,6 +287,8 @@ onShow(loadData)
   padding: 24rpx 32rpx; padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
   background: color.change($by-bg, $alpha: .95);
   border-top: 1rpx solid $by-border;
+  /* iOS WKWebView 15.4 之前只认 -webkit- 前缀，deploymentTarget=15.0 会覆盖到 15.0-15.3 */
+  -webkit-backdrop-filter: blur(20rpx);
   backdrop-filter: blur(20rpx);
 }
 .inv-share-btn {

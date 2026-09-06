@@ -475,17 +475,19 @@ const DEFAULT_GIFTS = [
   { name: '冰淇淋',   imageUrl: '🍦',   price: 20,    sort: 3,  active: true, animationLevel: 0 },
   { name: '爱心',     imageUrl: '❤️',   price: 50,    sort: 4,  active: true, animationLevel: 1 },
   { name: '蛋糕',     imageUrl: '🎂',   price: 80,    sort: 5,  active: true, animationLevel: 1 },
-  { name: '皇冠',     imageUrl: '/static/gifts/crown.png',        price: 100,   sort: 6,  active: true, animationLevel: 2, effectImage: '/assets/gift-effect-l2.png' },
-  { name: '钻石戒指', imageUrl: '/static/gifts/diamond-ring.png', price: 200,   sort: 7,  active: true, animationLevel: 2, effectImage: '/assets/gift-effect-l2.png' },
-  { name: '烟花',     imageUrl: '/static/gifts/fireworks.png',   price: 300,   sort: 8,  active: true, animationLevel: 2, effectImage: '/assets/gift-effect-l2.png' },
-  { name: '城堡',     imageUrl: '/static/gifts/castle.png',      price: 500,   sort: 9,  active: true, animationLevel: 2, effectImage: '/assets/gift-effect-l2.png' },
-  { name: '火箭',     imageUrl: '/static/gifts/rocket.png',      price: 500,   sort: 10, active: true, animationLevel: 3, effectImage: '/assets/gift-effect-l3-crown.png' },
-  { name: '游艇',     imageUrl: '/static/gifts/yacht.png',       price: 1000,  sort: 11, active: true, animationLevel: 3, effectImage: '/assets/gift-effect-l3-diamond.png' },
-  { name: '跑车',     imageUrl: '/static/gifts/sports-car.png',  price: 2000,  sort: 12, active: true, animationLevel: 3, effectImage: '/assets/gift-effect-l3-crown.png' },
-  { name: '私人飞机', imageUrl: '/static/gifts/private-jet.png', price: 5000,  sort: 13, active: true, animationLevel: 3, effectImage: '/assets/gift-effect-l3-diamond.png' },
-  { name: '火箭舰队', imageUrl: '🚀🚀', price: 10000, sort: 14, active: true, animationLevel: 3, effectImage: '/assets/gift-effect-l3-crown.png' },
-  { name: '星球',     imageUrl: '🪐',   price: 20000, sort: 15, active: true, animationLevel: 3, effectImage: '/assets/gift-effect-l3-diamond.png' },
-  { name: '银河',     imageUrl: '🌌',   price: 50000, sort: 16, active: true, animationLevel: 3, effectImage: '/assets/gift-effect-l3-crown.png' }
+  // 图标/特效统一放 app/src/static 下并用绝对 /static/ 路径：H5 与 App(iOS/Android) 双端都能解析。
+  // 不要用 /assets/ —— 那是 Vite H5 专用目录，App 端只打包 src/static，会加载不到。
+  { name: '皇冠',     imageUrl: '/static/gifts/crown.jpg',        price: 100,   sort: 6,  active: true, animationLevel: 2, effectImage: '/static/gift-effects/l2.jpg' },
+  { name: '钻石戒指', imageUrl: '/static/gifts/diamond-ring.jpg', price: 200,   sort: 7,  active: true, animationLevel: 2, effectImage: '/static/gift-effects/l2.jpg' },
+  { name: '烟花',     imageUrl: '/static/gifts/fireworks.jpg',    price: 300,   sort: 8,  active: true, animationLevel: 2, effectImage: '/static/gift-effects/l2.jpg' },
+  { name: '城堡',     imageUrl: '/static/gifts/castle.jpg',       price: 500,   sort: 9,  active: true, animationLevel: 2, effectImage: '/static/gift-effects/l2.jpg' },
+  { name: '火箭',     imageUrl: '/static/gifts/rocket.jpg',       price: 500,   sort: 10, active: true, animationLevel: 3, effectImage: '/static/gift-effects/l3-crown.jpg' },
+  { name: '游艇',     imageUrl: '/static/gifts/yacht.jpg',        price: 1000,  sort: 11, active: true, animationLevel: 3, effectImage: '/static/gift-effects/l3-diamond.jpg' },
+  { name: '跑车',     imageUrl: '/static/gifts/sports-car.jpg',   price: 2000,  sort: 12, active: true, animationLevel: 3, effectImage: '/static/gift-effects/l3-crown.jpg' },
+  { name: '私人飞机', imageUrl: '/static/gifts/private-jet.jpg',  price: 5000,  sort: 13, active: true, animationLevel: 3, effectImage: '/static/gift-effects/l3-diamond.jpg' },
+  { name: '火箭舰队', imageUrl: '🚀🚀', price: 10000, sort: 14, active: true, animationLevel: 3, effectImage: '/static/gift-effects/l3-crown.jpg' },
+  { name: '星球',     imageUrl: '🪐',   price: 20000, sort: 15, active: true, animationLevel: 3, effectImage: '/static/gift-effects/l3-diamond.jpg' },
+  { name: '银河',     imageUrl: '🌌',   price: 50000, sort: 16, active: true, animationLevel: 3, effectImage: '/static/gift-effects/l3-crown.jpg' }
 ]
 async function ensureGifts({ transaction }) {
   const existing = await Gift.findAll({ transaction })
