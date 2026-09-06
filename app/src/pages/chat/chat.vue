@@ -36,7 +36,7 @@
               </view>
             </template>
             <template v-else-if="m.type === 'gift'">
-              <view class="gift-card" @tap="onGiftCardTap(m)">
+              <view class="gift-card">
                 <view class="gift-card-icon">
                   <text v-if="isEmojiGift(parseGiftContent(m).giftImage)" class="gift-card-emoji">{{ parseGiftContent(m).giftImage }}</text>
                   <image v-else class="gift-card-img" :src="parseGiftContent(m).giftImage" mode="aspectFit" />
@@ -164,6 +164,7 @@ import { useUserStore } from '@/store/user'
 import { ensureTUILogin, getTUILoginContext } from '@/utils/tuilogin'
 import GiftPanel from '@/components/GiftPanel.vue'
 import GiftAnimation from '@/components/GiftAnimation.vue'
+import { isGiftPlayed, markGiftPlayed } from '@/utils/giftAnimPlayed'
 
 const userStore = useUserStore()
 
@@ -319,6 +320,7 @@ async function loadHistory(appendOlder = false) {
       hasMore.value = list.length < total
       scrollToBottom()
     }
+    catchupGiftEffects(list)
   } catch (e) {
     console.warn('[chat] loadHistory fail', e)
   } finally {
@@ -530,20 +532,6 @@ function isEmojiGift(str) {
   return !str.startsWith('http') && !str.startsWith('/') && !str.startsWith('data:')
 }
 
-function onGiftCardTap(m) {
-  const gc = parseGiftContent(m)
-  if (gc && giftAnimRef.value) {
-    giftAnimRef.value.play({
-      giftName: gc.giftName,
-      giftImage: gc.giftImage,
-      diamondAmount: gc.diamondAmount,
-      quantity: gc.quantity || 1,
-      animationLevel: gc.animationLevel || 1,
-      effectImage: gc.effectImage || ''
-    })
-  }
-}
-
 function onGiftSent(gift) {
   showGiftPanel.value = false
   giftSentToast.value = `已送出 ${gift.giftName || gift.name || '礼物'}`
@@ -560,8 +548,8 @@ function onGiftSent(gift) {
   }
 }
 
-function triggerGiftAnimation(msg) {
-  const gc = parseGiftContent(msg)
+function playGiftEffect(m) {
+  const gc = parseGiftContent(m)
   if (gc && gc.animationLevel > 0 && giftAnimRef.value) {
     giftAnimRef.value.play({
       giftName: gc.giftName,
@@ -572,6 +560,45 @@ function triggerGiftAnimation(msg) {
       effectImage: gc.effectImage || ''
     })
   }
+}
+
+/** 实时到达的礼物：每条只播一次 */
+function triggerGiftAnimation(msg) {
+  const key = msg && msg.id ? `db:${msg.id}` : ''
+  if (isGiftPlayed(key)) return
+  // 动画层还没就绪就先不登记，留给历史加载时补播，否则这条特效会永久丢失
+  if (!giftAnimRef.value) return
+  markGiftPlayed(key)
+  playGiftEffect(msg)
+}
+
+/**
+ * 历史消息补播：每次加载至多播「最新一条未播放的收礼」，其余只登记为已播。
+ * 自己送出的礼物在送出那一刻已经播过，这里一律不播。
+ * 这样接收方离线期间收到的礼物会在首次打开会话时看到一次，之后再开不再出现，
+ * 也不会在首屏一次性炸出整屏历史特效。
+ */
+function catchupGiftEffects(list) {
+  let newest = null
+  for (const m of list || []) {
+    if (!m || m.type !== 'gift' || !m.id) continue
+    const key = `db:${m.id}`
+    if (isGiftPlayed(key)) continue
+    if (isMine(m)) {
+      markGiftPlayed(key)
+      continue
+    }
+    if (!newest || Number(m.id) > Number(newest.id)) {
+      // 落选的历史礼物直接登记；入选的那条要等真播出去才登记
+      if (newest) markGiftPlayed(`db:${newest.id}`)
+      newest = m
+    } else {
+      markGiftPlayed(key)
+    }
+  }
+  if (!newest || !giftAnimRef.value) return
+  markGiftPlayed(`db:${newest.id}`)
+  playGiftEffect(newest)
 }
 
 function setupSocket() {
@@ -624,6 +651,7 @@ function startPollingFallback() {
       if (fresh.length) {
         messages.value = list
         scrollToBottom()
+        catchupGiftEffects(fresh)
       } else {
         // 同步已读状态变化
         messages.value = messages.value.map(x => {

@@ -104,15 +104,33 @@ const sendGift = async () => {
     balance.value -= gift.price
 
     const giftData = (sendRes && sendRes.data) || {}
+    const animationLevel = giftData.animationLevel || gift.animationLevel || 1
+    const effectImage = giftData.effectImage || gift.effectImage || ''
+    const senderName = currentUserProfile.value?.nick || currentUserProfile.value?.userID || ''
+
+    // 扣费成功就立刻播特效。放在 IM 消息发送之前——否则要等 sendCustomMessage 往返
+    // 好几秒，发送方点了按钮却看不到任何反应。发送方也要看到，不能只依赖消息列表 watcher。
+    try {
+      uni.$emit('gift-animation', {
+        giftName: gift.name,
+        giftImage: gift.imageUrl,
+        diamondAmount: gift.price,
+        quantity: 1,
+        animationLevel,
+        effectImage,
+        senderName,
+      })
+    } catch (_) {}
+
     const payload = {
       data: JSON.stringify({
         businessID: CHAT_MSG_CUSTOM_TYPE.GIFT,
         giftName: gift.name,
         giftImage: gift.imageUrl,
         diamondAmount: gift.price,
-        animationLevel: giftData.animationLevel || gift.animationLevel || 1,
-        effectImage: giftData.effectImage || gift.effectImage || '',
-        senderName: currentUserProfile.value?.nick || currentUserProfile.value?.userID || '',
+        animationLevel,
+        effectImage,
+        senderName,
       }),
       description: `送出了${gift.name}`,
       extension: `送出了${gift.name}`,
@@ -127,23 +145,13 @@ const sendGift = async () => {
       await TUIChatService.sendCustomMessage(options)
     } catch (imErr) {
       console.warn('[Gift] IM消息发送失败，礼物已扣费', imErr)
+      uni.showToast({ title: '礼物已送出，消息同步失败', icon: 'none' })
     }
 
-    uni.showToast({ title: '礼物已送出', icon: 'success' })
-    // 直接触发动画（发送方也要看到，不能只依赖消息列表 watcher）
-    try {
-      uni.$emit('gift-animation', {
-        giftName: gift.name,
-        giftImage: gift.imageUrl,
-        diamondAmount: gift.price,
-        quantity: 1,
-        animationLevel: giftData.animationLevel || gift.animationLevel || 1,
-        effectImage: giftData.effectImage || gift.effectImage || '',
-        senderName: currentUserProfile.value?.nick || currentUserProfile.value?.userID || '',
-      })
-    } catch (_) {}
+    // 全屏动画本身就是「已送出」的反馈，成功 toast 只会盖在动画上；无动画时才提示
+    if (animationLevel <= 0) uni.showToast({ title: '礼物已送出', icon: 'success' })
     selectedGift.value = null
-    emit('sent', { ...gift, animationLevel: giftData.animationLevel || gift.animationLevel || 1 })
+    emit('sent', { ...gift, animationLevel })
   } catch (e) {
     uni.showToast({ title: e.message || '发送失败', icon: 'none' })
   }

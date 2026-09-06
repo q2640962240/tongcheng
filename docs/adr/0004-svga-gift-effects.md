@@ -111,7 +111,44 @@
 - **图标加载证据**：16 个 PNG 在页面内 `new Image()` 全部 `naturalWidth = naturalHeight = 192`，无一失败。
 - **真实组件全量跑通**：线上 `#/pages/chat/chat` 未登录也会挂载 `<GiftAnimation>`，从 Vue 组件树里取到实例后直接调它 expose 的 `play()`，礼物数据取自线上 `/api/gifts`。**16/16 PASS**，`sawCanvas` 全为 true（说明确实走了 SVGA 分支而非 CSS 降级），alphaMax 均为 255，去重帧数 6-53，累计 72s，无一次落到兜底定时器。
 
-> 局限：① 生产短信未配置且 `NODE_ENV=production` 下 `sms.js` 无 dev/mock 回退，因此**没有做真实登录后的送礼端到端**（不写 `gift_records`、不动钻石），上面的组件验证是绕过 API 直接驱动动画层；② App(WKWebView) 端无法在此环境验证，它依赖 `siteOrigin + /static/...` 绝对 URL 与新增的 CORS 头，属打包后待验项。
+> 局限：① 「登录后真实送礼端到端」当时未做，**已在同日补做并闭环，见下节**；② App(WKWebView) 端无法在此环境验证，它依赖 `siteOrigin + /static/...` 绝对 URL 与新增的 CORS 头，属 HBuilderX 打包后的待验项；③ 13 个 `.svga` 素材授权状态不明（见「素材授权」节），iOS 上架前必须替换或取得授权。
+
+## 真实送礼端到端验证（2026-09-07，生产，用户 27 → 25）
+
+上面的组件验证是绕过 API 直接驱动动画层。这一节是**真发请求、真扣钻、真写库**的全链路，两个方向各跑一次流星雨（gift_id 30，50000 钻，L3）。
+
+**发送端**（浏览器登录用户 27，TUIChat 会话 C2C25，点 `.gift-entry` → `.gift-item` → `.gift-confirm`）：
+
+- `POST /api/gifts/send` → 200 `{"code":0,"data":{"giftName":"流星雨","diamondAmount":50000,"quantity":1,"animationLevel":3,"effectImage":"/static/svga/liuxingyu.svga","receiverId":25,"messageId":271}}` —— **`effectImage` 确实从接口回传到前端**，这是上一节遗留的唯一技术缺口，就此闭合
+- 播放器 XHR 拉到 `/static/svga/liuxingyu.svga`（1 次），页面出现 1 个 canvas，动画层 class 为 `gift-anim-layer gift-anim-l3`，中心 40% 区域 `alphaMax=255`、14 个去重帧签名 → 真帧推进、真像素，不是 CSS 降级
+- 会话里追加了「流星雨 💎 50000」礼物卡片（不是「[自定义消息]」）
+- 注意时序：`message-input-gift.vue` 先 `await TUIChatService.sendCustomMessage()` 再 `uni.$emit('gift-animation')`，IM 那步耗时约 5-8s，**动画明显滞后于点击**。轮询窗口给短了会误判成"没反应"
+
+**接收端**（浏览器切到用户 25 打开 C2C27，服务端用 `viaIM:false` 代发 → REST 转发腾讯 IM → Lite SDK 实时收到）：
+
+- `POST /api/gifts/send` → 200，`messageId:272`
+- 消息到达后约 11s 采样窗口内出现 canvas，同样是 `gift-anim-l3` + `liuxingyu.svga` + `alphaMax=255` + 14 个去重帧签名，消息列表新增第二张流星雨卡片
+- 说明 AGENTS.md 坑点 14 的基线/去重逻辑在真实实时到达场景下工作正常
+
+**落库核对**（两笔一致）：`gift_records` 57/58（27→25, gift_id 30, qty 1, 50000）、`messages` 271/272（type=gift, session 25-27）、`transactions` 114-117；用户 27 钻石 629676→529676（−100000，精确），用户 25 `gift_income` +7000000 分（=50000×0.7×100，精确）、`charm_value` +100000（精确）。分成比例取自 `configs.gift.withdrawRatio`。
+
+**顺带发现的真 bug**：`transactions.balance_after` 把差额算了两次（发送方少记一次扣减、接收方多记一次收入）。根因是 Sequelize `instance.update()` 就地改实例，`gifts.js:81`/`:90` 又用改后的值再算了一遍。**钱包与收入本身正确，只有审计字段错。** 详见 AGENTS.md 待办 #12，尚未修。
+
+> 这两笔是有意产生的生产测试数据，清理清单见 AGENTS.md 待办 #8。IM 云端的 2 条自定义消息无法通过 REST 删除。
+
+## 特效播放次数策略（2026-09-07 修订）
+
+线上验证通过后，用户提出四条要求：特效每条礼物**只播一次**、画面里**只有动画不掺静态图**、发送方看到一次、接收方离线期间收到的礼物在**首次打开会话时补播一次且不再重复**。据此改了三处：
+
+**1. 去重从内存 Set 改为持久化。** 原先的 `processedGiftIds` 是组件内 `new Set()`，切会话就 `clear()`，刷新/重启更是全丢——"不重复"实际只由 `baselineMsgTime` 兜着，而基线在 `lastMessage` 缺失时会 fail-open 到 0，把整屏历史当实时消息批量重放。现在落到 `app/src/utils/giftAnimPlayed.js`：localStorage、按用户 ID 隔离、上限 200 条，键为 `im:<msg.ID>`（TUIKit）与 `db:<message.id>`（自建兜底页）共用一份记录。基线仍保留，但缺失时用 `Date.now()/1000` 兜底而不是 0。
+
+**2. 历史补播限制为「最新一条」。** 需求要求首次打开会话要播一次，但一页历史可能有几十条礼物。取舍是：每次会话打开至多补播未播放历史礼物中最新的一条，其余**只登记不播**。代价是老礼物永远不会补播；换来的是首屏不会炸出一串动画，且"至多一次"这条硬约束不被破坏。实时到达（`msg.time > 基线`）不受此限，逐条播。
+
+**3. SVGA 播放时图层内只有 `<SvgaStage>`。** `.gift-banner`、`.gift-center`、`.gift-bottom-banner` 原先只按 `current.level` 门控，其中前两个各含一张礼物图标 `<image>`，z-index 10 压在 z-index 2 的 canvas 上——用户看到的"图片加粒子"就是这个，SVGA 其实一直在正常播。三层现在都加了 `!current.effectSvga`。CSS 层保留不删：小程序端没有 renderjs，H5/App 端 SVGA 下载或解码失败时 `onSvgaFail` 清空 `effectSvga` 后要靠它们降级。
+
+**顺带修的两处**：发送方特效从 `await sendCustomMessage()` 之后移到扣费成功后立刻播（原先要等 IM 往返好几秒，点了按钮没反应），成功 toast 改为仅在 `animationLevel <= 0` 时出现（否则会盖在全屏动画上）；自建聊天页礼物卡片的点击重播已移除（与"只播一次"冲突，且主路径 TUIChat 本来就没有这个入口）。
+
+> **部署后的一次性行为**：所有存量用户的已播放记录都是空的，因此更新后每人**在每个会话首次打开时会看到一次最近收到的礼物特效**，之后归于沉寂。这是需求的直接推论，不是 bug。
 
 ## 连带发现：部署即改生产数据
 
@@ -122,7 +159,8 @@
 ## 关键文件
 
 - `app/src/components/SvgaStage.vue` — renderjs 播放器（**Options API，勿改**）
-- `app/src/components/GiftAnimation.vue` — SVGA 分支 + CSS 降级 + 队列
+- `app/src/components/GiftAnimation.vue` — SVGA 分支 + CSS 降级 + 队列（CSS 层仅供小程序端与 SVGA 失败时使用）
+- `app/src/utils/giftAnimPlayed.js` — 「已播放」持久化去重（按用户隔离，`im:` / `db:` 两种键）
 - `app/src/static/svga/*.svga` — 16 个特效素材
 - `app/src/static/gifts/*.png` — 16 个抽帧图标
 - `app/src/static/lib/svga.min.js` — svgaplayerweb 2.3.2 UMD

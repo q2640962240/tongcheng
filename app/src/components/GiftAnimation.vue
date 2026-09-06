@@ -21,7 +21,7 @@
 
     <view v-if="!current.effectSvga && current.level >= 3" class="gift-bg-overlay"></view>
 
-    <view v-if="current.level >= 1" class="gift-banner" :class="'gift-banner-l' + current.level">
+    <view v-if="!current.effectSvga && current.level >= 1" class="gift-banner" :class="'gift-banner-l' + current.level">
       <view class="gift-banner-shimmer"></view>
       <text v-if="current.isEmoji" class="gift-banner-emoji">{{ current.image }}</text>
       <image v-else class="gift-banner-img" :src="current.image" mode="aspectFit" />
@@ -31,13 +31,13 @@
       </view>
     </view>
 
-    <view v-if="current.level >= 2" class="gift-center" :class="'gift-center-l' + current.level">
+    <view v-if="!current.effectSvga && current.level >= 2" class="gift-center" :class="'gift-center-l' + current.level">
       <view class="gift-center-glow"></view>
       <text v-if="current.isEmoji" class="gift-center-emoji">{{ current.image }}</text>
       <image v-else class="gift-center-img" :src="current.image" mode="aspectFit" />
     </view>
 
-    <view v-if="current.level >= 3" class="gift-bottom-banner">
+    <view v-if="!current.effectSvga && current.level >= 3" class="gift-bottom-banner">
       <view class="gift-bottom-shimmer"></view>
       <text class="gift-bottom-text">{{ current.senderName || '神秘人' }} 送出 {{ current.giftName }}{{ current.quantity > 1 ? ' ×' + current.quantity : '' }}</text>
     </view>
