@@ -4,23 +4,25 @@
       <text class="gift-title">送礼物</text>
       <text class="gift-balance">💎 {{ balance }}</text>
     </view>
-    <scroll-view scroll-y class="gift-grid">
-      <view
-        v-for="gift in giftList"
-        :key="gift.id"
-        class="gift-item"
-        :class="{ selected: selectedGift?.id === gift.id }"
-        @click="selectGift(gift)"
-      >
-        <view class="gift-icon-wrap">
-          <text v-if="isEmoji(gift.imageUrl)" class="gift-emoji">{{ gift.imageUrl }}</text>
-          <image v-else class="gift-image" :src="gift.imageUrl" mode="aspectFit" />
+    <scroll-view scroll-y class="gift-scroll">
+      <view class="gift-grid">
+        <view
+          v-for="gift in giftList"
+          :key="gift.id"
+          class="gift-item"
+          :class="{ selected: selectedGift?.id === gift.id }"
+          @click="selectGift(gift)"
+        >
+          <view class="gift-icon-wrap" :class="'tier-' + giftTier(gift)">
+            <text v-if="isEmoji(gift.imageUrl)" class="gift-emoji">{{ gift.imageUrl }}</text>
+            <image v-else class="gift-image" :src="gift.imageUrl" mode="aspectFit" />
+          </view>
+          <text class="gift-name">{{ gift.name }}</text>
+          <text class="gift-price">{{ gift.price }}💎</text>
         </view>
-        <text class="gift-name">{{ gift.name }}</text>
-        <text class="gift-price">{{ gift.price }}💎</text>
-      </view>
-      <view v-if="giftList.length === 0 && !loading" class="gift-empty">
-        <text class="gift-empty-text">暂无礼物</text>
+        <view v-if="giftList.length === 0 && !loading" class="gift-empty">
+          <text class="gift-empty-text">暂无礼物</text>
+        </view>
       </view>
     </scroll-view>
     <view class="gift-actions" v-if="selectedGift">
@@ -73,6 +75,13 @@ onMounted(async () => {
 const isEmoji = (str) => {
   if (!str) return false
   return !str.startsWith('http') && !str.startsWith('/') && !str.startsWith('data:')
+}
+
+const giftTier = (gift) => {
+  const p = gift.price || 0
+  if (p >= 500) return 'luxury'
+  if (p >= 100) return 'hot'
+  return 'normal'
 }
 
 const selectGift = (gift) => {
@@ -172,13 +181,13 @@ const sendGift = async () => {
   font-weight: 500;
 }
 
-.gift-grid {
+.gift-scroll {
   flex: 1;
   padding: 12px 12px 0;
-  overflow-y: auto;
 }
 
 .gift-empty {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -190,16 +199,15 @@ const sendGift = async () => {
   font-size: 14px;
 }
 
-/* 用 flex wrap 模拟网格，每行4个 */
 .gift-grid {
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding-bottom: 12px;
 }
 
 .gift-item {
-  width: calc(25% - 3px);
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -220,25 +228,42 @@ const sendGift = async () => {
 }
 
 .gift-icon-wrap {
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 6px;
   overflow: hidden;
+
+  &.tier-normal {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  &.tier-hot {
+    background: rgba(255, 140, 0, 0.12);
+    box-shadow: 0 0 8px rgba(255, 140, 0, 0.15);
+  }
+
+  &.tier-luxury {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(180, 100, 255, 0.12));
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.2);
+  }
+
+  .selected & {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+  }
 }
 
 .gift-emoji {
-  font-size: 28px;
+  font-size: 30px;
   line-height: 1;
 }
 
 .gift-image {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
 }
 
 .gift-name {
@@ -254,8 +279,9 @@ const sendGift = async () => {
 
 .gift-price {
   font-size: 11px;
-  color: #7E88AA;
+  color: rgba(255, 215, 0, 0.72);
   margin-top: 2px;
+  font-weight: 600;
 }
 
 .gift-actions {

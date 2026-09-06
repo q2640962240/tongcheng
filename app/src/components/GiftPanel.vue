@@ -244,7 +244,7 @@ const sendGift = async () => {
 .gift-panel-body {
   flex: 1;
   max-height: 48vh;
-  padding: 0 16px;
+  padding: 0 16px 12px;
 }
 
 .gift-section {
@@ -269,8 +269,8 @@ const sendGift = async () => {
 }
 
 .gift-panel-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
 
@@ -288,7 +288,7 @@ const sendGift = async () => {
 }
 
 .gift-panel-item {
-  width: calc(25% - 8px);
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -311,8 +311,8 @@ const sendGift = async () => {
 }
 
 .gift-panel-icon-wrap {
-  width: 50px;
-  height: 50px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -341,13 +341,13 @@ const sendGift = async () => {
 }
 
 .gift-panel-emoji {
-  font-size: 28px;
+  font-size: 30px;
   line-height: 1;
 }
 
 .gift-panel-img {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
 }
 
 .gift-panel-name {
@@ -363,9 +363,9 @@ const sendGift = async () => {
 
 .gift-panel-price {
   font-size: 11px;
-  color: #7E88AA;
+  color: rgba(255, 215, 0, 0.72);
   margin-top: 3px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .gift-panel-footer {
