@@ -103,7 +103,7 @@ cd app && npm install && npm run dev:h5
 1. Android APK 打包 (HBuilderX 本地)
 2. 配置中心填写真实密钥 (短信/支付/OSS/推送)
 3. 钻石充值接入微信/支付宝支付
-4. 礼物素材正式设计 (当前 emoji 占位)
+4. **礼物素材正式设计 (当前 8/16 仍 emoji 占位)** — 图标提示词已定稿（统一插画风、正方形透明底）。素材到位后按契约接入：落盘 `app/src/static/gifts/`，文件名 `lollipop/rose/ice-cream/heart/cake/crown/diamond-ring/fireworks/castle/rocket/yacht/sports-car/private-jet/fleet/planet/galaxy.png`（512×512 透明 PNG）；接入步骤 = sharp 转码 192px palette PNG → 改 `seed.js` `DEFAULT_GIFTS.imageUrl` → 服务器跑 `upgradeGifts()` 或生产库定向 UPDATE `gifts.image_url`（**禁止跑完整 seed**，见坑点与 `project-prod-data-safety`）。L1-L3 特效当前是 CSS 实现；用户提供的 SVGA 分镜脚本（L1 2.5s / L2 3.5s / L3 5-8s、720×1280 透明底 30fps）是**设计师 AE 交付物**，若将来真要 SVGA 需另引播放器库，属新架构决策
 5. 会话列表深色主题适配
 6. **`diamondAmount` 字段语义不一致** — `gifts.js` 写入消息体的 `giftContent.diamondAmount` 是**单价** (`gift.price`)，而 API 响应 / WS 广播里的 `diamondAmount` 是**总价** (`totalDiamond`)。多件礼物时聊天卡片显示单价且不显示数量（如送 2 个游艇、实付 2000，卡片显示「游艇 💎 1000」）。需先决定以哪个为准，再统一两端并让卡片显示数量
 7. **会话列表礼物摘要显示「[自定义消息]」** — Lite SDK 的 `conversation.lastMessage.messageForShow` 不取 `TIMCustomElem.Desc`（服务端已传 `送出了N个XX`，无效）。需在会话列表摘要渲染处按 `businessID === 'gift'` 自行映射为「[礼物] XX」
