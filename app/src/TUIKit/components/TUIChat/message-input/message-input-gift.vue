@@ -25,14 +25,14 @@
         </view>
       </view>
     </scroll-view>
-    <view class="gift-actions" v-if="selectedGift">
+    <view class="gift-actions">
       <view
         class="gift-confirm"
-        :class="{ disabled: balance < selectedGift.price }"
+        :class="{ disabled: !selectedGift || sending || balance < selectedGift.price }"
         @click="sendGift"
       >
         <text class="gift-confirm-text">
-          送给TA {{ selectedGift.name }}（{{ selectedGift.price }}💎）
+          {{ selectedGift ? '送给TA ' + selectedGift.name + '（' + selectedGift.price + '💎）' : (sending ? '正在送出…' : '请先选择礼物') }}
         </text>
       </view>
     </view>
@@ -54,6 +54,7 @@ const giftList = ref([])
 const balance = ref(0)
 const selectedGift = ref(null)
 const loading = ref(true)
+const sending = ref(false)
 const currentUserProfile = ref(null)
 
 onMounted(async () => {
@@ -89,12 +90,13 @@ const selectGift = (gift) => {
 }
 
 const sendGift = async () => {
-  if (!selectedGift.value) return
+  if (!selectedGift.value || sending.value) return
   if (balance.value < selectedGift.value.price) {
     uni.showToast({ title: '钻石不足，请充值', icon: 'none' })
     return
   }
   const gift = selectedGift.value
+  sending.value = true
   try {
     const sendRes = await giftApi.send({
       receiverId: props.receiverId,
@@ -154,6 +156,8 @@ const sendGift = async () => {
     emit('sent', { ...gift, animationLevel })
   } catch (e) {
     uni.showToast({ title: e.message || '发送失败', icon: 'none' })
+  } finally {
+    sending.value = false
   }
 }
 </script>
@@ -192,6 +196,9 @@ const sendGift = async () => {
 .gift-scroll {
   box-sizing: border-box;
   flex: 1;
+  /* 外层 uni-scroll-view 的 overflow 是 visible，flex 的 min-height:auto 会等于内容高度，
+     不写 0 的话滚动区拒绝收缩：内部滚不动，底部赠送行被面板 overflow:hidden 裁掉 */
+  min-height: 0;
   padding: 12px 12px 0;
 }
 

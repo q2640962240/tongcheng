@@ -41,8 +41,8 @@
         </view>
       </scroll-view>
 
-      <view class="gift-panel-footer" v-if="selectedGift">
-        <view class="gift-panel-qty-row">
+      <view class="gift-panel-footer">
+        <view class="gift-panel-qty-row" v-if="selectedGift">
           <view class="gift-panel-qty">
             <view
               v-for="q in qtyOptions"
@@ -58,11 +58,11 @@
         </view>
         <view
           class="gift-panel-send"
-          :class="{ disabled: balance < selectedGift.price * quantity }"
+          :class="{ disabled: !selectedGift || sending || balance < selectedGift.price * quantity }"
           @click="sendGift"
         >
           <text class="gift-panel-send-text">
-            送给TA {{ selectedGift.name }}{{ quantity > 1 ? ' ×' + quantity : '' }}（{{ selectedGift.price * quantity }}💎）
+            {{ selectedGift ? '送给TA ' + selectedGift.name + (quantity > 1 ? ' ×' + quantity : '') + '（' + selectedGift.price * quantity + '💎）' : (sending ? '正在送出…' : '请先选择礼物') }}
           </text>
         </view>
       </view>
@@ -85,6 +85,7 @@ const balance = ref(0)
 const selectedGift = ref(null)
 const loading = ref(false)
 const quantity = ref(1)
+const sending = ref(false)
 const qtyOptions = [1, 5, 10, 66]
 
 const isEmoji = (str) => {
@@ -144,13 +145,14 @@ const selectGift = (gift) => {
 }
 
 const sendGift = async () => {
-  if (!selectedGift.value) return
+  if (!selectedGift.value || sending.value) return
   const total = selectedGift.value.price * quantity.value
   if (balance.value < total) {
     uni.showToast({ title: '钻石不足，请充值', icon: 'none' })
     setTimeout(() => uni.navigateTo({ url: '/pages/recharge/recharge' }), 1500)
     return
   }
+  sending.value = true
   try {
     const res = await giftApi.send({
       receiverId: props.receiverId,
@@ -171,6 +173,8 @@ const sendGift = async () => {
     selectedGift.value = null
   } catch (e) {
     uni.showToast({ title: e.message || '发送失败', icon: 'none' })
+  } finally {
+    sending.value = false
   }
 }
 </script>
@@ -244,7 +248,9 @@ const sendGift = async () => {
 .gift-panel-body {
   box-sizing: border-box;
   flex: 1;
-  max-height: 48vh;
+  /* 不能用 max-height 钉死：footer 出现时总高会超出面板 max-height 而被裁掉赠送按钮。
+     min-height:0 让 flex 在 footer 出现时自动压缩滚动区，内部滚动才生效 */
+  min-height: 0;
   padding: 0 16px 12px;
 }
 
