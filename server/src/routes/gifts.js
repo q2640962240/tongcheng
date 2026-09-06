@@ -93,6 +93,7 @@ router.post('/send', auth, async (req, res, next) => {
     // c. 创建聊天消息（type='gift'）
     const sortedIds = [Number(req.userId), Number(receiverId)].sort((a, b) => a - b)
     const giftContent = JSON.stringify({
+      businessID: 'gift',
       giftId: gift.id,
       giftName: gift.name,
       giftImage: gift.imageUrl,

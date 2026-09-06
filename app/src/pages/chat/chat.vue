@@ -68,8 +68,8 @@
 
     <!-- 输入栏 -->
     <view class="input-bar">
-      <view class="btn-plus" @tap="onPickImage">
-        <text class="plus-icon">🖼</text>
+      <view class="btn-plus" @tap="showMoreMenu = !showMoreMenu">
+        <text class="plus-icon">＋</text>
       </view>
       <view class="btn-gift" @tap="showGiftPanel = true">
         <view v-if="giftSentToast" class="gift-sent-toast">
@@ -87,6 +87,24 @@
         @input="onTyping"
       />
       <view class="btn-send" :class="{ disabled: !draft.trim() }" @tap="sendText">发送</view>
+    </view>
+
+    <!-- 更多功能菜单 -->
+    <view v-if="showMoreMenu" class="more-menu-mask" @tap="showMoreMenu = false">
+      <view class="more-menu" @tap.stop>
+        <view class="more-menu-item" @tap="onMenuPickAlbum">
+          <text class="more-menu-icon">🖼</text>
+          <text class="more-menu-text">相册</text>
+        </view>
+        <view class="more-menu-item" @tap="onMenuTakePhoto">
+          <text class="more-menu-icon">📷</text>
+          <text class="more-menu-text">拍照</text>
+        </view>
+        <view class="more-menu-item" @tap="onMenuSendGift">
+          <text class="more-menu-icon">🎁</text>
+          <text class="more-menu-text">送礼</text>
+        </view>
+      </view>
     </view>
 
     <!-- 搜索入口按钮 -->
@@ -163,6 +181,7 @@ const playingId = ref('')
 const scrollAnchor = ref('')
 const connected = ref(false)
 const showGiftPanel = ref(false)
+const showMoreMenu = ref(false)
 const giftSentToast = ref('')
 const giftAnimRef = ref(null)
 
@@ -414,6 +433,37 @@ function onPickImage() {
   })
 }
 
+function onMenuPickAlbum() {
+  showMoreMenu.value = false
+  onPickImage()
+}
+
+function onMenuTakePhoto() {
+  showMoreMenu.value = false
+  uni.chooseImage({
+    count: 1,
+    sourceType: ['camera'],
+    success: async (res) => {
+      const path = res.tempFilePaths && res.tempFilePaths[0]
+      if (!path) return
+      try {
+        uni.showLoading({ title: '发送中…' })
+        const up = await uploadFile(path)
+        uni.hideLoading()
+        if (up && up.url) doSend('image', up.url)
+      } catch (e) {
+        uni.hideLoading()
+        uni.showToast({ title: '拍照发送失败', icon: 'none' })
+      }
+    }
+  })
+}
+
+function onMenuSendGift() {
+  showMoreMenu.value = false
+  showGiftPanel.value = true
+}
+
 function previewImage(m) {
   uni.previewImage({ urls: [resolveUrl(m.content)] })
 }
@@ -604,6 +654,21 @@ onLoad(async (options) => {
   })
   // #endif
 
+  // #ifdef H5
+  // H5 端监听 visualViewport 变化，键盘弹出时滚动到底部
+  if (typeof window !== 'undefined' && window.visualViewport) {
+    const onViewportChange = () => {
+      nextTick(() => { scrollToBottom() })
+    }
+    window.visualViewport.addEventListener('resize', onViewportChange)
+    window.visualViewport.addEventListener('scroll', onViewportChange)
+    socketOffs.push(() => {
+      window.visualViewport.removeEventListener('resize', onViewportChange)
+      window.visualViewport.removeEventListener('scroll', onViewportChange)
+    })
+  }
+  // #endif
+
   if (!userStore.isLoggedIn) {
     uni.showToast({ title: '请先登录', icon: 'none' })
     setTimeout(() => uni.reLaunch({ url: '/pages/login/login' }), 800)
@@ -656,6 +721,7 @@ onUnload(() => {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   background: $by-bg;
 }
 
@@ -800,6 +866,43 @@ onUnload(() => {
   color: $by-text-3;
   font-size: 24rpx;
   padding: 8rpx 0;
+}
+
+.more-menu-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+}
+.more-menu {
+  width: 100%;
+  background: $by-bg;
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 32rpx 24rpx;
+  padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 32rpx;
+  animation: slideUp 0.25s ease-out;
+}
+.more-menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+  padding: 20rpx 32rpx;
+  background: $by-surface;
+  border-radius: 20rpx;
+  flex: 1;
+  &:active { background: $by-surface-2; }
+}
+.more-menu-icon { font-size: 56rpx; }
+.more-menu-text { font-size: 24rpx; color: $by-text-1; }
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
 .input-bar {

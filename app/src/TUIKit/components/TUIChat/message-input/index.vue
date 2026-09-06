@@ -48,7 +48,7 @@
         :file="moreIcon"
         :size="'23px'"
         :hotAreaSize="'3px'"
-        @onClick="handleDirectImageSelect"
+        @onClick="showMoreMenu = !showMoreMenu"
       />
     </div>
     <div>
@@ -65,6 +65,23 @@
         @close="showGiftPanel = false"
         @sent="onGiftSent"
       />
+    </view>
+    <!-- 更多功能菜单 -->
+    <view v-if="showMoreMenu" class="more-menu-mask" @click="showMoreMenu = false">
+      <view class="more-menu" @click.stop>
+        <view class="more-menu-item" @click="onMenuPickAlbum">
+          <text class="more-menu-icon">🖼</text>
+          <text class="more-menu-text">相册</text>
+        </view>
+        <view class="more-menu-item" @click="onMenuTakePhoto">
+          <text class="more-menu-icon">📷</text>
+          <text class="more-menu-text">拍照</text>
+        </view>
+        <view class="more-menu-item" @click="onMenuSendGift">
+          <text class="more-menu-icon">🎁</text>
+          <text class="more-menu-text">送礼</text>
+        </view>
+      </view>
     </view>
   </div>
 </template>
@@ -136,6 +153,32 @@ const toggleGiftPanel = () => {
 
 const onGiftSent = (gift: any) => {
   showGiftPanel.value = false;
+};
+
+// 更多功能菜单
+const showMoreMenu = ref(false);
+
+const onMenuPickAlbum = () => {
+  showMoreMenu.value = false;
+  handleDirectImageSelect();
+};
+
+const onMenuTakePhoto = () => {
+  showMoreMenu.value = false;
+  uni.chooseImage({
+    count: 1,
+    sourceType: ['camera'],
+    success: (res) => {
+      if (currentConversation.value) {
+        sendImageMessage(currentConversation.value, res);
+      }
+    }
+  });
+};
+
+const onMenuSendGift = () => {
+  showMoreMenu.value = false;
+  showGiftPanel.value = true;
 };
 
 onMounted(() => {
@@ -327,5 +370,49 @@ defineExpose({
   bottom: 0;
   background: rgba(0, 0, 0, 0.4);
   z-index: -1;
+}
+
+.more-menu-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 1001;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.more-menu {
+  width: 100%;
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  padding: 24px 16px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 16px;
+  animation: menuSlideUp 0.25s ease-out;
+}
+
+.more-menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px;
+  background: #f5f5f5;
+  border-radius: 16px;
+  flex: 1;
+  &:active { background: #e8e8e8; }
+}
+
+.more-menu-icon { font-size: 32px; }
+.more-menu-text { font-size: 13px; color: #333; }
+
+@keyframes menuSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 </style>

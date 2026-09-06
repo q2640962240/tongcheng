@@ -372,7 +372,7 @@ onShow(() => {
 .title { font-size: 36rpx; font-weight: 700; color: $by-text-1; }
 
 .content-scroll {
-  height: calc(100vh - #{$by-topbar-h} - env(safe-area-inset-top));
+  height: calc(100vh - #{$by-topbar-h} - env(safe-area-inset-top) - 100rpx);
   padding: 24rpx $by-page-pad-x;
 }
 
@@ -642,6 +642,6 @@ onShow(() => {
 }
 
 .bottom-safe {
-  height: calc(#{$by-safe-bottom} + 40rpx);
+  height: calc(40rpx + env(safe-area-inset-bottom));
 }
 </style>

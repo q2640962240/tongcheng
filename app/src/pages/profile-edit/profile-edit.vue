@@ -242,7 +242,8 @@ onShow(() => {
 .page { min-height: 100vh; background: #fffbeb; }
 .header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 24rpx; height: 88rpx; position: sticky; top: 0;
+  padding: 0 24rpx; padding-top: env(safe-area-inset-top);
+  height: calc(88rpx + env(safe-area-inset-top)); position: sticky; top: 0;
   background: #fffbeb;
   border-bottom: 2rpx solid #e5e5e5; z-index: 10;
 }
@@ -280,6 +281,7 @@ onShow(() => {
   height: 96rpx; background: #ffd60a; color: #171717;
   border-radius: 9999rpx; display: flex; align-items: center; justify-content: center;
   font-size: 32rpx; font-weight: 700; margin: 32rpx 0;
+  margin-bottom: calc(32rpx + env(safe-area-inset-bottom));
   &:active { opacity: 0.9; }
   &.disabled { opacity: 0.5; }
 }
