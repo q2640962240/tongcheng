@@ -1,58 +1,62 @@
 <template>
   <view class="gift-anim-layer" v-if="current.id">
-    <view class="gift-anim-content" :key="current.id" :class="'gift-anim-l' + current.level">
-      <view v-if="current.level >= 2" class="gift-bg-overlay"></view>
+    <canvas
+      v-if="current.level >= 2"
+      class="gift-canvas"
+      ref="canvasRef"
+      :style="{ width: screenW + 'px', height: screenH + 'px' }"
+    ></canvas>
 
-      <view v-if="current.level >= 1" class="gift-l1">
-        <view class="gift-l1-banner">
-          <view class="gift-l1-shimmer"></view>
-          <text v-if="current.isEmoji" class="gift-l1-emoji">{{ current.image }}</text>
-          <image v-else class="gift-l1-img" :src="current.image" mode="aspectFit" />
-          <view class="gift-l1-info">
-            <text class="gift-l1-sender">{{ current.senderName || '神秘人' }}</text>
-            <text class="gift-l1-action">送出 {{ current.giftName }}{{ current.quantity > 1 ? ' ×' + current.quantity : '' }}</text>
-          </view>
-        </view>
-      </view>
+    <view class="gift-bg-overlay" v-if="current.level >= 3"></view>
 
-      <view v-if="current.level >= 2" class="gift-l2">
-        <view class="gift-l2-pillar"></view>
-        <view class="gift-l2-ring"></view>
-        <view v-for="i in 8" :key="'s'+i" class="gift-l2-star" :style="starStyle(i, 8)"></view>
-        <view class="gift-l2-center">
-          <text v-if="current.isEmoji" class="gift-l2-emoji">{{ current.image }}</text>
-          <image v-else class="gift-l2-img" :src="current.image" mode="aspectFit" />
-        </view>
+    <view v-if="current.level >= 1" class="gift-banner" :class="'gift-banner-l' + current.level">
+      <view class="gift-banner-shimmer"></view>
+      <text v-if="current.isEmoji" class="gift-banner-emoji">{{ current.image }}</text>
+      <image v-else class="gift-banner-img" :src="current.image" mode="aspectFit" />
+      <view class="gift-banner-info">
+        <text class="gift-banner-sender">{{ current.senderName || '神秘人' }}</text>
+        <text class="gift-banner-action">送出 {{ current.giftName }}{{ current.quantity > 1 ? ' ×' + current.quantity : '' }}</text>
       </view>
+    </view>
 
-      <view v-if="current.level >= 3" class="gift-l3">
-        <view class="gift-l3-flash"></view>
-        <view v-for="i in 24" :key="'p'+i" class="gift-l3-particle" :style="particleStyle(i)"></view>
-        <view v-for="i in 6" :key="'f'+i" class="gift-l3-firework" :style="fireworkStyle(i)"></view>
-        <view class="gift-l3-center">
-          <view class="gift-l3-halo"></view>
-          <text v-if="current.isEmoji" class="gift-l3-emoji">{{ current.image }}</text>
-          <image v-else class="gift-l3-img" :src="current.image" mode="aspectFit" />
-        </view>
-        <view class="gift-l3-bottom-banner">
-          <view class="gift-l3-bottom-shimmer"></view>
-          <text class="gift-l3-bottom-text">{{ current.senderName || '神秘人' }} 送出 {{ current.giftName }}{{ current.quantity > 1 ? ' ×' + current.quantity : '' }}</text>
-        </view>
-      </view>
+    <view v-if="current.level >= 2" class="gift-center" :class="'gift-center-l' + current.level">
+      <view class="gift-center-glow"></view>
+      <text v-if="current.isEmoji" class="gift-center-emoji">{{ current.image }}</text>
+      <image v-else class="gift-center-img" :src="current.image" mode="aspectFit" />
+    </view>
+
+    <view v-if="current.level >= 3" class="gift-bottom-banner">
+      <view class="gift-bottom-shimmer"></view>
+      <text class="gift-bottom-text">{{ current.senderName || '神秘人' }} 送出 {{ current.giftName }}{{ current.quantity > 1 ? ' ×' + current.quantity : '' }}</text>
     </view>
   </view>
 </template>
 
 <script setup>
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, watch, nextTick, onUnmounted } from 'vue'
 
 const queue = ref([])
 const current = ref({})
 const playing = ref(false)
+const canvasRef = ref(null)
+const screenW = ref(375)
+const screenH = ref(667)
 let timerId = null
+let animId = null
+let particles = []
+let beams = []
+let shocks = []
+let sparkles = []
+let startTime = 0
+let canvasCtx = null
 const MAX_QUEUE = 5
+const durations = { 0: 0, 1: 2500, 2: 4000, 3: 6000 }
 
-const durations = { 0: 0, 1: 2500, 2: 3500, 3: 5000 }
+const COLORS = [
+  '#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#FF69B4',
+  '#FFA500', '#96CEB4', '#DDA0DD', '#FF4500', '#00CED1',
+  '#FF1493', '#7B68EE', '#FFD700', '#FF6347', '#00FA9A'
+]
 
 const isEmojiStr = (s) => {
   if (!s) return true
@@ -63,9 +67,7 @@ const play = (gift) => {
   const level = gift.animationLevel || 1
   if (level <= 0) return
   const imgUrl = gift.imageUrl || gift.giftImage || '🎁'
-  if (queue.value.length >= MAX_QUEUE) {
-    queue.value.shift()
-  }
+  if (queue.value.length >= MAX_QUEUE) queue.value.shift()
   queue.value.push({
     id: Date.now() + Math.random(),
     level,
@@ -77,37 +79,249 @@ const play = (gift) => {
   })
 }
 
-const starStyle = (i, total) => {
-  const angle = ((i - 1) / total) * 360
-  const delay = ((i - 1) * 0.15).toFixed(2)
-  return {
-    '--star-angle': `${angle}deg`,
-    '--star-delay': `${delay}s`,
+const initCanvas = () => {
+  const canvas = canvasRef.value
+  if (!canvas) return null
+  try {
+    const dpr = uni.getSystemInfoSync().pixelRatio || 2
+    screenW.value = uni.getSystemInfoSync().windowWidth
+    screenH.value = uni.getSystemInfoSync().windowHeight
+    canvas.width = screenW.value * dpr
+    canvas.height = screenH.value * dpr
+    const ctx = canvas.getContext('2d')
+    ctx.scale(dpr, dpr)
+    canvasCtx = ctx
+    return ctx
+  } catch (e) {
+    return null
   }
 }
 
-const particleStyle = (i) => {
-  const angle = ((i - 1) / 24) * 360
-  const delay = ((i - 1) * 0.06).toFixed(2)
-  const distance = 120 + Math.floor((i % 5) * 30)
-  const size = 4 + (i % 4) * 2
-  return {
-    '--p-angle': `${angle}deg`,
-    '--p-delay': `${delay}s`,
-    '--p-distance': `${distance}px`,
-    '--p-size': `${size}px`,
+const addParticles = (cx, cy, count, opts = {}) => {
+  const {
+    speedMin = 2, speedMax = 10,
+    sizeMin = 2, sizeMax = 7,
+    gravity = 0.12, friction = 0.98,
+    lifeMin = 50, lifeMax = 110,
+    trails = true, colorSet = null
+  } = opts
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2
+    const speed = speedMin + Math.random() * (speedMax - speedMin)
+    const colors = colorSet || COLORS
+    particles.push({
+      x: cx, y: cy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      size: sizeMin + Math.random() * (sizeMax - sizeMin),
+      color: colors[Math.floor(Math.random() * colors.length)],
+      alpha: 1,
+      life: lifeMin + Math.random() * (lifeMax - lifeMin),
+      maxLife: 0,
+      gravity, friction,
+      trails,
+      history: []
+    })
+    const p = particles[particles.length - 1]
+    p.maxLife = p.life
   }
 }
 
-const fireworkStyle = (i) => {
-  const x = 10 + ((i - 1) % 3) * 35
-  const y = 10 + Math.floor((i - 1) / 3) * 40
-  const delay = ((i - 1) * 0.3).toFixed(1)
-  return {
-    '--fw-x': `${x}%`,
-    '--fw-y': `${y}%`,
-    '--fw-delay': `${delay}s`,
+const addShockwave = (cx, cy, opts = {}) => {
+  const { color = '#FFD700', maxRadius = 200, width = 4, speed = 6 } = opts
+  shocks.push({ x: cx, y: cy, radius: 5, maxRadius, alpha: 0.9, color, width, speed })
+}
+
+const addBeams = (cx, cy, count = 12) => {
+  for (let i = 0; i < count; i++) {
+    beams.push({
+      x: cx, y: cy,
+      angle: (i / count) * Math.PI * 2,
+      length: 120 + Math.random() * 180,
+      width: 1.5 + Math.random() * 3,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      alpha: 0.5 + Math.random() * 0.4,
+      rotSpeed: (Math.random() - 0.5) * 0.04
+    })
   }
+}
+
+const addSparkles = (cx, cy, count = 5) => {
+  for (let i = 0; i < count; i++) {
+    sparkles.push({
+      x: cx + (Math.random() - 0.5) * 80,
+      y: cy + (Math.random() - 0.5) * 80,
+      vx: (Math.random() - 0.5) * 3,
+      vy: -2 - Math.random() * 4,
+      size: 1.5 + Math.random() * 3,
+      color: '#FFD700',
+      alpha: 0.8 + Math.random() * 0.2,
+      life: 25 + Math.random() * 35
+    })
+  }
+}
+
+const render = () => {
+  const ctx = canvasCtx
+  if (!ctx) { animId = requestAnimationFrame(render); return }
+  const w = screenW.value
+  const h = screenH.value
+  const cx = w / 2
+  const cy = h * 0.38
+  const elapsed = Date.now() - startTime
+
+  ctx.clearRect(0, 0, w, h)
+  ctx.globalCompositeOperation = 'lighter'
+
+  for (let i = beams.length - 1; i >= 0; i--) {
+    const b = beams[i]
+    const fadeOut = elapsed > 3000 ? Math.max(0, 1 - (elapsed - 3000) / 1500) : 1
+    b.angle += b.rotSpeed
+    const grad = ctx.createLinearGradient(
+      b.x, b.y,
+      b.x + Math.cos(b.angle) * b.length,
+      b.y + Math.sin(b.angle) * b.length
+    )
+    grad.addColorStop(0, b.color)
+    grad.addColorStop(1, 'transparent')
+    ctx.globalAlpha = b.alpha * fadeOut
+    ctx.beginPath()
+    ctx.moveTo(b.x, b.y)
+    ctx.lineTo(
+      b.x + Math.cos(b.angle) * b.length,
+      b.y + Math.sin(b.angle) * b.length
+    )
+    ctx.lineWidth = b.width
+    ctx.strokeStyle = grad
+    ctx.stroke()
+    if (fadeOut <= 0) beams.splice(i, 1)
+  }
+
+  for (let i = shocks.length - 1; i >= 0; i--) {
+    const s = shocks[i]
+    s.radius += s.speed
+    s.alpha *= 0.96
+    ctx.globalAlpha = s.alpha
+    ctx.beginPath()
+    ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2)
+    ctx.lineWidth = s.width
+    ctx.strokeStyle = s.color
+    ctx.stroke()
+    if (s.radius > s.maxRadius || s.alpha < 0.01) shocks.splice(i, 1)
+  }
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i]
+    if (p.trails && p.history.length > 1) {
+      for (let j = 1; j < p.history.length; j++) {
+        const t = j / p.history.length
+        ctx.globalAlpha = t * p.alpha * 0.4
+        ctx.beginPath()
+        ctx.arc(p.history[j].x, p.history[j].y, p.size * t * 0.6, 0, Math.PI * 2)
+        ctx.fillStyle = p.color
+        ctx.fill()
+      }
+    }
+    p.vx *= p.friction
+    p.vy *= p.friction
+    p.vy += p.gravity
+    p.x += p.vx
+    p.y += p.vy
+    p.life--
+    p.alpha = Math.max(0, p.life / p.maxLife)
+    if (p.trails) {
+      p.history.push({ x: p.x, y: p.y })
+      if (p.history.length > 8) p.history.shift()
+    }
+    ctx.globalAlpha = p.alpha
+    ctx.beginPath()
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
+    ctx.fillStyle = p.color
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2)
+    ctx.fillStyle = p.color
+    ctx.globalAlpha = p.alpha * 0.15
+    ctx.fill()
+    if (p.life <= 0) particles.splice(i, 1)
+  }
+
+  for (let i = sparkles.length - 1; i >= 0; i--) {
+    const s = sparkles[i]
+    s.x += s.vx
+    s.y += s.vy
+    s.vy += 0.06
+    s.life--
+    s.alpha *= 0.96
+    ctx.globalAlpha = s.alpha
+    ctx.beginPath()
+    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2)
+    ctx.fillStyle = s.color
+    ctx.fill()
+    if (s.life <= 0) sparkles.splice(i, 1)
+  }
+
+  if (current.value.level >= 3 && elapsed < 4500) {
+    addSparkles(cx, cy, 3)
+  }
+
+  ctx.globalAlpha = 1
+  ctx.globalCompositeOperation = 'source-over'
+  animId = requestAnimationFrame(render)
+}
+
+const startEffects = (level) => {
+  const ctx = initCanvas()
+  if (!ctx && level >= 2) return
+  const w = screenW.value
+  const h = screenH.value
+  const cx = w / 2
+  const cy = h * 0.38
+  startTime = Date.now()
+  particles = []
+  beams = []
+  shocks = []
+  sparkles = []
+
+  if (level >= 2) {
+    addParticles(cx, cy, 60, { speedMax: 8, sizeMax: 5, gravity: 0.1, lifeMax: 80 })
+    addShockwave(cx, cy, { color: '#FFD700', maxRadius: Math.max(w, h) * 0.5, speed: 5 })
+    setTimeout(() => addShockwave(cx, cy, { color: '#FF69B4', maxRadius: Math.max(w, h) * 0.4, speed: 4 }), 150)
+  }
+
+  if (level >= 3) {
+    setTimeout(() => {
+      addParticles(cx, cy, 100, { speedMin: 3, speedMax: 14, sizeMin: 2, sizeMax: 8, gravity: 0.08, lifeMin: 60, lifeMax: 130 })
+      addShockwave(cx, cy, { color: '#4ECDC4', maxRadius: Math.max(w, h) * 0.7, width: 5, speed: 7 })
+      addBeams(cx, cy, 16)
+    }, 200)
+    setTimeout(() => {
+      addParticles(cx, cy, 50, { speedMin: 1, speedMax: 6, sizeMin: 3, sizeMax: 9, gravity: 0.15, lifeMin: 40, lifeMax: 90 })
+      addShockwave(cx, cy, { color: '#FF6B6B', maxRadius: Math.max(w, h) * 0.5, speed: 4 })
+    }, 600)
+    setTimeout(() => {
+      addParticles(cx * 0.5, cy * 0.7, 35, { speedMax: 6, lifeMax: 70 })
+      addParticles(cx * 1.5, cy * 0.7, 35, { speedMax: 6, lifeMax: 70 })
+    }, 1000)
+    setTimeout(() => {
+      addParticles(cx, cy, 40, { speedMin: 4, speedMax: 12, sizeMax: 7, gravity: 0.06, lifeMax: 100 })
+      addShockwave(cx, cy, { color: '#DDA0DD', maxRadius: Math.max(w, h) * 0.6, speed: 5 })
+    }, 1500)
+  }
+
+  animId = requestAnimationFrame(render)
+}
+
+const stopEffects = () => {
+  if (animId) {
+    cancelAnimationFrame(animId)
+    animId = null
+  }
+  particles = []
+  beams = []
+  shocks = []
+  sparkles = []
+  canvasCtx = null
 }
 
 const clearTimer = () => {
@@ -118,13 +332,12 @@ const clearTimer = () => {
 }
 
 watch(queue, (q) => {
-  if (q.length > 0 && !playing.value) {
-    playNext()
-  }
+  if (q.length > 0 && !playing.value) playNext()
 }, { deep: true })
 
-const playNext = () => {
+const playNext = async () => {
   clearTimer()
+  stopEffects()
   if (queue.value.length === 0) {
     playing.value = false
     current.value = {}
@@ -132,6 +345,12 @@ const playNext = () => {
   }
   playing.value = true
   current.value = queue.value[0]
+
+  if (current.value.level >= 2) {
+    await nextTick()
+    setTimeout(() => startEffects(current.value.level), 50)
+  }
+
   const dur = durations[current.value.level] || 2500
   timerId = setTimeout(() => {
     queue.value.shift()
@@ -140,12 +359,14 @@ const playNext = () => {
     } else {
       playing.value = false
       current.value = {}
+      stopEffects()
     }
   }, dur)
 }
 
 onUnmounted(() => {
   clearTimer()
+  stopEffects()
   queue.value = []
   current.value = {}
   playing.value = false
@@ -163,21 +384,17 @@ defineExpose({ play })
   overflow: hidden;
 }
 
-.gift-anim-content {
+.gift-canvas {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  animation: giftContainerIn 0.35s ease-out;
-}
-
-@keyframes giftContainerIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  top: 0; left: 0;
+  z-index: 1;
 }
 
 .gift-bg-overlay {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: radial-gradient(ellipse at center, rgba(11, 15, 26, 0.6) 0%, rgba(11, 15, 26, 0.3) 60%, transparent 100%);
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.2) 50%, transparent 80%);
+  z-index: 0;
   animation: bgFadeIn 0.5s ease-out;
 }
 
@@ -186,16 +403,10 @@ defineExpose({ play })
   to { opacity: 1; }
 }
 
-/* ========== L1: 左侧滑入信息条 ========== */
-.gift-l1 {
+/* ========== Banner (L1/L2/L3 共用) ========== */
+.gift-banner {
   position: absolute;
-  bottom: 140px;
-  left: 16px;
-  animation: l1BannerIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.gift-l1-banner {
-  position: relative;
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -207,13 +418,28 @@ defineExpose({ play })
     0 0 0 1px rgba(255, 215, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
   overflow: hidden;
-  animation: l1BannerFloat 2.5s ease-in-out 3;
+  animation: bannerSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.gift-l1-shimmer {
+.gift-banner-l1 {
+  bottom: 140px;
+  left: 16px;
+}
+
+.gift-banner-l2 {
+  bottom: 160px;
+  left: 16px;
+}
+
+.gift-banner-l3 {
+  bottom: 120px;
+  left: 16px;
+}
+
+.gift-banner-shimmer {
   position: absolute;
   top: 0; left: -100%; width: 60%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
   animation: shimmerSweep 2s ease-in-out 1;
   pointer-events: none;
 }
@@ -224,365 +450,162 @@ defineExpose({ play })
   100% { left: 120%; }
 }
 
-@keyframes l1BannerIn {
+@keyframes bannerSlideIn {
   from { transform: translateX(-120%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
 
-@keyframes l1BannerFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
-
-.gift-l1-emoji {
+.gift-banner-emoji {
   font-size: 32px;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
-.gift-l1-img {
+.gift-banner-img {
   width: 40px;
   height: 40px;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
-.gift-l1-info {
+.gift-banner-info {
   display: flex;
   flex-direction: column;
   gap: 1px;
 }
 
-.gift-l1-sender {
+.gift-banner-sender {
   font-size: 13px;
   font-weight: 700;
   color: #1A1A2E;
   line-height: 1.2;
 }
 
-.gift-l1-action {
+.gift-banner-action {
   font-size: 11px;
   font-weight: 500;
   color: rgba(26, 26, 46, 0.7);
   line-height: 1.2;
 }
 
-/* ========== L2: 光柱 + 弹性礼物 + 旋转光圈 ========== */
-.gift-l2 {
+/* ========== 中心礼物 (L2/L3) ========== */
+.gift-center {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 32%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.gift-l2-pillar {
-  position: absolute;
-  top: 0; left: 50%;
-  width: 80px;
-  height: 100%;
-  margin-left: -40px;
-  background: linear-gradient(180deg,
-    transparent 0%,
-    rgba(255, 215, 0, 0.08) 20%,
-    rgba(255, 215, 0, 0.2) 40%,
-    rgba(255, 215, 0, 0.2) 60%,
-    rgba(255, 215, 0, 0.08) 80%,
-    transparent 100%);
-  animation: pillarPulse 3.5s ease-in-out 1;
+.gift-center-l2 {
+  animation: centerBounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@keyframes pillarPulse {
-  0% { opacity: 0; transform: scaleX(0.5); }
-  15% { opacity: 1; transform: scaleX(1); }
-  85% { opacity: 1; transform: scaleX(1.2); }
-  100% { opacity: 0; transform: scaleX(0.5); }
+.gift-center-l3 {
+  animation: centerDramatic 1s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.gift-l2-ring {
+@keyframes centerBounce {
+  0% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
+  50% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+  70% { transform: translate(-50%, -50%) scale(0.9); }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+@keyframes centerDramatic {
+  0% { transform: translate(-50%, -50%) scale(0.1) rotate(-30deg); opacity: 0; }
+  40% { transform: translate(-50%, -50%) scale(1.5) rotate(10deg); opacity: 1; }
+  60% { transform: translate(-50%, -50%) scale(0.85) rotate(-5deg); }
+  80% { transform: translate(-50%, -50%) scale(1.05) rotate(2deg); }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+}
+
+.gift-center-glow {
   position: absolute;
-  top: 35%;
-  left: 50%;
   width: 200px;
   height: 200px;
-  margin-left: -100px;
-  margin-top: -100px;
   border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    rgba(255, 215, 0, 0.6),
-    rgba(255, 165, 0, 0.1),
-    rgba(255, 215, 0, 0.6),
-    rgba(255, 165, 0, 0.1),
-    rgba(255, 215, 0, 0.6)
-  );
-  animation: ringRotate 3s linear 2;
-  filter: blur(8px);
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.4) 0%, rgba(255, 165, 0, 0.15) 40%, transparent 70%);
+  animation: glowPulse 2s ease-in-out infinite alternate;
 }
 
-@keyframes ringRotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes glowPulse {
+  from { transform: scale(1); opacity: 0.6; }
+  to { transform: scale(1.3); opacity: 0.3; }
 }
 
-.gift-l2-star {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 6px;
-  height: 6px;
-  margin: -3px;
-  border-radius: 50%;
-  background: #FFD700;
-  box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
-  animation: starOrbit 2s ease-out 1;
-  animation-delay: var(--star-delay, 0s);
-  transform: rotate(var(--star-angle, 0deg)) translateY(0);
-  opacity: 0;
-}
-
-@keyframes starOrbit {
-  0% {
-    transform: rotate(var(--star-angle, 0deg)) translateY(0);
-    opacity: 1;
-  }
-  70% {
-    opacity: 1;
-  }
-  100% {
-    transform: rotate(var(--star-angle, 0deg)) translateY(-100px);
-    opacity: 0;
-  }
-}
-
-.gift-l2-center {
+.gift-center-emoji {
+  font-size: 80px;
   position: relative;
   z-index: 2;
-  animation: l2Bounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 0 25px rgba(255, 215, 0, 0.8)) brightness(1.2);
+  animation: giftFloat 2s ease-in-out infinite alternate;
 }
 
-@keyframes l2Bounce {
-  0% { transform: scale(0.1); opacity: 0; }
-  50% { transform: scale(1.3); opacity: 1; }
-  70% { transform: scale(0.9); }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-.gift-l2-emoji {
-  font-size: 64px;
-  filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.7)) brightness(1.1);
-  animation: l2GiftGlow 1.5s ease-in-out 2 alternate;
-}
-
-@keyframes l2GiftGlow {
-  from { filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.7)) brightness(1.1); }
-  to { filter: drop-shadow(0 0 35px rgba(255, 215, 0, 0.9)) brightness(1.2); }
-}
-
-.gift-l2-img {
-  width: 80px;
-  height: 80px;
-  filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.7)) brightness(1.1);
-  animation: l2GiftGlow 1.5s ease-in-out 2 alternate;
-}
-
-/* ========== L3: 全屏豪华特效 ========== */
-.gift-l3 {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.gift-l3-flash {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: white;
-  animation: l3Flash 0.8s ease-out 1 forwards;
-  pointer-events: none;
-}
-
-@keyframes l3Flash {
-  0% { opacity: 0.8; }
-  20% { opacity: 0.6; }
-  100% { opacity: 0; }
-}
-
-.gift-l3-particle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: var(--p-size, 6px);
-  height: var(--p-size, 6px);
-  margin: calc(var(--p-size, 6px) / -2);
-  border-radius: 50%;
-  background: #FFD700;
-  box-shadow: 0 0 6px rgba(255, 215, 0, 0.8);
-  animation: l3Particle 3s ease-out 1;
-  animation-delay: var(--p-delay, 0s);
-  transform: rotate(var(--p-angle, 0deg)) translateY(0);
-  opacity: 0;
-}
-
-@keyframes l3Particle {
-  0% {
-    transform: rotate(var(--p-angle, 0deg)) translateY(0);
-    opacity: 1;
-  }
-  60% {
-    opacity: 0.8;
-  }
-  100% {
-    transform: rotate(var(--p-angle, 0deg)) translateY(var(--p-distance, 150px));
-    opacity: 0;
-  }
-}
-
-.gift-l3-firework {
-  position: absolute;
-  top: var(--fw-y, 30%);
-  left: var(--fw-x, 30%);
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  animation: l3Firework 2s ease-out 1;
-  animation-delay: var(--fw-delay, 0s);
-  opacity: 0;
-}
-
-.gift-l3-firework::before,
-.gift-l3-firework::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-}
-
-.gift-l3-firework::before {
-  width: 80px;
-  height: 80px;
-  top: -38px;
-  left: -38px;
-  background: radial-gradient(circle, rgba(255, 215, 0, 0.6) 0%, rgba(255, 100, 50, 0.3) 40%, transparent 70%);
-  animation: fwBurst 1.5s ease-out 1;
-  animation-delay: inherit;
-}
-
-.gift-l3-firework::after {
-  width: 40px;
-  height: 40px;
-  top: -18px;
-  left: -18px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, transparent 60%);
-  animation: fwCore 1s ease-out 1;
-  animation-delay: inherit;
-}
-
-@keyframes l3Firework {
-  0% { opacity: 0; transform: scale(0); }
-  10% { opacity: 1; transform: scale(0.5); }
-  50% { opacity: 0.8; transform: scale(1.2); }
-  100% { opacity: 0; transform: scale(0.8); }
-}
-
-@keyframes fwBurst {
-  0% { transform: scale(0); opacity: 1; }
-  100% { transform: scale(2); opacity: 0; }
-}
-
-@keyframes fwCore {
-  0% { transform: scale(0); opacity: 1; }
-  100% { transform: scale(3); opacity: 0; }
-}
-
-.gift-l3-center {
+.gift-center-img {
+  width: 100px;
+  height: 100px;
   position: relative;
-  z-index: 3;
-  animation: l3CenterIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 2;
+  filter: drop-shadow(0 0 25px rgba(255, 215, 0, 0.8)) brightness(1.2);
+  animation: giftFloat 2s ease-in-out infinite alternate;
 }
 
-@keyframes l3CenterIn {
-  0% { transform: scale(0.1) rotate(-30deg); opacity: 0; }
-  50% { transform: scale(1.3) rotate(10deg); opacity: 1; }
-  70% { transform: scale(0.9) rotate(-5deg); }
-  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+.gift-center-l3 .gift-center-emoji {
+  font-size: 120px;
 }
 
-.gift-l3-halo {
+.gift-center-l3 .gift-center-img {
+  width: 140px;
+  height: 140px;
+}
+
+@keyframes giftFloat {
+  from { transform: translateY(0); }
+  to { transform: translateY(-8px); }
+}
+
+/* ========== L3 底部横幅 ========== */
+.gift-bottom-banner {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 180px;
-  height: 180px;
-  margin-top: -90px;
-  margin-left: -90px;
-  border-radius: 50%;
-  background: radial-gradient(circle,
-    rgba(255, 215, 0, 0.4) 0%,
-    rgba(255, 165, 0, 0.2) 40%,
-    transparent 70%);
-  animation: l3HaloPulse 2s ease-in-out 2 alternate;
-}
-
-@keyframes l3HaloPulse {
-  from { transform: scale(1); opacity: 0.6; }
-  to { transform: scale(1.4); opacity: 0.3; }
-}
-
-.gift-l3-emoji {
-  font-size: 100px;
-  filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.8)) brightness(1.2);
-  animation: l3GiftFloat 2s ease-in-out 2 alternate;
-}
-
-@keyframes l3GiftFloat {
-  from { filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.8)) brightness(1.2); transform: translateY(0); }
-  to { filter: drop-shadow(0 0 50px rgba(255, 215, 0, 1)) brightness(1.4); transform: translateY(-8px); }
-}
-
-.gift-l3-img {
-  width: 120px;
-  height: 120px;
-  filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.8)) brightness(1.2);
-  animation: l3GiftFloat 2s ease-in-out 2 alternate;
-}
-
-.gift-l3-bottom-banner {
-  position: absolute;
-  bottom: 80px;
+  bottom: 60px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 10px 32px;
+  z-index: 10;
+  padding: 12px 36px;
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.95), rgba(255, 140, 0, 0.9));
-  border-radius: 24px;
+  border-radius: 28px;
   box-shadow:
-    0 4px 30px rgba(255, 165, 0, 0.6),
-    0 0 0 1px rgba(255, 215, 0, 0.4);
-  animation: l3BannerIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+    0 6px 40px rgba(255, 165, 0, 0.7),
+    0 0 0 2px rgba(255, 215, 0, 0.4);
+  animation: bottomBannerIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
   overflow: hidden;
   white-space: nowrap;
 }
 
-.gift-l3-bottom-shimmer {
+.gift-bottom-shimmer {
   position: absolute;
   top: 0; left: -100%; width: 50%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-  animation: l3Shimmer 2.5s ease-in-out 1;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  animation: bottomShimmer 3s ease-in-out 1;
 }
 
-@keyframes l3Shimmer {
+@keyframes bottomShimmer {
   0% { left: -50%; }
   40% { left: 120%; }
   100% { left: 120%; }
 }
 
-@keyframes l3BannerIn {
-  from { transform: translateX(-50%) translateY(30px); opacity: 0; }
+@keyframes bottomBannerIn {
+  from { transform: translateX(-50%) translateY(40px); opacity: 0; }
   to { transform: translateX(-50%) translateY(0); opacity: 1; }
 }
 
-.gift-l3-bottom-text {
+.gift-bottom-text {
   position: relative;
   z-index: 1;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: #1A1A2E;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
