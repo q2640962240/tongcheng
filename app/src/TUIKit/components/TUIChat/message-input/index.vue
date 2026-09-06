@@ -386,6 +386,7 @@ defineExpose({
 }
 
 .more-menu {
+  box-sizing: border-box;
   width: 100%;
   background: #fff;
   border-radius: 24px 24px 0 0;

@@ -249,6 +249,7 @@ onShow(() => {
 .field { margin-bottom: 28rpx; }
 .field-label { font-size: 26rpx; color: #525252; display: block; margin-bottom: 12rpx; }
 .field-input {
+  box-sizing: border-box;
   width: 100%; height: 88rpx; background: #f5f5f5; border-radius: 16rpx;
   padding: 0 24rpx; font-size: 28rpx; color: #171717;
 }

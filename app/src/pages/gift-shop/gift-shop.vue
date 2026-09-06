@@ -329,6 +329,7 @@ onShow(() => {
   display: flex; align-items: flex-end; justify-content: center;
 }
 .detail-sheet {
+  box-sizing: border-box;
   width: 100%;
   background: $by-surface;
   border-radius: 40rpx 40rpx 0 0;
@@ -366,6 +367,7 @@ onShow(() => {
 .detail-price-icon { font-size: 32rpx; }
 .detail-price-num { font-size: 40rpx; font-weight: 700; color: $by-gold-soft; }
 .detail-hint {
+  box-sizing: border-box;
   background: $by-surface-2;
   border-radius: $by-radius-md;
   padding: 20rpx 28rpx;

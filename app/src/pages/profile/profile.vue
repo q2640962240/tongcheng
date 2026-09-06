@@ -372,6 +372,7 @@ onShow(() => {
 .title { font-size: 36rpx; font-weight: 700; color: $by-text-1; }
 
 .content-scroll {
+  box-sizing: border-box;
   height: calc(100vh - #{$by-topbar-h} - env(safe-area-inset-top) - 100rpx);
   padding: 24rpx $by-page-pad-x;
 }

@@ -242,6 +242,7 @@ const sendGift = async () => {
 }
 
 .gift-panel-body {
+  box-sizing: border-box;
   flex: 1;
   max-height: 48vh;
   padding: 0 16px 12px;

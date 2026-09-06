@@ -152,6 +152,7 @@ onReachBottom(() => {
 
 /* Type bar */
 .type-bar {
+  box-sizing: border-box;
   white-space: nowrap; padding: 20rpx $by-page-pad-x;
   background: $by-card-bg; border-bottom: 1rpx solid $by-border;
   position: sticky; top: 0; z-index: 5;

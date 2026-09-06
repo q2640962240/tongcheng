@@ -190,6 +190,7 @@ const sendGift = async () => {
 }
 
 .gift-scroll {
+  box-sizing: border-box;
   flex: 1;
   padding: 12px 12px 0;
 }

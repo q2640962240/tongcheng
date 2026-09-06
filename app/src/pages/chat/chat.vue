@@ -912,6 +912,7 @@ onUnload(() => {
   align-items: flex-end;
 }
 .more-menu {
+  box-sizing: border-box;
   width: 100%;
   background: $by-bg;
   border-radius: 32rpx 32rpx 0 0;
