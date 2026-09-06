@@ -34,6 +34,8 @@ router.post('/send', auth, async (req, res, next) => {
     const receiver = await User.findByPk(receiverId, { transaction: t })
     if (!receiver) return fail(res, '接收者不存在', 404)
 
+    const sender = await User.findByPk(req.userId, { transaction: t })
+
     const totalDiamond = gift.price * qty
 
     // 行锁防超扣
@@ -101,7 +103,8 @@ router.post('/send', auth, async (req, res, next) => {
       quantity: qty,
       totalDiamond,
       animationLevel: gift.animationLevel || 1,
-      effectImage: gift.effectImage || ''
+      effectImage: gift.effectImage || '',
+      senderName: (sender && sender.nickname) || ''
     })
     const message = await Message.create({
       sessionId: sortedIds.join('-'),

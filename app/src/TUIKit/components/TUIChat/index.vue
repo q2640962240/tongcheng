@@ -225,15 +225,34 @@ onUnmounted(() => {
 
 // 检测新礼物消息并触发特效（用 Set 去重，防止 TUIKit 重排消息导致重复触发）
 const processedGiftIds = new Set()
+// 特效只为「进入会话之后新到达」的礼物消息播放，基线在会话打开时取自
+// conversation.lastMessage.lastTime —— 它正是最后一条历史消息的服务端时间，晚于它的
+// 必然是新到达消息。空会话没有 lastMessage，基线为 0，首条实时消息照常播放。
+// 不要在 watcher 里惰性取「首次非空列表的最新 time」：空会话的首次非空列表就是那条
+// 实时消息本身，基线会被设成它自己，导致它被当成历史消息吞掉、特效永不播放。
+let baselineMsgTime = 0
 function onMessageListUpdate(messageList: IMessageModel[]) {
-  if (!messageList) return
+  if (!messageList?.length) return
   for (const msg of messageList) {
     if (msg?.type !== TUIChatEngine.TYPES.MSG_CUSTOM) continue
-    if (processedGiftIds.has(msg.id)) continue
+    // 注意：SDK 消息主键是 ID（大写），msg.id 恒为 undefined——用它做去重键会让
+    // 第一条消息就把 undefined 塞进 Set，此后所有礼物消息都被判为已处理而不再播放。
+    const msgId = msg.ID
+    if (!msgId || processedGiftIds.has(msgId)) continue
+    if ((msg.time || 0) <= baselineMsgTime) {
+      processedGiftIds.add(msgId)
+      continue
+    }
+    // 自己发出的礼物已由送礼面板的 gift-animation 事件即时播放，这里跳过 flow=out，
+    // 否则发送方会连播两次（直接事件一次 + 消息入列表一次）。
+    if (msg.flow === 'out') {
+      processedGiftIds.add(msgId)
+      continue
+    }
     try {
       const data = typeof msg.payload.data === 'string' ? JSON.parse(msg.payload.data) : msg.payload.data;
       if (data?.businessID === 'gift') {
-        processedGiftIds.add(msg.id)
+        processedGiftIds.add(msgId)
         giftAnimRef.value?.play({
           giftName: data.giftName,
           giftImage: data.giftImage,
@@ -381,6 +400,11 @@ function onCurrentConversationUpdate(conversation: IConversationModel) {
   }
 
   isGroup.value = false;
+  // 切换会话：以该会话最后一条历史消息的服务端时间为基线，并清空去重集合。
+  // 早于基线的都是历史（含上滑分页加载的更早消息），不重放；晚于基线的才是新到达。
+  // 空会话没有 lastMessage，基线为 0，首条实时礼物消息照常播放。
+  baselineMsgTime = Number(conversation?.lastMessage?.lastTime) || 0;
+  processedGiftIds.clear();
   let conversationType = TUIChatEngine.TYPES.CONV_C2C;
   const conversationID = conversation.conversationID;
   if (conversationID.startsWith(TUIChatEngine.TYPES.CONV_GROUP)) {

@@ -80,6 +80,8 @@ cd app && npm install && npm run dev:h5
 11. **提现需绑定收款账号** — 用户提现前必须绑定支付宝/微信收款账号（含二维码），换绑需短信验证（场景 payment_bind）
 12. **Banner 管理 API 路径** — admin 前端调 `/banners/admin/list` 和 `/banners/admin/banners`，走 `/api/banners` 挂载点下的 admin 路由
 13. **H5 事件 API polyfill 必须委托原生 Emitter** — `main.js` 补齐 `window.uni.$emit/$on/$off` 时只能赋值 `@dcloudio/uni-h5` 导出的同名函数，禁止自建闭包总线：vite-plugin-uni 会把组件里的 `uni.$on` 编译成原生独立函数，两条总线互不相通，礼物动画等跨组件事件会静默丢失
+14. **礼物特效触发规则（TUIChat）** — 消息列表 watcher 只播「进入会话后新到达（`msg.time > baselineMsgTime`）且 `flow === 'in'`」的礼物消息；自己送出的礼物由送礼面板 `uni.$emit('gift-animation')` 直接播。两个易错点：① 去重键必须用 `msg.ID`（大写），SDK 没有 `msg.id`，用错会让 `undefined` 污染 Set 从而永久吞掉后续所有礼物消息；② 基线必须在会话打开时取 `conversation.lastMessage.lastTime`，不能在 watcher 里惰性取「首次非空列表的最新 time」——空会话的首次非空列表就是那条实时消息本身，基线会被设成它自己而把它当历史吞掉。少了基线会重放历史特效，少了 flow 判断发送方会连播两次（GiftAnimation 队列无去重）
+15. **IM v4 REST 自定义消息 Data 不能 Base64** — `sendIMC2CCustomV4` 的 `MsgContent.Data` 必须传原始 JSON 字符串，REST 会原样投递给接收端 SDK 的 `payload.data`。若做 Base64，接收端 `JSON.parse` 失败，礼物消息会退化成「[自定义消息]」——既不渲染礼物卡片也不触发特效
 
 ## 服务器信息
 

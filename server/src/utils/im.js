@@ -477,7 +477,10 @@ function sendIMC2CCustomV4({ cfg, fromUserId, toUserId, data, desc }) {
       MsgBody: [{
         MsgType: 'TIMCustomElem',
         MsgContent: {
-          Data: Buffer.from(JSON.stringify(data)).toString('base64'),
+          // Data 必须是原始 JSON 字符串：REST 会原样投递给接收端 SDK 的 payload.data。
+          // 若做 Base64，接收端拿到的是一串 Base64、JSON.parse 失败，礼物消息会退化成
+          // 「[自定义消息]」——既不渲染礼物卡片也不触发特效。
+          Data: typeof data === 'string' ? data : JSON.stringify(data),
           Desc: String(desc || ''),
           Ext: '',
           Sound: ''
