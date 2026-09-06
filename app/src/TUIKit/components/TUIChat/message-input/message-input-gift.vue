@@ -120,6 +120,17 @@ const sendGift = async () => {
     }
 
     uni.showToast({ title: '礼物已送出', icon: 'success' })
+    // 直接触发动画（发送方也要看到，不能只依赖消息列表 watcher）
+    try {
+      uni.$emit('gift-animation', {
+        giftName: gift.name,
+        giftImage: gift.imageUrl,
+        diamondAmount: gift.price,
+        quantity: 1,
+        animationLevel: giftData.animationLevel || gift.animationLevel || 1,
+        senderName: currentUserProfile.value?.nick || currentUserProfile.value?.userID || '',
+      })
+    } catch (_) {}
     selectedGift.value = null
     emit('sent', { ...gift, animationLevel: giftData.animationLevel || gift.animationLevel || 1 })
   } catch (e) {

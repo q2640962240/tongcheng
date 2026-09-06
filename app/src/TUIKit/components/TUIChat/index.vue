@@ -211,6 +211,8 @@ onMounted(() => {
   TUIStore.watch(StoreName.CHAT, {
     messageList: onMessageListUpdate,
   });
+  // 监听送礼方直接触发的动画事件
+  uni.$on('gift-animation', onGiftAnimationDirect);
 });
 
 onUnmounted(() => {
@@ -220,6 +222,7 @@ onUnmounted(() => {
   TUIStore.unwatch(StoreName.CHAT, {
     messageList: onMessageListUpdate,
   });
+  uni.$off('gift-animation', onGiftAnimationDirect);
   reset();
 });
 
@@ -252,6 +255,19 @@ function onMessageListUpdate(messageList: IMessageModel[]) {
     processedGiftIds.clear()
     arr.slice(-100).forEach(id => processedGiftIds.add(id))
   }
+}
+
+// 送礼方直接触发动画（不依赖消息列表 watcher）
+function onGiftAnimationDirect(giftData: any) {
+  if (!giftData) return
+  giftAnimRef.value?.play({
+    giftName: giftData.giftName,
+    giftImage: giftData.giftImage,
+    diamondAmount: giftData.diamondAmount,
+    quantity: giftData.quantity || 1,
+    animationLevel: giftData.animationLevel || 1,
+    senderName: giftData.senderName || ''
+  })
 }
 
 const isInputToolbarShow = computed<boolean>(() => {

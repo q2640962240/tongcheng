@@ -638,7 +638,7 @@ onLoad(async (options) => {
   if (o.conversationID) {
     pid = String(o.conversationID).replace(/^C2C/i, '').replace(/^GROUP/i, '')
   }
-  if (!pid) pid = String(o.userId || o.to || o.id || o.uid || o.providerId || '')
+  if (!pid) pid = String(o.userId || o.peerUserId || o.to || o.id || o.uid || o.providerId || '')
   peerId.value = pid
   if (o.name) peerName.value = decodeURIComponent(o.name)
   uni.setNavigationBarTitle({ title: peerName.value })

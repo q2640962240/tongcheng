@@ -71,7 +71,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { giftApi, walletApi } from '@/api'
 
 const props = defineProps({
@@ -128,6 +128,10 @@ const loadData = async () => {
 
 watch(() => props.visible, (v) => {
   if (v) loadData()
+})
+
+onMounted(() => {
+  if (props.visible) loadData()
 })
 
 const selectGift = (gift) => {

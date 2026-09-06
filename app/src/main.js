@@ -104,6 +104,191 @@ function _tuiPolyfillUni() {
     }
   }
 
+  // Network：uni-app H5 运行时不把 request API 挂到 window.uni（vite-plugin-uni
+  // 只对 import 做编译期替换），导致 request.js 等通过 window.uni.request 发请求的
+  // 代码抛 "uni.request is not a function"，所有 API 调用（礼物列表/余额/送礼等）
+  // 静默失败。用 fetch 补齐，回调语义与 uni.request 对齐。
+  if (typeof U.request !== 'function') {
+    U.request = (opts) => {
+      const o = opts || {}
+      let url = String(o.url || '')
+      const method = (o.method || 'GET').toUpperCase()
+      const header = o.header || {}
+      let body = o.data || null
+
+      if (method === 'GET' && body && typeof body === 'object') {
+        const qs = Object.keys(body)
+          .map(k => encodeURIComponent(k) + '=' + encodeURIComponent(body[k]))
+          .join('&')
+        if (qs) url += (url.includes('?') ? '&' : '?') + qs
+        body = null
+      } else if (body && typeof body === 'object') {
+        const ct = header['Content-Type'] || header['content-type'] || ''
+        if (ct.indexOf('json') !== -1 || !ct) {
+          body = JSON.stringify(body)
+          if (!header['Content-Type'] && !header['content-type']) {
+            header['Content-Type'] = 'application/json'
+          }
+        }
+      }
+
+      const timer = o.timeout
+        ? setTimeout(() => { if (typeof o.fail === 'function') o.fail({ errMsg: 'request:fail timeout' }) }, o.timeout)
+        : null
+
+      fetch(url, { method, headers: header, body: method !== 'GET' ? body : null })
+        .then(res => res.text().then(text => {
+          if (timer) clearTimeout(timer)
+          let data
+          try { data = JSON.parse(text) } catch (_) { data = text }
+          if (typeof o.success === 'function') o.success({ statusCode: res.status, data, header: {} })
+        }))
+        .catch(err => {
+          if (timer) clearTimeout(timer)
+          if (typeof o.fail === 'function') o.fail({ errMsg: 'request:fail ' + (err.message || err) })
+        })
+    }
+  }
+
+  // UI 反馈类 API：request.js 的错误提示、chat.vue 的发送反馈等都通过 window.uni.showToast 调用
+  if (typeof U.showToast !== 'function') {
+    U.showToast = (opts) => {
+      const o = opts || {}
+      const title = o.title || ''
+      const icon = o.icon || 'success'
+      const duration = o.duration || 1500
+      let el = document.getElementById('__uni_toast')
+      if (!el) {
+        el = document.createElement('div')
+        el.id = '__uni_toast'
+        el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(17,17,17,0.76);color:#fff;padding:16px 24px;border-radius:10px;font-size:14px;z-index:99999;text-align:center;max-width:70vw;word-break:break-all;pointer-events:none;transition:opacity 0.2s'
+        document.body.appendChild(el)
+      }
+      const iconMap = { success: '✓', none: '', loading: '…' }
+      const prefix = iconMap[icon] !== undefined ? (iconMap[icon] ? iconMap[icon] + ' ' : '') : '✓ '
+      el.textContent = prefix + title
+      el.style.opacity = '1'
+      el.style.display = 'block'
+      if (el._timer) clearTimeout(el._timer)
+      if (duration > 0) {
+        el._timer = setTimeout(() => { el.style.opacity = '0'; setTimeout(() => { el.style.display = 'none' }, 200) }, duration)
+      }
+      if (typeof o.success === 'function') o.success()
+      if (typeof o.complete === 'function') o.complete()
+    }
+  }
+  if (typeof U.hideToast !== 'function') {
+    U.hideToast = () => { const el = document.getElementById('__uni_toast'); if (el) el.style.display = 'none' }
+  }
+  if (typeof U.showModal !== 'function') {
+    U.showModal = (opts) => {
+      const o = opts || {}
+      return new Promise((resolve) => {
+        const mask = document.createElement('div')
+        mask.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:99998;display:flex;align-items:center;justify-content:center'
+        const box = document.createElement('div')
+        box.style.cssText = 'background:#fff;border-radius:12px;width:280px;padding:24px 20px 16px;text-align:center;font-family:system-ui'
+        if (o.title) {
+          const t = document.createElement('div')
+          t.style.cssText = 'font-size:17px;font-weight:600;color:#333;margin-bottom:8px'
+          t.textContent = o.title
+          box.appendChild(t)
+        }
+        if (o.content) {
+          const c = document.createElement('div')
+          c.style.cssText = 'font-size:14px;color:#666;margin-bottom:20px'
+          c.textContent = o.content
+          box.appendChild(c)
+        }
+        const btnRow = document.createElement('div')
+        btnRow.style.cssText = 'display:flex;gap:12px;justify-content:center'
+        const close = (confirm) => {
+          document.body.removeChild(mask)
+          const res = { confirm, cancel: !confirm }
+          if (typeof o.success === 'function') o.success(res)
+          if (typeof o.complete === 'function') o.complete(res)
+          resolve(res)
+        }
+        if (o.showCancel !== false) {
+          const cancelBtn = document.createElement('button')
+          cancelBtn.style.cssText = 'flex:1;height:40px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#666;font-size:15px;cursor:pointer'
+          cancelBtn.textContent = o.cancelText || '取消'
+          cancelBtn.addEventListener('click', () => close(false))
+          btnRow.appendChild(cancelBtn)
+        }
+        const confirmBtn = document.createElement('button')
+        confirmBtn.style.cssText = 'flex:1;height:40px;border:none;border-radius:8px;background:#07c160;color:#fff;font-size:15px;cursor:pointer'
+        confirmBtn.textContent = o.confirmText || '确定'
+        confirmBtn.addEventListener('click', () => close(true))
+        btnRow.appendChild(confirmBtn)
+        box.appendChild(btnRow)
+        mask.appendChild(box)
+        document.body.appendChild(mask)
+      })
+    }
+  }
+  if (typeof U.showLoading !== 'function') {
+    U.showLoading = (opts) => U.showToast({ ...(opts || {}), icon: 'loading', duration: 0 })
+  }
+  if (typeof U.hideLoading !== 'function') {
+    U.hideLoading = () => U.hideToast()
+  }
+
+  // 图片类 API：chat.vue 的拍照/相册/预览通过 window.uni 调用
+  if (typeof U.chooseImage !== 'function') {
+    U.chooseImage = (opts) => {
+      const o = opts || {}
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = 'image/*'
+      if (o.sourceType && o.sourceType.includes('camera')) input.capture = 'environment'
+      input.onchange = () => {
+        const files = Array.from(input.files || [])
+        const urls = files.map(f => URL.createObjectURL(f))
+        const res = { tempFilePaths: urls, tempFiles: files.map((f, i) => ({ path: urls[i], size: f.size })) }
+        if (typeof o.success === 'function') o.success(res)
+        if (typeof o.complete === 'function') o.complete(res)
+      }
+      input.click()
+    }
+  }
+  if (typeof U.previewImage !== 'function') {
+    U.previewImage = (opts) => {
+      const o = opts || {}
+      const urls = o.urls || []
+      if (!urls.length) return
+      const mask = document.createElement('div')
+      mask.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:99999;display:flex;align-items:center;justify-content:center;cursor:pointer'
+      mask.onclick = () => document.body.removeChild(mask)
+      const img = document.createElement('img')
+      img.src = urls[o.current ? urls.indexOf(o.current) : 0] || urls[0]
+      img.style.cssText = 'max-width:95vw;max-height:95vh;object-fit:contain'
+      mask.appendChild(img)
+      document.body.appendChild(mask)
+    }
+  }
+  if (typeof U.uploadFile !== 'function') {
+    U.uploadFile = (opts) => {
+      const o = opts || {}
+      const fd = new FormData()
+      if (o.filePath) fd.append(o.name || 'file', o.filePath)
+      if (o.formData) Object.keys(o.formData).forEach(k => fd.append(k, o.formData[k]))
+      const header = o.header || {}
+      return fetch(o.url, { method: 'POST', headers: header, body: fd })
+        .then(res => res.text().then(text => {
+          let data
+          try { data = JSON.parse(text) } catch (_) { data = text }
+          const result = { statusCode: res.status, data }
+          if (typeof o.success === 'function') o.success(result)
+          if (typeof o.complete === 'function') o.complete(result)
+        }))
+        .catch(err => {
+          if (typeof o.fail === 'function') o.fail({ errMsg: err.message })
+          if (typeof o.complete === 'function') o.complete()
+        })
+    }
+  }
+
   // 观测/查询类 API：TUIKit 已读回执、滚动定位会用到；H5 缺失时给安全空实现，
   // 避免调用处抛错中断生命周期钩子（对应功能退化为不生效，可接受）。
   if (typeof U.createIntersectionObserver !== 'function') {
@@ -124,6 +309,27 @@ function _tuiPolyfillUni() {
         boundingClientRect: (cb) => { if (typeof cb === 'function') cb([]); return q }
       })
       return q
+    }
+  }
+
+  // 事件通信 API：uni.$emit/$on/$off 用于跨组件通信（礼物动画触发等），
+  // H5 端缺失时用简单事件总线实现
+  if (typeof U.$emit !== 'function') {
+    const eventBus = {}
+    U.$on = (eventName, callback) => {
+      if (!eventBus[eventName]) eventBus[eventName] = []
+      eventBus[eventName].push(callback)
+    }
+    U.$off = (eventName, callback) => {
+      if (!eventBus[eventName]) return
+      if (!callback) { delete eventBus[eventName]; return }
+      eventBus[eventName] = eventBus[eventName].filter(cb => cb !== callback)
+    }
+    U.$emit = (eventName, data) => {
+      if (!eventBus[eventName]) return
+      eventBus[eventName].forEach(cb => {
+        try { cb(data) } catch (e) { console.error('[uni.$emit] handler error:', e) }
+      })
     }
   }
 }
