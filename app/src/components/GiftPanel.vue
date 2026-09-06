@@ -191,7 +191,9 @@ const sendGift = async () => {
 
 .gift-panel {
   width: 100%;
-  max-height: 68vh;
+  /* 必须是确定高度：uni-app 内层 .uni-scroll-view 靠 height:100% 撑满滚动区，
+     百分比只在父级高度确定时才解析；max-height + auto 会让它退化成内容高，滚动失效 */
+  height: 68vh;
   background: linear-gradient(180deg, #1E2845 0%, #1A2238 100%);
   border-radius: 20px 20px 0 0;
   display: flex;
