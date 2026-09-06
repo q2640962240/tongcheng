@@ -94,6 +94,22 @@ cd app && npm install && npm run dev:h5
     - **已确认安全、不要再改**：`profile-edit.vue .picker-sheet`（横向 padding 是 0）、`TUIContact/contact-search .tui-contact-search-main`（自身无横向 padding，且本项目根本没挂载 TUIContact）、`simple-message-list .header-container`（只在「合并转发记录」抽屉里 `position:absolute` 渲染，冷门路径）、以及 `home.vue .scroll/.online-scroll`、`discover.vue .by-tabs-scroll`、`search.vue .tabs-scroll`、`follow-list.vue .user-list`、`chat-list.vue .session-scroll`（padding 都在内层子元素上）。
     - **根治方案与为什么还没做**：正解是在 `App.vue` 或全局样式里加 `view, scroll-view, text, image, input, textarea, button { box-sizing: border-box }`。没做的原因是它会重排约 40 个页面，而本会话**截图工具不可用**（标签页 `visibilityState=hidden`，`take_screenshot` 报 `NATIVE_BROWSER_VIEWPORT_UNAVAILABLE`），无法逐页视觉验证，风险大于收益。**若后续有可截图的环境，建议把全局重置作为独立任务推进，然后把这 10 行零散补丁收回去。**
     - **排查方法**（不依赖截图）：在浏览器里比 `document.documentElement.scrollWidth` 与 `clientWidth`，差值 > 0 就是横向溢出；再沿 `elementFromPoint` / 父链逐个比 `getBoundingClientRect().right`，第一个超过 `clientWidth` 的就是元凶。注意要用 `documentElement.clientWidth`（不含滚动条）而不是 `window.innerWidth`——实测两者差 15px 正好是一条纵向滚动条，用它算会把结论带偏。另外 `.uni-tabbar-bottom` 被 uni-app 故意停在屏幕外（`position:fixed; top:618px; bottom:-50px`），真正可见的是 `.uni-tabbar`，**它不是溢出源，别去动它**。
+    - **诊断校正：不是每一处溢出都会让「整页可左右滑动」** — 按 CSS Overflow 规范，`position: fixed` 的盒子**不计入**文档的 scrollable overflow region。所以 `.more-menu`（在 `position:fixed; inset:0` 的 mask 里）、`.gift-panel-body`、`.gift-scroll`、`.detail-sheet` 这几处溢出表现为**弹层右侧被视口裁切**（圆角/最后一个按钮切掉），而不会产生横向滚动条。真正造成用户报告的「个人页可以左右滑动」的只有两处：普通文档流里的 `.content-scroll` 和 `position: sticky` 的 `.type-bar`（sticky 计入 overflow）。**别把「页面能左右滑」当成所有 9 处的共同症状，否则会因为「弹层没导致滑动」而误判修复无效。**
+    - **线上实测证据（2026-09-07，部署 `8c42a5e` 后，H5 生产站 https://zyb001.cn，视口 524px）** — 9 处全部逐个打开并用 `getBoundingClientRect()` 量过，每页 `scrollWidth - clientWidth` 均为 **0**：
+      | 位置 | 修复后宽度 | 右边界 | 修复前推算 |
+      |---|---|---|---|
+      | `profile .content-scroll` | 508.8px（padding 21.7×2 已内含） | 508.8 ≤ 509 | 553.5 → **溢出 45px**（实测过） |
+      | `transactions .type-bar` | 508.8px，computed `border-box` | 508.8 | 552.2 |
+      | `chat.vue .more-menu` | 508.8px，3 个菜单项 | 508.8 | 541.4 |
+      | `gift-shop .detail-sheet` | 508.8px | 508.8 | 552.2 |
+      | `gift-shop .detail-hint` | 465.4px，left 21.7 / right 487.1（正好内嵌父内容区） | — | 503.4（撑破父级） |
+      | `payment-bind .field-input` | 422px，left 43.4 / right 465.4（内嵌 `.form-card` 内容区） | — | 460（撑破卡片） |
+      | `chat.vue .gift-panel-body` | 508.8px，16 个礼物已渲染 | 508.8 | 540.8 |
+      | `TUIKit .gift-scroll` | 524px，16 个礼物格 | 524 | 548 |
+      | `TUIKit .more-menu` | 524px，3 个菜单项 | 524 | 556 |
+
+      两个测量细节：① `.form-card` 自身仍是 `content-box` 但**没有**显式 `width:100%`（它是 auto 宽度的 `uni-view`），所以自己算出 465.4 = 508.8 − 2×21.7，正确——这正好反证了「触发条件是 `width:100%` 或 scroll-view，不是 padding 本身」。② TUIChat 页没有纵向滚动条，`clientWidth` 从 509 变回 524，再次印证那 15px 就是滚动条。
+      另：**裸改 `location.hash` 跳 TUIChat 会报「会话参数缺失」**（`pages/chat/chat.vue:713` 的 toast，不是 TUIChat 自己的），必须整页重载 `?v=xxx#/TUIKit/components/TUIChat/index?conversationID=C2C25` 让 uni 路由在启动时解析 query；`window.uni.navigateTo` 在已加载文档里也带不进参数。
 
 ## 服务器信息
 
