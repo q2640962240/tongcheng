@@ -102,6 +102,23 @@
 
 > 测试环境的坑：浏览器标签页处于 `hidden` 状态时 rAF 不 tick、`setInterval` 被钳到 1s，canvas 会一直是空的——看起来像"特效不工作"，其实是测试假象。必须用 MessageChannel 驱动 rAF 才能采到帧。真机/前台页面不受影响。
 
+## 线上验证（2026-09-07，https://zyb001.cn）
+
+部署后在生产环境复验，结论与本地一致：
+
+- **资产可达**：16 个 `.svga` + 16 个 `.png` + `svga.min.js` 全部 200，`/static/` 带 `Access-Control-Allow-Origin: *` 与 `X-Content-Type-Options: nosniff`。
+- **构建产物一致**：线上 `assets/GiftAnimation.C3wSLJQ7.js`（5619B）与本地 `GiftAnimation.bdp_FsdW.js` 逐字节相同，唯一差异是它 import 的 entry chunk 哈希。哈希不同只是 CI 独立构建，不是代码不同。
+- **图标加载证据**：16 个 PNG 在页面内 `new Image()` 全部 `naturalWidth = naturalHeight = 192`，无一失败。
+- **真实组件全量跑通**：线上 `#/pages/chat/chat` 未登录也会挂载 `<GiftAnimation>`，从 Vue 组件树里取到实例后直接调它 expose 的 `play()`，礼物数据取自线上 `/api/gifts`。**16/16 PASS**，`sawCanvas` 全为 true（说明确实走了 SVGA 分支而非 CSS 降级），alphaMax 均为 255，去重帧数 6-53，累计 72s，无一次落到兜底定时器。
+
+> 局限：① 生产短信未配置且 `NODE_ENV=production` 下 `sms.js` 无 dev/mock 回退，因此**没有做真实登录后的送礼端到端**（不写 `gift_records`、不动钻石），上面的组件验证是绕过 API 直接驱动动画层；② App(WKWebView) 端无法在此环境验证，它依赖 `siteOrigin + /static/...` 绝对 URL 与新增的 CORS 头，属打包后待验项。
+
+## 连带发现：部署即改生产数据
+
+这次验证时发现线上 `gifts` 表变成了 **30 行**：`server/Dockerfile` 的 ENTRYPOINT 每次容器启动都跑完整 `seed.js`，而每次部署都会重建 server 容器，于是 `upgradeGifts()` 按 name 匹配不到改名后的旧行、新建了 14 行，另有 2 行（皇冠/跑车）name 撞上被就地改了 sort 与素材路径但 price 保持旧值。
+
+已修复：旧行 `active=0` 下架（有 `gift_records_ibfk_99` 外键引用，不能删），皇冠/跑车 price 修正为 1000/10000（已获批准）。根因与长期对策见 [ADR-0005](0005-seed-on-boot-gate.md)。
+
 ## 关键文件
 
 - `app/src/components/SvgaStage.vue` — renderjs 播放器（**Options API，勿改**）

@@ -55,6 +55,11 @@ services:
       NODE_ENV: production
       PORT: 3000
       HOST: 0.0.0.0
+      # 容器启动时是否执行 src/seed.js。默认 false：每次部署都会重建本容器，
+      # 若默认执行等于每次部署都在改生产数据（2026-09-07 曾因此多出 14 行礼物）。
+      # 建表不依赖它 —— app.js 启动时会自己调 db.bootstrap()（alter 模式）。
+      # 首次部署 / 需要同步种子数据时，在 .env 里设 SEED_ON_BOOT=true 再启动一次。
+      SEED_ON_BOOT: "${SEED_ON_BOOT:-false}"
       DB_DRIVER: mysql
       DB_HOST: mysql
       DB_PORT: 3306

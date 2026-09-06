@@ -173,7 +173,8 @@ AI 自动回复
 
 动画触发:
   发送方/接收方收到 WS/IM 消息 → 解析 type='gift' → GiftAnimation.play(gift)
-  animationLevel: 0=无, 1=小飘动+横幅, 2=中型横幅+光效, 3=全屏粒子特效
+  animationLevel: 0=无, 1=小型(46vw), 2=中型横幅(82vw), 3=全屏(100vw×100vh)
+  L1-L3 播放 effectImage 指向的 .svga 矢量动画；加载失败或小程序端降级为 CSS 特效
 ```
 
 ### 关键文件
@@ -185,7 +186,8 @@ AI 自动回复
 | `server/src/models/GiftRecord.js` | 送礼记录：senderId/receiverId/giftId/quantity/messageId |
 | `server/src/models/User.js` | charmValue(魅力值=累计收到钻石), giftIncome(礼物收入,分) |
 | `app/src/components/GiftPanel.vue` | 共享礼物面板：网格+数量选择+余额检查 |
-| `app/src/components/GiftAnimation.vue` | 分级 CSS 动画组件，队列序列化 |
+| `app/src/components/GiftAnimation.vue` | 分级动画组件，队列序列化；SVGA 分支 + CSS 降级 |
+| `app/src/components/SvgaStage.vue` | renderjs SVGA 播放器（**必须 Options API**，见 AGENTS.md 坑点 19） |
 | `app/src/pages/gift-rank/` | 排行榜：魅力榜+豪礼榜，日/周/总切换 |
 | `app/src/pages/gift-shop/` | 礼物商城 |
 | `app/src/pages/withdraw/payment-bind.vue` | 收款账号绑定页（支付宝/微信+二维码） |
@@ -249,7 +251,7 @@ AI 自动回复
 | 5 | 微信小程序提审 | 打包产物已生成 |
 | 6 | 应用市场资质 | ICP 备案/软著/隐私政策 |
 | 7 | 会话列表深色主题适配 | 贴合白夜午夜蓝风格 |
-| 8 | 礼物素材补充 | 当前种子礼物用 emoji 占位，需设计正式图片 |
+| ~~8~~ | ~~礼物素材补充~~ **已完成 2026-09-07** | 16 个礼物全部换成 SVGA 矢量动画 + 抽帧图标，emoji 占位清零（ADR-0004）。遗留：13 个 .svga 来自无 LICENSE 仓库，商用前须替换或取得授权 |
 
 ### 低优先级
 
@@ -320,7 +322,7 @@ curl -sk https://zyb001.cn/ | grep -o 'index-[A-Za-z0-9_-]*\.js'
 3. **不要 docker compose down**: 除非 FORCE_REBUILD=true
 4. **apt 源必须 HTTP**: server/Dockerfile 用阿里云 HTTP 镜像
 5. **npm 用 npmmirror.com**: 所有 Dockerfile 统一
-6. **seed.js 必须退出**: 末尾 `await sequelize.close(); process.exit(0);`
+6. **seed.js 必须退出，且 boot seed 默认关闭**: 末尾 `await sequelize.close(); process.exit(0);`。`server/Dockerfile` ENTRYPOINT 里的 seed 由 `SEED_ON_BOOT` 控制，compose 默认 `false` —— 此前它每次容器启动都跑完整 seed，而每次部署都重建容器，等于每次部署都在写生产库（2026-09-07 礼物表因此从 16 行涨到 30 行）。建表不依赖 seed，`app.js:178` 自己调 `db.bootstrap()`；新环境首次部署需显式设 `SEED_ON_BOOT=true`。见 ADR-0005
 7. **证书保护**: deploy.yml 有 3 层证书备份/还原逻辑，不要删除
 8. **appleboy/ssh-action**: 锁定 v1.2.0，不要用 @master
 9. **IM 好友关系检查**: 已在腾讯云控制台关闭，不要再开

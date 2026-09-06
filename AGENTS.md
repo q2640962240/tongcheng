@@ -58,10 +58,10 @@ cd app && npm install && npm run dev:h5
 ### 礼物系统 (核心业务)
 
 - **送礼**: POST /api/gifts/send → 事务(扣钻→加收入→创建GiftRecord→创建Message) → WS广播 → IM转发
-- **动画**: GiftAnimation 组件，4级效果 (L0无/L1小飘/L2横幅/L3全屏)
+- **动画**: GiftAnimation 组件，4级效果 (L0无/L1小飘/L2横幅/L3全屏)；L1-L3 播放 SVGA 矢量动画（`SvgaStage` 用 renderjs），加载失败自动降级为 CSS 特效，小程序端不支持 renderjs 恒走 CSS
 - **经济**: 钻石(充值) → 送礼消耗 → 收礼获 giftIncome(分) → 提现（需先绑定收款账号）
 - **收款绑定**: 提现前必须绑定支付宝/微信收款账号+二维码，换绑需短信验证（payment_bind）
-- **关键文件**: `server/src/routes/gifts.js`, `app/src/components/GiftPanel.vue`, `app/src/components/GiftAnimation.vue`, `app/src/pages/withdraw/payment-bind.vue`
+- **关键文件**: `server/src/routes/gifts.js`, `app/src/components/GiftPanel.vue`, `app/src/components/GiftAnimation.vue`, `app/src/components/SvgaStage.vue`, `app/src/pages/withdraw/payment-bind.vue`
 
 详见 `docs/HANDOVER.md` 第三/三½节。
 
@@ -82,9 +82,11 @@ cd app && npm install && npm run dev:h5
 13. **H5 事件 API polyfill 必须委托原生 Emitter** — `main.js` 补齐 `window.uni.$emit/$on/$off` 时只能赋值 `@dcloudio/uni-h5` 导出的同名函数，禁止自建闭包总线：vite-plugin-uni 会把组件里的 `uni.$on` 编译成原生独立函数，两条总线互不相通，礼物动画等跨组件事件会静默丢失
 14. **礼物特效触发规则（TUIChat）** — 消息列表 watcher 只播「进入会话后新到达（`msg.time > baselineMsgTime`）且 `flow === 'in'`」的礼物消息；自己送出的礼物由送礼面板 `uni.$emit('gift-animation')` 直接播。两个易错点：① 去重键必须用 `msg.ID`（大写），SDK 没有 `msg.id`，用错会让 `undefined` 污染 Set 从而永久吞掉后续所有礼物消息；② 基线必须在会话打开时取 `conversation.lastMessage.lastTime`，不能在 watcher 里惰性取「首次非空列表的最新 time」——空会话的首次非空列表就是那条实时消息本身，基线会被设成它自己而把它当历史吞掉。少了基线会重放历史特效，少了 flow 判断发送方会连播两次（GiftAnimation 队列无去重）
 15. **IM v4 REST 自定义消息 Data 不能 Base64** — `sendIMC2CCustomV4` 的 `MsgContent.Data` 必须传原始 JSON 字符串，REST 会原样投递给接收端 SDK 的 `payload.data`。若做 Base64，接收端 `JSON.parse` 失败，礼物消息会退化成「[自定义消息]」——既不渲染礼物卡片也不触发特效
-16. **静态资源只能放 `app/src/static/`，路径用绝对 `/static/...`** — Vite 的 `app/public/`（构建后落到 `/assets/`）是 **H5 专用**，uni-app App 端只打包 `src/static/`。礼物特效图曾长期写成 `/assets/gift-effect-*.png`，而该文件从未存在于 `public/`，线上全部 404，全屏特效背景图**从未真正显示过**（H5 和 App 双端）。种子数据在 `server/src/seed.js` 的 `DEFAULT_GIFTS`，`upgradeGifts()` 会把 `imageUrl`/`effectImage`/`sort`/`animationLevel` 同步到已有行，改完路径需在服务器跑一次 seed 才生效
+16. **静态资源只能放 `app/src/static/`，路径用绝对 `/static/...`** — Vite 的 `app/public/`（构建后落到 `/assets/`）是 **H5 专用**，uni-app App 端只打包 `src/static/`。礼物特效图曾长期写成 `/assets/gift-effect-*.png`，而该文件从未存在于 `public/`，线上全部 404，全屏特效背景图**从未真正显示过**（H5 和 App 双端）。种子数据在 `server/src/seed.js` 的 `DEFAULT_GIFTS`，但**生产库改路径不要跑 seed**：`ensureGifts`/`upgradeGifts` 都按 `name` 匹配，改名后会新建重复行（2026-09-07 线上礼物表因此从 16 行涨到 30 行，见坑点 20 与 ADR-0005）。生产改素材路径的正确姿势是按 `id`/`sort` 定向 `UPDATE gifts SET image_url=..., effect_image=...`
 17. **App 逻辑层没有 `window`/`document`/`localStorage`** — uni-app App 端 JS 跑在 JSCore(iOS)/V8(Android)，页面才在 WebView 里。任何未加守卫的浏览器全局都是 ReferenceError：`invite.vue` 的「复制邀请链接」和微信分享 `href` 曾直接读 `window.location.origin`，在 App 端点击即静默失效（分享根本调不起来）。站点源要从 `getCurrentBaseURL()` 去掉 `/api` 推导，H5 才用 `window.location.origin`，且必须包在 `typeof window !== 'undefined'` + `#ifdef H5` 里
 18. **iOS 的 CSS 能力由系统版本决定，不由 deploymentTarget 决定** — App 端页面渲染在 WKWebView，其内核版本等于设备 iOS 版本；`deploymentTarget` 只是「低于此版本的设备装不上」。业务代码有 224 处 flex `gap`（Safari 14.1+）和 2 处 `aspect-ratio`（Safari 15+），逐处改写不现实，因此 `manifest.json` 的 `deploymentTarget` 已从 13.0 抬到 **15.0**。另：`backdrop-filter` 在 iOS 15.4 前只认 `-webkit-` 前缀；`height:100vh` 配 `overflow:hidden` 在 iOS Safari 会裁掉底部内容，要补 `height:100dvh`（参照 `home.vue` / `chat.vue`）。新增样式若用到更新的 CSS 特性，先确认 iOS 15.0 的 WKWebView 支持
+19. **接收 renderjs 回调的组件必须用 Options API** — `ownerInstance.callMethod(name, args)` 的实现是 `this.$vm[name]`（见 `@dcloudio/uni-h5/dist/uni-h5.es.js:1455`），而 Vue 3 `<script setup>` + `defineExpose` 把方法挂在 `instance.exposed` 代理上、**不在 `$vm` 上**，于是视图层回调静默丢失：SVGA 播完了逻辑层收不到，动画层只能靠兜底定时器才消失。`SvgaStage.vue` 因此刻意写成 Options API `methods`，与项目主流的 `<script setup>` 风格不一致，**不要"顺手统一风格"改回去**。另外 renderjs 的 `change:prop` 靠值变化触发，绑定的 prop 要先给空值、`mounted` + `$nextTick` 再填真值，否则首次同步不派发
+20. **部署曾经等于改生产数据：boot seed 已默认关闭** — `server/Dockerfile` 的 ENTRYPOINT 原本每次容器启动都跑完整 `node src/seed.js`，而每次部署都会重建 server 容器，等于**每次部署都在直接写生产库**。2026-09-07 礼物改名后部署，`upgradeGifts()` 按 name 匹配不到旧行 → 新建 14 行，线上礼物表从 16 涨到 30 行。现已改为 `SEED_ON_BOOT` 开关控制、compose 里默认 `false`（见 ADR-0005）。建表不依赖 seed —— `app.js:178` 自己会调 `db.bootstrap()`（alter 模式）。新环境首次部署需在 `.env` 显式设 `SEED_ON_BOOT=true` 启动一次。注意「CI 不执行 seed」这个旧认知是错的：seed 不在 workflow 里，藏在 Dockerfile 里
 
 ## 服务器信息
 
@@ -103,9 +105,9 @@ cd app && npm install && npm run dev:h5
 1. Android APK 打包 (HBuilderX 本地)
 2. 配置中心填写真实密钥 (短信/支付/OSS/推送)
 3. 钻石充值接入微信/支付宝支付
-4. **礼物素材正式设计 (当前 8/16 仍 emoji 占位)** — 图标提示词已定稿（统一插画风、正方形透明底）。素材到位后按契约接入：落盘 `app/src/static/gifts/`，文件名 `lollipop/rose/ice-cream/heart/cake/crown/diamond-ring/fireworks/castle/rocket/yacht/sports-car/private-jet/fleet/planet/galaxy.png`（512×512 透明 PNG）；接入步骤 = sharp 转码 192px palette PNG → 改 `seed.js` `DEFAULT_GIFTS.imageUrl` → 服务器跑 `upgradeGifts()` 或生产库定向 UPDATE `gifts.image_url`（**禁止跑完整 seed**，见坑点与 `project-prod-data-safety`）。L1-L3 特效当前是 CSS 实现；用户提供的 SVGA 分镜脚本（L1 2.5s / L2 3.5s / L3 5-8s、720×1280 透明底 30fps）是**设计师 AE 交付物**，若将来真要 SVGA 需另引播放器库，属新架构决策
+4. ~~礼物素材正式设计~~ **已完成 (2026-09-07)** — 16 个礼物全部换成 SVGA 矢量动画（L1-L3），图标由同一份 SVGA 抽帧生成，emoji 占位清零，礼物 lineup 已改名（点赞/比心/星际少女/玫瑰/心动/一剑穿心/钻石/天使/花好月圆/福袋/皇冠/水晶球/独角兽/跑车/旋转木马/流星雨），价格阶梯未变。线上 16/16 实测通过。见 ADR-0004。遗留三项：① **素材授权**——13 个 .svga 来自无 LICENSE 的仓库，当前以「非商用」为前提，商用前必须替换或取得授权；② **App(WKWebView) 端未验证**——依赖 `siteOrigin + /static/...` 绝对 URL 与 nginx 新增的 `/static/` CORS 头，需 HBuilderX 打包后实测；③ **`gifts` 表缺稳定业务键**——`seed.js` 按 `name` 匹配，任何改名都会产生重复行，宜加 `code` 列改为按它匹配
 5. 会话列表深色主题适配
-6. **`diamondAmount` 字段语义不一致** — `gifts.js` 写入消息体的 `giftContent.diamondAmount` 是**单价** (`gift.price`)，而 API 响应 / WS 广播里的 `diamondAmount` 是**总价** (`totalDiamond`)。多件礼物时聊天卡片显示单价且不显示数量（如送 2 个游艇、实付 2000，卡片显示「游艇 💎 1000」）。需先决定以哪个为准，再统一两端并让卡片显示数量
+6. **`diamondAmount` 字段语义不一致** — `gifts.js` 写入消息体的 `giftContent.diamondAmount` 是**单价** (`gift.price`)，而 API 响应 / WS 广播里的 `diamondAmount` 是**总价** (`totalDiamond`)。多件礼物时聊天卡片显示单价且不显示数量（如送 2 个水晶球、实付 4000，卡片显示「水晶球 💎 2000」）。需先决定以哪个为准，再统一两端并让卡片显示数量
 7. **会话列表礼物摘要显示「[自定义消息]」** — Lite SDK 的 `conversation.lastMessage.messageForShow` 不取 `TIMCustomElem.Desc`（服务端已传 `送出了N个XX`，无效）。需在会话列表摘要渲染处按 `businessID === 'gift'` 自行映射为「[礼物] XX」
 8. **清理礼物特效验证期间的测试数据** — `gift_records` 43-46（20→23 一条、13→23 三条）及对应 `messages` 245-248；用户 13/20 钱包被充值（现余 500/1500）；用户 23 的 `gift_income`(3783570 分) 与 `charm_value`(54051) 含测试污染。IM 云端消息无法通过 REST 删除，会残留在会话里
 9. **TUIKit 首屏偶发空白竞态** — 容器重建后首次加载偶发 `Error in event handler for sdkStateReady: e.chat.getConversationList is not a function`，聊天页停在约 75 个 DOM 元素不渲染，再刷新一次即恢复。属引擎内部时序问题，与业务代码无关，尚未修复
@@ -201,4 +203,4 @@ cd app && npm install && npm run dev:h5
 
 ---
 
-*最后更新: 2026-09-06*
+*最后更新: 2026-09-07*
