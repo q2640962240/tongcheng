@@ -158,6 +158,18 @@ export default {
  *   ❌ 不要再写 @import / @use theme-baiye.scss（uni.scss 已 as * 导出）
  */
 
+/* 全局 box-sizing 重置（AGENTS.md 坑点 22 的根治方案）。
+ * 必须用标签选择器而不是 `*`：标签选择器特异度 (0,0,1) 低于 TUIKit 三方样式的类选择器 (0,1,0)，
+ * 所以 TUIKit 自己已有的 border-box 声明与两处显式 content-box 都不会被这份重置覆盖；
+ * 用 `*` 会连伪元素和三方样式一起改，且无法靠类规则安全兜回来。
+ * postcss(@dcloudio/uni-cli-shared 的 uniapp.js) 会把这些内置组件标签重写成
+ * uni-view / uni-scroll-view …，所以 H5 与 App 两端共用这一份源码即可。 */
+view, scroll-view, swiper, swiper-item, cover-view, cover-image,
+text, image, icon, button, input, textarea, navigator, label, form,
+picker, slider, switch, progress, checkbox, radio, video, canvas {
+  box-sizing: border-box;
+}
+
 /* 白夜 · 全局页面样式 */
 page {
   background: $by-gradient-night;

@@ -209,7 +209,9 @@ a {
   padding: 10px 14px;
   border: 1px solid rgba(255, 215, 0, 0.25);
   box-shadow: 0 2px 12px rgba(255, 215, 0, 0.08);
-  min-width: 160px;
+  /* 190 = 160 内容 + 14×2 padding + 1×2 border。全局 border-box 重置后
+   * min-width 量的是边框盒，写 160 会让卡片窄掉 30px 并把气泡一起带窄。 */
+  min-width: 190px;
 }
 
 .gift-icon {
