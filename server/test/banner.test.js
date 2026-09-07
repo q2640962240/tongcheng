@@ -3,10 +3,15 @@
  * 覆盖：公开列表 / 管理端列表 / 管理员增删改
  */
 const { authHeader, getApp, request } = require('./helpers')
+const { signAdminToken } = require('../src/middleware/adminAuth')
 const app = getApp()
 
-/** 管理员 token 伪造（与 Banner 路由 adminAuth 规则一致：admin_<id>） */
-function adminToken(id = 1) { return { 'x-admin-token': `admin_${id}` } }
+/**
+ * 管理员令牌。必须走中间件的真签发函数，不能再手写 `admin_<id>` ——
+ * 那种明文格式是已被收口的鉴权漏洞（AGENTS.md 坑点 32），现在会被验签拒绝成 401。
+ * 用它签发同时也让测试覆盖到「验签 + type:'admin' 断言 + 查库」整条路径。
+ */
+function adminToken(id = 1) { return { 'x-admin-token': signAdminToken(id) } }
 
 beforeAll(async () => {
   // 确保至少有一个 admin 记录存在
