@@ -18,9 +18,19 @@ router.get('/', optionalAuth, async (req, res, next) => {
     const cityRaw = String(req.query.city || '').trim()
     const cityNorm = cityRaw ? normalizeCityName(cityRaw) : ''
     const cityVariants = new Set()
-    if (cityRaw) {
-      cityVariants.add(cityRaw)
-      if (cityNorm && cityNorm !== cityRaw) cityVariants.add(cityNorm)
+    // 存量数据里同一城市既存短名（'深圳'）也存规范名（'深圳市'），只按其中一个查 SQL 就会漏掉
+    // 另一半，而下面的内存 matchCity 永远收不到没进 SQL 的行，所以两种形态都要进 IN。
+    // 只补 '市' 后缀：'州'/'盟'/'地区' 剥完只剩单字（'广州'→'广'），matchCity 的双向 startsWith
+    // 拿它去比会误命中 '广安市' 这类同前缀城市。
+    for (const c of [cityRaw, cityNorm]) {
+      if (!c) continue
+      cityVariants.add(c)
+      if (c.endsWith('市')) {
+        const short = c.slice(0, -1)
+        if (short.length >= 2) cityVariants.add(short)
+      } else {
+        cityVariants.add(`${c}市`)
+      }
     }
     const matchCity = rowCity => {
       if (!cityVariants.size) return true
@@ -30,8 +40,6 @@ router.get('/', optionalAuth, async (req, res, next) => {
     }
     const ignored = !!keywordRaw && keywordRaw.length < 2
     const where = { status: { [Op.in]: ['open', 'full'] } }
-    // 存量数据里 city 有原值（'深圳'）也有规范值（'深圳市'），精确匹配会把其中一半滤掉，
-    // 后面的内存模糊匹配因此永远收不到这些行，所以这里两种变体都要进 SQL
     if (cityVariants.size) where.city = { [Op.in]: Array.from(cityVariants) }
     if (req.query.category) where.category = req.query.category
     if (req.query.expectMax) where.expectMax = { [Op.lte]: Number(req.query.expectMax) }
