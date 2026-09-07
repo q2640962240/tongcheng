@@ -58,10 +58,12 @@ cd app && npm install && npm run dev:h5
 ### 礼物系统 (核心业务)
 
 - **送礼**: POST /api/gifts/send → 事务(扣钻→加收入→创建GiftRecord→创建Message) → WS广播 → IM转发
+- **礼物库**: **22 档在售**（2026-09-08 起，价格阶梯 1→88888，L1 六档 / L2 七档 / L3 九档），完整阵容见待办 4。`gifts.code` 是稳定业务键（`uk_gifts_code` 唯一索引），seed 按它匹配；另有 14 行 `active=0` 的历史礼物，任何脚本都不要碰
 - **动画**: GiftAnimation 组件，4级效果 (L0无/L1小飘/L2横幅/L3全屏)；L1-L3 播放 SVGA 矢量动画（`SvgaStage` 用 renderjs），加载失败自动降级为 CSS 特效，小程序端不支持 renderjs 恒走 CSS
+- **SVGA 容器有两种**: 绝大多数是 zlib+protobuf；`yuanding.svga`（缘定今生）是 **zip 容器（SVGA 1.x）**，`svga.min.js` 的 zip 分支门控在 `JSZip`/`JSZipUtils` 全局上，所以 `SvgaStage.ensureLib()` 会在加载播放器之前先注入这两个库（双向实测证据见待办 4：有 JSZip 解析出 750×1334/100帧，无 JSZip 精确报 `incorrect header check`）
 - **经济**: 钻石(充值) → 送礼消耗 → 收礼获 giftIncome(分) → 提现（需先绑定收款账号）
 - **收款绑定**: 提现前必须绑定支付宝/微信收款账号+二维码，换绑需短信验证（payment_bind）
-- **关键文件**: `server/src/routes/gifts.js`, `app/src/components/GiftPanel.vue`, `app/src/components/GiftAnimation.vue`, `app/src/components/SvgaStage.vue`, `app/src/pages/withdraw/payment-bind.vue`
+- **关键文件**: `server/src/routes/gifts.js`, `app/src/components/GiftPanel.vue`, `app/src/components/GiftAnimation.vue`, `app/src/components/SvgaStage.vue`, `app/src/pages/gift-shop/gift-shop.vue`, `app/src/pages/withdraw/payment-bind.vue`
 
 详见 `docs/HANDOVER.md` 第三/三½节。
 
@@ -82,7 +84,7 @@ cd app && npm install && npm run dev:h5
 13. **H5 事件 API polyfill 必须委托原生 Emitter** — `main.js` 补齐 `window.uni.$emit/$on/$off` 时只能赋值 `@dcloudio/uni-h5` 导出的同名函数，禁止自建闭包总线：vite-plugin-uni 会把组件里的 `uni.$on` 编译成原生独立函数，两条总线互不相通，礼物动画等跨组件事件会静默丢失
 14. **礼物特效触发规则（每条只播一次）** — 播放记录持久化在 `app/src/utils/giftAnimPlayed.js`（localStorage，按用户 ID 隔离，上限 200 条），内存 Set 扛不住刷新/切会话/重启。TUIChat 消息列表 watcher 分两类处理：**实时到达**（`msg.time > baselineMsgTime`）逐条播；**历史消息**（`<= 基线`）每次会话打开只补播「最新一条」，其余只登记不播——这样接收方离线期间收到的礼物会在首次打开会话时看到一次、之后不再重复，也不会在首屏炸出整屏历史特效。`flow === 'out'` 只登记不播，自己送出的礼物由送礼面板 `uni.$emit('gift-animation')` 在**扣费成功后立刻**播（别放到 `await sendCustomMessage()` 之后，否则发送方要等好几秒才看到动画）。三个易错点：① 去重键必须用 `msg.ID`（大写），SDK 没有 `msg.id`，用错会让 `undefined` 污染集合从而永久吞掉后续所有礼物消息；② 基线在会话打开时取 `conversation.lastMessage.lastTime`，**缺失时用 `Date.now()/1000` 兜底**——基线为 0 会把整屏历史当成实时消息批量播放；也不能在 watcher 里惰性取「首次非空列表的最新 time」，空会话的首次非空列表就是那条实时消息本身，基线会被设成它自己而把它当历史吞掉；③ 兜底路径 `pages/chat/chat.vue` 用 `db:<消息id>` 做键共享同一份记录，实时走 socket `message`、历史走 `catchupGiftEffects()`，且礼物卡片**已去掉点击重播**（与「只播一次」冲突）。另：`markGiftPlayed` 必须在确认能播出去之后调用，动画层未就绪时先不登记，否则那条特效会被永久吞掉
 15. **IM v4 REST 自定义消息 Data 不能 Base64** — `sendIMC2CCustomV4` 的 `MsgContent.Data` 必须传原始 JSON 字符串，REST 会原样投递给接收端 SDK 的 `payload.data`。若做 Base64，接收端 `JSON.parse` 失败，礼物消息会退化成「[自定义消息]」——既不渲染礼物卡片也不触发特效
-16. **静态资源只能放 `app/src/static/`，路径用绝对 `/static/...`** — Vite 的 `app/public/`（构建后落到 `/assets/`）是 **H5 专用**，uni-app App 端只打包 `src/static/`。礼物特效图曾长期写成 `/assets/gift-effect-*.png`，而该文件从未存在于 `public/`，线上全部 404，全屏特效背景图**从未真正显示过**（H5 和 App 双端）。种子数据在 `server/src/seed.js` 的 `DEFAULT_GIFTS`，但**生产库改路径不要跑 seed**：`ensureGifts`/`upgradeGifts` 都按 `name` 匹配，改名后会新建重复行（2026-09-07 线上礼物表因此从 16 行涨到 30 行，见坑点 20 与 ADR-0005）。生产改素材路径的正确姿势是按 `id`/`sort` 定向 `UPDATE gifts SET image_url=..., effect_image=...`
+16. **静态资源只能放 `app/src/static/`，路径用绝对 `/static/...`** — Vite 的 `app/public/`（构建后落到 `/assets/`）是 **H5 专用**，uni-app App 端只打包 `src/static/`。礼物特效图曾长期写成 `/assets/gift-effect-*.png`，而该文件从未存在于 `public/`，线上全部 404，全屏特效背景图**从未真正显示过**（H5 和 App 双端）。种子数据在 `server/src/seed.js` 的 `DEFAULT_GIFTS`，但**生产库改路径不要跑 seed**：`ensureGifts`/`upgradeGifts` 都按 `name` 匹配，改名后会新建重复行（2026-09-07 线上礼物表因此从 16 行涨到 30 行，见坑点 20 与 ADR-0005）。生产改素材路径的正确姿势是按 `id`/`sort` 定向 `UPDATE gifts SET image_url=..., effect_image=...`。⚠️ **时效性提示（2026-09-08 起）**：这里说的「`ensureGifts`/`upgradeGifts` 按 `name` 匹配」是**历史成因**，`seed.js` 已改为按 `code` 匹配（`byCode[g.code] || byName[g.name]`，name 只作兜底）、`gifts.code` 也已回填并加了 `uk_gifts_code` 唯一索引，见待办 4 ③。但**「生产库不要跑 seed」的结论不变**——理由已从「会产生重复行」变成「seed 会覆盖运营在后台改过的文案/价格」（坑点 20）
 17. **App 逻辑层没有 `window`/`document`/`localStorage`** — uni-app App 端 JS 跑在 JSCore(iOS)/V8(Android)，页面才在 WebView 里。任何未加守卫的浏览器全局都是 ReferenceError：`invite.vue` 的「复制邀请链接」和微信分享 `href` 曾直接读 `window.location.origin`，在 App 端点击即静默失效（分享根本调不起来）。站点源要从 `getCurrentBaseURL()` 去掉 `/api` 推导，H5 才用 `window.location.origin`，且必须包在 `typeof window !== 'undefined'` + `#ifdef H5` 里
 18. **iOS 的 CSS 能力由系统版本决定，不由 deploymentTarget 决定** — App 端页面渲染在 WKWebView，其内核版本等于设备 iOS 版本；`deploymentTarget` 只是「低于此版本的设备装不上」。业务代码有 224 处 flex `gap`（Safari 14.1+）和 2 处 `aspect-ratio`（Safari 15+），逐处改写不现实，因此 `manifest.json` 的 `deploymentTarget` 已从 13.0 抬到 **15.0**。另：`backdrop-filter` 在 iOS 15.4 前只认 `-webkit-` 前缀；`height:100vh` 配 `overflow:hidden` 在 iOS Safari 会裁掉底部内容，要补 `height:100dvh`（参照 `home.vue` / `chat.vue`）。新增样式若用到更新的 CSS 特性，先确认 iOS 15.0 的 WKWebView 支持
 19. **接收 renderjs 回调的组件必须用 Options API** — `ownerInstance.callMethod(name, args)` 的实现是 `this.$vm[name]`（见 `@dcloudio/uni-h5/dist/uni-h5.es.js:1455`），而 Vue 3 `<script setup>` + `defineExpose` 把方法挂在 `instance.exposed` 代理上、**不在 `$vm` 上**，于是视图层回调静默丢失：SVGA 播完了逻辑层收不到，动画层只能靠兜底定时器才消失。`SvgaStage.vue` 因此刻意写成 Options API `methods`，与项目主流的 `<script setup>` 风格不一致，**不要"顺手统一风格"改回去**。另外 renderjs 的 `change:prop` 靠值变化触发，绑定的 prop 要先给空值、`mounted` + `$nextTick` 再填真值，否则首次同步不派发
@@ -163,6 +165,22 @@ cd app && npm install && npm run dev:h5
     - **修法三处**：删掉 `onMounted`（`onShow` 已覆盖首次显示）；把 `refreshSocialStats()` 改成纯函数 `applySocialStats(profileData)`，复用 `loadAll` 里 `fetchProfile()` 已拿到的那份数据、不再单独发请求；`store/user.js` 加 `let _profilePromise = null` 做 in-flight 合并（`.finally()` 里复位）。**生产实测结果（`ae63f5c` 上线后，真实入口 home → 点「我的」tab）**：`/user/profile` **9 → 2**、`wallet/balance` **3 → 1**、`user/certifications` **3 → 1**。剩下的 2 次分别是 `App.vue:122` onLaunch 与页面 `onShow`，相隔 43 秒、in-flight 闸门吃不到，属预期下限。⚠️ **深链直入 `#/pages/profile/profile` 会量到 3**（uni-app H5 在该入口下让 `onShow` 触发两次），别误判成修复无效——详见待办 17。
     - ⚠️ **验证陷阱：本地测不出请求次数**。H5 构建产物里的 `BASE_URL` 解析成**绝对生产地址** `https://zyb001.cn/api`（不是相对 `/api`），所以「本地静态服务 + 反代拦截 API」对请求计数完全无效——本地 dist 会直连生产，且写入的合成假 token 会拿到 401 → `request.js` 的 `kickToLogin()` → `reLaunch` 到登录页，把探针和被测页面一起清掉。要数请求次数只能在**部署后用生产真实会话**测，且**入口必须是「home 整页载入 → 点 tabbar」**（深链直入会让 `onShow` 多触发一次，见待办 17），计数用页面内 `performance.getEntriesByType('resource')` 按路径分组收集 `startTime`。改前端时能做的最强本地证据是**产物结构对照**：比对生产 chunk 与新构建 chunk 里 `.profile(`、`onMounted` 的 import 绑定等指纹的出现次数。
 
+29. **手写生产 SQL 必须自带 `SET NAMES utf8mb4;` 和自中止闸门 —— 否则脚本会「退出码 0 却把库改坏」**（2026-09-08 D4 礼物 16→22，两个陷阱都在真跑之前被挡下）
+    - **字符集陷阱（致命且完全静默）**：容器内 mysql CLI 的 `character_set_client` 从 OS locale 推导、**不是 utf8mb4**，脚本文件里的 UTF-8 中文字节被当 latin1 解释。实测 `SELECT COUNT(*) FROM gifts WHERE name='点赞' AND active=1` → 不加 `--default-character-set=utf8mb4` 得 **0**，加了得 **1**（id 17）；所有中文名字在输出里显示成 `??`。后果链是静默的：`UPDATE ... WHERE name='<中文>'` 全部命中 **0 行** → 后续按 `code` 定位的 UPDATE 也跟着命中 0 行 → 而 `INSERT ... SELECT` 里的中文 name **照样插入，变成乱码行**。整个脚本退出码 0，看不出任何异常。
+    - **连带后果：任何「期望 0 行」的中文断言都可能是假通过** —— 返回 0 行不是因为不存在，而是因为字面量被解坏了、匹配不上任何东西。所以这类断言必须**再做一次阳性对照**：同一个 IN 列表里混进一个已知存在的值，确认它精确返回 1 行，才能证明断言机制真的活着。
+    - **修法**：脚本内**第一行**写 `SET NAMES utf8mb4;`，不依赖调用方记得传 CLI 参数（`SET NAMES` 是会话级，一次设置对同一文件的后续所有语句都生效，包括末尾的断言）。三个 D4 脚本 `scripts/sql/2026-09-08-gifts-{precheck,16to22,code-unique}.sql` 都已内置。
+    - **★ 已验证的自中止闸门手法 ★** —— 断言不成立时往 NOT NULL 列写 NULL：
+      ```sql
+      INSERT INTO gifts (name, price, created_at, updated_at)
+      SELECT NULL, NULL, NOW(), NOW() FROM DUAL
+      WHERE <断言不成立的条件>;
+      ```
+      → `ERROR 1048 (23000): Column 'name' cannot be null` → mysql CLI 批处理模式遇错即停、退出码 1 → 连接关闭 → **未 COMMIT 的事务自动回滚**，生产库回到执行前状态。断言成立时 WHERE 为假、SELECT 出 0 行，什么都不插也不触发约束检查。MySQL 不支持无 FROM 的 WHERE，必须写 `FROM DUAL`。
+    - **⚠️ 不要用「插一个已存在的 id 撞主键」做闸门**：第一版就是这么写的，在临时库里因为**恰好没有 id=1** 而直接插入成功、根本没中止，后续语句照跑。任何依赖既有数据的设计都是脆弱的——NOT NULL 违例只依赖 schema。
+    - **闸门怎么放**：变更脚本每做完一个「必须命中 N 行」的步骤就卡一道（D4 的闸门 A 卡在 16 条 code 回填之后，专拦上面的字符集坑），`COMMIT` 之前再卡一道总断言（闸门 B：在售 22 行 / distinct code 22 / 在售行 code 无 NULL）。这样闸门一旦触发，`COMMIT` 永远执行不到。
+    - **验证闸门本身也要用生产同款 schema**：取 `SHOW CREATE TABLE gifts` 照抄 DDL 建临时库（`baiye_gate_test`），**故意不插 id=1**，再逐项测四个行为：断言成立时静默不插行 / 不成立时 ERROR 1048 + 退出码 1 / 后续语句不执行 / 未提交事务在新连接里确实回滚。测完 `DROP DATABASE`——验证脚本若在中途被闸门中止，**它末尾的清理语句也不会执行**，临时库会残留在生产实例上（本次就残留了，已手工 DROP）。
+    - 另：SQL 文件必须 `docker cp` 进容器再 `< /tmp/x.sql`，不能靠管道传（会丢字符集）；`mysqldump` 备份也要带 `--default-character-set=utf8mb4`，否则备份文件里的中文同样是坏的。
+
 ## 服务器信息
 
 | 项 | 值 |
@@ -180,7 +198,17 @@ cd app && npm install && npm run dev:h5
 1. Android APK 打包 (HBuilderX 本地)
 2. **配置中心密钥：短信/OSS/IM 已配好，剩支付与推送** — 2026-09-07 核对生产 `configs` 表：`sms` 5/7 项有值（provider/accessKeyId/accessKeySecret/signName/templateCode，空的 templateLogin/templateRegister 是可选覆盖）、`oss` 5/7、`im` 6/8 均已配置；**未配**的是 `wxpay` 1/8、`alipay` 2/6、`push` 1/6。⚠️ 别再把「短信未配置」当既成事实——这条待办曾长期笼统写着「短信/支付/OSS/推送」都没填，导致误判线上无法登录。判断某模块是否可用要直接查 `configs` 表或调 `getModuleConfig()`，不要照抄本行
 3. 钻石充值接入微信/支付宝支付
-4. ~~礼物素材正式设计~~ **已完成 (2026-09-07)** — 16 个礼物全部换成 SVGA 矢量动画（L1-L3），图标由同一份 SVGA 抽帧生成，emoji 占位清零，礼物 lineup 已改名（点赞/比心/星际少女/玫瑰/心动/一剑穿心/钻石/天使/花好月圆/福袋/皇冠/水晶球/独角兽/跑车/旋转木马/流星雨），价格阶梯未变。线上 16/16 实测通过。见 ADR-0004。遗留三项：① **素材授权**——13 个 .svga 来自无 LICENSE 的仓库，当前以「非商用」为前提，商用前必须替换或取得授权；② **App(WKWebView) 端未验证**——依赖 `siteOrigin + /static/...` 绝对 URL 与 nginx 新增的 `/static/` CORS 头，需 HBuilderX 打包后实测；③ **`gifts` 表缺稳定业务键**——`seed.js` 按 `name` 匹配，任何改名都会产生重复行，宜加 `code` 列改为按它匹配
+4. ~~礼物素材正式设计~~ **已完成，并于 2026-09-08 扩到 22 档（D4 生产已执行）** — 全部为 SVGA 矢量动画（L1-L3），图标由同一份 SVGA 抽帧生成，emoji 占位清零。见 ADR-0004。
+   - **22 档阵容（sort / 名字 / 价格 / 等级）**：1 点赞 1 L1｜2 便便 2 L1｜3 绿帽子 5 L1｜4 扔鸡蛋 8 L1｜5 比心 10 L1｜6 星际少女 20 L1｜7 玫瑰 50 L2｜8 心动 80 L2｜9 一剑穿心 100 L2｜10 加油 150 L2｜11 钻石 200 L2｜12 天使 300 L2｜13 花好月圆 500 L2｜14 福袋 500 L3｜15 皇冠 1000 L3｜16 水晶球 2000 L3｜17 独角兽 5000 L3｜18 跑车 10000 L3｜19 旋转木马 20000 L3｜20 一锤定音 30000 L3｜21 流星雨 50000 L3｜22 缘定今生 88888 L3。加粗的 6 档（便便/绿帽子/扔鸡蛋/加油/一锤定音/缘定今生）是 D4 新增，其余 16 档 **name/price/素材路径一分未动，只重排了 sort**。
+   - **计划偏离：最终是 22 档不是 26** —— 另外四个槽位的候选源素材抽帧后视觉上被否掉了（详见 `scripts/svga-tools/README.md`）。
+   - ~~① **素材授权**~~ **用户已明确豁免（2026-09-08：「不用考虑授权问题，这个项目不会进行商用」）** — .svga 来自无 LICENSE 的仓库，以非商用为前提使用。**若将来要商用，这一项重新变成阻塞项。**
+   - ② **App(WKWebView) 端未验证** — 依赖 `siteOrigin + /static/...` 绝对 URL 与 nginx 的 `/static/` CORS 头，需 HBuilderX 打包后实测（见待办 16）。
+   - ~~③ **`gifts` 表缺稳定业务键**~~ **已完成（2026-09-08，D4）** — `code varchar(32)` 列已由 `db.bootstrap()` 的 `sync({alter:true})` 建出，22 行在售礼物全部回填（14 行 `active=0` 旧礼物保持 NULL、一律不碰），并加了 `uk_gifts_code` 唯一索引；`seed.js` 的 `DEFAULT_GIFTS` 已改成 22 条带 `code`、匹配逻辑改为 `byCode[g.code] || byName[g.name]`（name 只作兜底）。**坑点 16 与坑点 20 里「seed 按 name 匹配、改名会产生重复行」的说法自此过时**——但「生产库禁止跑完整 seed」的纪律不变（见坑点 20）。
+   - **`yuanding.svga` 是 zip 容器（SVGA 1.x），必须靠 JSZip** — `svga.min.js` 的 zip 分支门控在 `JSZip`/`JSZipUtils` 两个全局上，npm 构建不打包它们。`SvgaStage.vue` 的 `ensureLib()` 因此在加载 `svga.min.js` **之前**先注入 `/static/lib/jszip.min.js` 与 `jszip-utils.min.js`（两者加载失败不阻断，绝大多数素材是 zlib+protobuf 走不到 zip 分支）。**双向实测证据（2026-09-08 生产 H5）**：三个全局齐备时 `yuanding.svga` 解析出 `videoSize 750×1334 / 100 帧 / 17 张图`（zip entry 名 `img_72` 等，值为 base64 字符串）；**只加载 `svga.min.js`、不加载 JSZip 时精确复现 `incorrect header check`**（掉进 proto 路径的 pako zlib 报错）——所以这个注入是必要的，不是 no-op。其余 5 个新素材不需要 JSZip：bianbian 60×60/75帧、lvmaozi 120×120/75帧、jidan 130×260/100帧、jiayou 750×1624/26帧、luochui 500×500/90帧。
+   - **22 档上线实测（2026-09-08，生产 H5，视口 626×642）**：`GET /api/gifts` 返回 22 条、sort 1..22 连续；礼物商城 22 张卡片、26 张图 `naturalWidth` 全部 >0、0 破图、横向溢出 0；TUIChat 送礼面板 22 格全渲染、22 张图 0 破图、真实滚动层 `scrollHeight 749 > clientHeight 250`、滚到底 `scrollTop 499.2 == maxScroll 499` 且最后一格「缘定今生 88888💎」完整可见、`.gift-actions` 574–642 在视口内显示「请先选择礼物」。**6 个新素材的 png/svga 全部 HTTP 200**（yuanding.svga 588KB）。
+   - ⚠️ **观察项：`luochui`（一锤定音，L3 全屏档，30000 钻）的 `videoSize` 只有 500×500**，而其它 L3 全是 750×1334/1624。AspectFit 下它在 390×844 的 holder 里渲染成 `390×390 @ 0,227`（铺满宽度、垂直居中、占屏高 46%），**画布内容占比 91%×91%**，所以不是「大黑屏里一小块」；但视觉冲击力弱于流星雨那种 `390×694`、内容 96%×82% 的满屏效果。**要不要把它降到 L2（82vw 方形 holder，更贴合方形素材）或换一个满屏源素材，等 iOS 真机眼看后再定**，不要凭数字单方面改。
+   - 同理，`bianbian` 60×60 / `lvmaozi` 120×120 在 L1 的 46vw holder 里会被放大数倍——但这与既有的 `dianzan` 60×60、`bixin` 120×120 **完全同构**，不是 D4 引入的退化。
+   - **未做真实送礼端到端**（会在生产留下 `gift_records`/`messages`/`transactions` 与一条**无法用 REST 删除**的 IM 云端消息，见待办 8）：新礼物行走的是与既有礼物完全相同的 `POST /api/gifts/send` → `Gift.findByPk(giftId)` 路径，且 API 已验证 6 个新字段（name/price/imageUrl/effectImage/animationLevel/sort）都正确下发，zip 容器解码也已双向验证，所以没有单独花钻石测。要补测的话最便宜的是「便便」2 钻。
 5. 会话列表深色主题适配
 6. ~~`diamondAmount` 字段语义不一致~~ **已修 (2026-09-08, `254234c`)** — 决定**以总价为准**。消息体里的 `diamondAmount` 保持「单价」语义不动（改它会让存量消息全部误读），改为**四个渲染点统一走 `totalDiamond ?? diamondAmount × quantity`**。关键的一点：**主通道走 `viaIM:true`，IM 消息体是前端 `message-input-gift.vue` 自己拼的**，服务端那份 `gifts.js:97-108` 只写进 DB Message，所以补齐字段要补在前端 payload（`quantity`/`totalDiamond`），不是补在服务端。已改的四处渲染：`message-custom.vue`(主通道卡片)、`chat.vue`(兜底卡片)、`GiftAnimation.vue`(本就已带 quantity，且不显示金额)、以及会话摘要三处（见待办 7）。**存量消息不会金额翻倍**：IM 云端的历史自定义消息两个字段都没有，但主通道数量恒为 1，`单价 × 1` 就等于实付总价——这也是当初担心的「改语义导致历史卡片翻倍」风险归零的原因
 7. ~~会话列表礼物摘要显示「[自定义消息]」~~ **已修 (2026-09-08, `254234c`)** — 根因确认：Lite SDK 的 `getLastMessageText()` 对 `MSG_CUSTOM` 只解析 `payload.data` 判 `businessID === 1`（数字，CallKit），其余一律取 `messageForShow` 再过翻译表，**从不解析我们塞的 gift JSON**，所以服务端在 `Desc` 里传的「送出了N个XX」根本用不上。修法是在 `TUIConversation/conversation-list/index.vue` 加 `lastMessageSummary()`，**只接管 `businessID === 'gift'` 这一类**，其余原样交回 SDK（避免复刻它的草稿/撤回/群提示分支）；SDK 会前缀未读条数（如「[3条]」），接管正文时用正则从 fallback 里把前缀取回来，不自己复刻判定条件。自建通道两处（`server/routes/chat.js`、`chat-list.vue`）文案与之对齐。**顺带修了一个计划外的真 bug**：`chat-list.vue` 的 `lastText()` 对上游已格式化好的「[礼物] XX」做 `JSON.parse` 必失败，于是所有礼物摘要都退化成没有名字的「[礼物]」——现在解析失败就原样透传
@@ -223,6 +251,9 @@ cd app && npm install && npm run dev:h5
     - [ ] 详情页发评论 → 出现「评论成功」、评论置顶显示、计数 +1
     - [ ] 确认发现页动态显示 0 赞 0 评论是**预期结果**（坑点 26 已校正伪造计数），不是数据丢失
     - [ ] 邀请页点「分享」→ 未配置微信时 action sheet **只有两个复制项**（复制邀请码 / 复制邀请链接），不出现「分享给微信好友 / 分享到朋友圈」（待办 10 的运行时探测）；配好 `sdkConfigs.share.weixin` 后两项自动出现且能真正拉起微信
+    - [ ] 礼物面板 / 礼物商城显示 **22 档**（不是 16），6 个新图标（便便/绿帽子/扔鸡蛋/加油/一锤定音/缘定今生）在 App 的 `file://` 源下也能加载出来——H5 是同源相对路径，App 端要靠 `siteOrigin + /static/...` 绝对 URL，两端不是同一条路径
+    - [ ] 送「缘定今生」（88888，最贵）→ **zip 容器 SVGA 能播**。这是 App 端唯一走 JSZip 分支的素材，`ensureLib()` 注入的两个库同样要能从 `siteOrigin` 绝对 URL 取到；播不出来会降级成 CSS 特效（不是黑屏），但那就说明 JSZip 那条路在 WKWebView 里断了
+    - [ ] 送「一锤定音」（30000）→ 人眼判断观感。它的 `videoSize` 只有 500×500（其它 L3 都是 750×1334/1624），AspectFit 后是「铺满宽度、垂直居中、占屏高约 46%」的方形画面、内容占画布 91%×91%。**数字上不算缺陷，但 30000 钻的档位是否够震撼只有眼看能定**；不满意就改 `animation_level` 降到 2（82vw 方形 holder 更贴合方形素材）或换源素材，别只凭数字改（待办 4 观察项）
 
 17. ~~部署后复测个人页请求次数~~ **已完成（2026-09-08，`ae63f5c` 上线后生产实测）** — 真实入口（`#/pages/home/home` 整页载入 → 点 tabbar「我的」）下：`GET /api/user/profile` **9 → 2**、`wallet/balance` **3 → 1**、`user/certifications` **3 → 1**、`POST /api/im/login` **1 → 1**（未变）、`im/config` 1 次。页面无回归：昵称「测试用户A」、魅力值 54051、钱包 [8 钻 / 37835.70 元]、8 个功能宫格、认证卡片正常。剩下的 2 次 profile 是 `App.vue:122` onLaunch 的 `restoreSession()`（startTime 1404ms）与 profile.vue `onShow` 的合并调用（44662ms），**分属两个时刻、无法再合并**——in-flight 闸门只吃同 tick 的并发。
     - ⚠️ **测量陷阱：深链直入会多量一轮**。用 `?v=xxx#/pages/profile/profile` 整页载入时量到的是 **3 / 2 / 2**，因为 uni-app H5 在这种入口下会让页面 `onShow` **触发两次**（两轮完整的 loadAll）。那是入口方式的产物，不是真实使用路径。**复测必须走「home 整页载入 → 点 tab」**，与待办 9 的会话列表验证入口要求一致。
