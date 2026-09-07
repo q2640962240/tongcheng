@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SVGA 播放自检</title>
+<script src="/app/src/static/lib/svga.min.js"></script>
+<style>
+  body { background:#111; color:#eee; font:12px/1.5 monospace; margin:8px }
+  canvas { background:#222; margin:4px }
+  pre { white-space:pre-wrap }
+</style>
+</head>
+<body>
+<canvas id="cv" width="360" height="640"></canvas>
+<pre id="log">ready — 在控制台调用 __runTest(['bianbian','lvmaozi'])</pre>
+<script>
+// 隐藏页面不 tick rAF，会导致 frames 恒为 0；一个 document 只能装一次
+window.requestAnimationFrame = cb => setTimeout(() => cb(performance.now()), 16);
+window.cancelAnimationFrame = id => clearTimeout(id);
+
+const CAND_BASE = '/scripts/svga-toolchain/candidates/';
+const logEl = document.getElementById('log');
+
+logEl.textContent = 'SVGA lib loaded: ' + (typeof window.SVGA !== 'undefined') +
+  ' | Parser=' + !!(window.SVGA && SVGA.Parser) + ' | Player=' + !!(window.SVGA && SVGA.Player);
+
+/**
+ * 逐个播放素材并采样画布，判断是否真的推帧、是否有不透明内容
+ *   __runTest(['bianbian','lvmaozi'])                  // 默认 candidates/，每个播 1500ms
+ *   __runTest(['liuxingyu'], 3000, '/app/src/static/svga/')
+ */
+window.__runTest = async function (names, msEach, base) {
+  msEach = msEach || 1500;
+  base = base || CAND_BASE;
+  const out = [];
+  for (const name of names) {
+    const url = base + name + '.svga';
+    const rec = { name, frames: 0, ok: false, err: '', alphaMax: 0, cover: 0, w: 0, h: 0, fps: 0, total: 0, ms: 0 };
+    try {
+      const canvas = document.getElementById('cv');
+      const player = new SVGA.Player(canvas);
+      const parser = new SVGA.Parser();
+      const vi = await new Promise((res, rej) => parser.load(url, res, rej));
+      rec.w = vi.videoSize && vi.videoSize.width;
+      rec.h = vi.videoSize && vi.videoSize.height;
+      rec.fps = vi.FPS;
+      rec.total = vi.frames;
+      rec.imgs = vi.images ? Object.keys(vi.images).length : 0;
+      player.setVideoItem(vi);
+      player.onFrame(f => { rec.frames = f });
+      player.startAnimation();
+      await new Promise(r => setTimeout(r, msEach));
+      player.pauseAnimation();          // stopAnimation 会清空画布
+      const ctx = canvas.getContext('2d');
+      const d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let alphaMax = 0, lit = 0, n = 0;
+      for (let i = 3; i < d.length; i += 4) { n++; if (d[i] > alphaMax) alphaMax = d[i]; if (d[i] > 8) lit++ }
+      rec.alphaMax = alphaMax;
+      rec.cover = Math.round(lit / n * 1000) / 10;
+      rec.ms = Math.round(rec.total / rec.fps * 1000);
+      rec.ok = rec.frames > 2 && alphaMax > 200;
+    } catch (e) { rec.err = String(e && e.message || e) }
+    out.push(rec);
+    logEl.textContent = out.map(o =>
+      o.name + ': ok=' + o.ok + ' frames=' + o.frames + '/' + o.total + ' fps=' + o.fps +
+      ' dur=' + o.ms + 'ms size=' + o.w + 'x' + o.h + ' img=' + o.imgs +
+      ' alphaMax=' + o.alphaMax + ' cover=' + o.cover + '%' + (o.err ? ' ERR=' + o.err : '')).join('\n');
+  }
+  return out;
+};
+</script>
+</body>
+</html>

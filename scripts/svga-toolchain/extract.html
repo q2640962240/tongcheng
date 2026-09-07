@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>SVGA 抽帧 / 图标生成</title>
+<script src="/app/src/static/lib/svga.min.js"></script>
+<style>
+  body { background:#111; color:#eee; font:12px/1.5 monospace; margin:8px }
+  canvas { margin:4px; vertical-align:top }
+  #cap { background:repeating-conic-gradient(#333 0 25%, #222 0 50%) 0 0/16px 16px }
+  #view, #out { background:#202020 }
+  pre { white-space:pre-wrap }
+</style>
+</head>
+<body>
+<canvas id="cap"  width="512" height="512"></canvas>
+<canvas id="view" width="512" height="512"></canvas>
+<canvas id="out"  width="192" height="192"></canvas>
+<pre id="log">ready — 在控制台调用 __dumpFrames / __extractIcons</pre>
+<script>
+// 自动化浏览器的标签页是 hidden，rAF 被挂起 → 播放器永远不推帧。
+// 必须换成 setTimeout 驱动；注意一个 document 只能装一次，装两次会互相包裹。
+window.requestAnimationFrame = cb => setTimeout(() => cb(performance.now()), 16);
+window.cancelAnimationFrame = id => clearTimeout(id);
+
+const CAP = 512, OUT = 192;
+const CAND_BASE = '/scripts/svga-toolchain/candidates/';
+const BG = '#202020';   // 落盘用的衬底色，让 PNG 脱离查看器的透明底也能看清
+
+const capCv  = document.getElementById('cap');
+const viewCv = document.getElementById('view');
+const outCv  = document.getElementById('out');
+const capCtx  = capCv.getContext('2d', { willReadFrequently: true });
+const viewCtx = viewCv.getContext('2d');
+const outCtx  = outCv.getContext('2d');
+const logEl   = document.getElementById('log');
+
+// onFrame 在绘制**之前**触发，回调里 pauseAnimation 会拿到空画布；
+// 改成按时长等待再暂停（+200ms 余量）。
+async function seekTo(player, vi, targetFrame) {
+  const waitMs = (targetFrame / vi.FPS) * 1000 + 200;
+  let last = 0;
+  player.onFrame(f => { last = f });
+  player.startAnimation();
+  await new Promise(r => setTimeout(r, waitMs));
+  player.pauseAnimation();          // 不能用 stopAnimation，它会清空画布
+  await new Promise(r => setTimeout(r, 50));
+  return last;
+}
+
+async function loadVi(url) {
+  const parser = new SVGA.Parser();
+  return await new Promise((res, rej) => parser.load(url, res, rej));
+}
+
+function alphaBox(ctx, w, h) {
+  const d = ctx.getImageData(0, 0, w, h).data;
+  let minX = w, minY = h, maxX = -1, maxY = -1, lit = 0, n = 0, alphaMax = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const a = d[(y * w + x) * 4 + 3];
+      n++;
+      if (a > alphaMax) alphaMax = a;
+      if (a > 8) { lit++; if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+    }
+  }
+  return { minX, minY, maxX, maxY, lit, n, alphaMax, empty: maxX < 0 };
+}
+
+// 全屏特效自带半透明压暗背景层（各素材 alpha 不同，边缘还常被光晕盖住），
+// 固定采样点不可靠；改成在内容包围盒内取「众数色 + alpha 段」做色键。
+function modalKey(ctx, w, h, box, tol) {
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const hist = new Map();
+  let area = 0;
+  for (let y = box.minY; y <= box.maxY; y++) {
+    for (let x = box.minX; x <= box.maxX; x++) {
+      const i = (y * w + x) * 4;
+      const a = d[i + 3];
+      if (a < 24) continue;
+      area++;
+      const band = a > 200 ? 3 : a > 100 ? 2 : 1;
+      const k = ((d[i] >> 3) << 12) | ((d[i + 1] >> 3) << 7) | ((d[i + 2] >> 3) << 2) | band;
+      hist.set(k, (hist.get(k) || 0) + 1);
+    }
+  }
+  let best = null, bestN = 0;
+  for (const [k, n] of hist) if (n > bestN) { bestN = n; best = k; }
+  if (!best || area === 0 || bestN / area < 0.15) return 0;
+  const r = ((best >> 12) & 31) << 3, g = ((best >> 7) & 31) << 3, b = ((best >> 2) & 31) << 3;
+  const band = best & 3;
+  const aLo = band === 1 ? 24  : band === 2 ? 100 : 200;
+  const aHi = band === 1 ? 100 : band === 2 ? 200 : 255;
+  let killed = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const a = d[i + 3];
+    if (a > 0 && a >= aLo && a <= aHi &&
+        Math.abs(d[i] - r) <= tol && Math.abs(d[i + 1] - g) <= tol && Math.abs(d[i + 2] - b) <= tol) {
+      d[i + 3] = 0; killed++;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return killed;
+}
+
+async function savePng(name, canvas) {
+  const r = await fetch('/__svga_save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, dataUrl: canvas.toDataURL('image/png') })
+  });
+  const j = await r.json();
+  if (!j.ok) throw new Error('save failed: ' + j.err);
+  return j.bytes;
+}
+
+// cap 是透明底，直接落盘在查看器里可能看不清；先铺衬底色再合成
+function composited() {
+  viewCtx.fillStyle = BG;
+  viewCtx.fillRect(0, 0, CAP, CAP);
+  viewCtx.drawImage(capCv, 0, 0);
+  return viewCv;
+}
+
+function log(results, fmt) {
+  logEl.textContent = results.map(fmt).join('\n');
+}
+
+/**
+ * 抽帧（选型用）— 每个素材按给定比例抽 N 帧，原样落盘 512×512 PNG
+ *   __dumpFrames(['bianbian','lvmaozi'])
+ *   __dumpFrames([{ name:'auction_success', at:[0.1,0.4,0.7,0.95] }])
+ * 默认抽 4 帧：0.05 / 0.3 / 0.55 / 0.85
+ * 落盘名：<name>@<pct>.png
+ */
+window.__dumpFrames = async function (items) {
+  const results = [];
+  for (const raw of items) {
+    const it = typeof raw === 'string' ? { name: raw } : raw;
+    const file = it.file || it.name;
+    const fracs = it.at || [0.05, 0.3, 0.55, 0.85];
+    const rec = { name: it.name, file, total: 0, fps: 0, vw: 0, vh: 0, imgs: 0, shots: [], err: '' };
+    try {
+      const vi = await loadVi((it.base || CAND_BASE) + file + '.svga');
+      rec.total = vi.frames; rec.fps = vi.FPS;
+      rec.vw = vi.videoSize.width; rec.vh = vi.videoSize.height;
+      rec.imgs = vi.images ? Object.keys(vi.images).length : 0;
+
+      for (const fr of fracs) {
+        capCtx.clearRect(0, 0, CAP, CAP);
+        const player = new SVGA.Player(capCv);
+        player.setVideoItem(vi);
+        player.setContentMode('AspectFit');
+        const target = Math.max(1, Math.round(vi.frames * fr));
+        const got = await seekTo(player, vi, target);
+        const b = alphaBox(capCtx, CAP, CAP);
+        const pct = Math.round(fr * 100);
+        const bytes = b.empty ? 0 : await savePng(`${it.name}@${pct}`, composited());
+        rec.shots.push({ pct, frame: got, cover: Math.round(b.lit / b.n * 1000) / 10, alphaMax: b.alphaMax, bytes });
+        log(results.concat([rec]), o =>
+          o.name + ': ' + (o.err ? 'ERR ' + o.err :
+            `frames=${o.total} fps=${o.fps} src=${o.vw}x${o.vh} img=${o.imgs} | ` +
+            o.shots.map(s => `${s.pct}%(f${s.frame} cov=${s.cover}% a=${s.alphaMax} ${s.bytes}B)`).join(' ')));
+      }
+    } catch (e) { rec.err = String(e && e.message || e); }
+    results.push(rec);
+  }
+  log(results, o =>
+    o.name + ': ' + (o.err ? 'ERR ' + o.err :
+      `frames=${o.total} fps=${o.fps} src=${o.vw}x${o.vh} img=${o.imgs} | ` +
+      o.shots.map(s => `${s.pct}%(f${s.frame} cov=${s.cover}% a=${s.alphaMax} ${s.bytes}B)`).join(' ')));
+  return results;
+};
+
+/**
+ * 拼图选型 — 一张 PNG 装下整批素材：素材为行、抽样帧为列，每格带文字标注
+ *   __contactSheet(['bianbian','lvmaozi','live_pk_egg_fly'], 'L1')
+ *   __contactSheet([{name:'auction_success'}, ...], 'L2', { at:[0.2,0.5,0.85], cell:240 })
+ *
+ * 存在的理由：选型需要时间维度的信息，但逐帧落盘会产生几十张 PNG，
+ * 一张分级拼图能把「看图判断」压到几次读取。
+ */
+window.__contactSheet = async function (items, tag, opts) {
+  opts = opts || {};
+  const fracs = opts.at || [0.2, 0.5, 0.85];
+  const CELL = opts.cell || 240;
+  const LABEL = 22;
+  const list = items.map(x => typeof x === 'string' ? { name: x } : x);
+
+  const sheet = document.createElement('canvas');
+  sheet.width = fracs.length * CELL;
+  sheet.height = list.length * (CELL + LABEL);
+  const sctx = sheet.getContext('2d');
+  sctx.fillStyle = BG;
+  sctx.fillRect(0, 0, sheet.width, sheet.height);
+  sctx.font = '13px monospace';
+  sctx.textBaseline = 'top';
+
+  const results = [];
+  for (let r = 0; r < list.length; r++) {
+    const it = list[r];
+    const file = it.file || it.name;
+    const rec = { name: it.name, file, total: 0, fps: 0, vw: 0, vh: 0, imgs: 0, shots: [], err: '' };
+    const y0 = r * (CELL + LABEL);
+    try {
+      const vi = await loadVi((it.base || CAND_BASE) + file + '.svga');
+      rec.total = vi.frames; rec.fps = vi.FPS;
+      rec.vw = vi.videoSize.width; rec.vh = vi.videoSize.height;
+      rec.imgs = vi.images ? Object.keys(vi.images).length : 0;
+
+      for (let c = 0; c < fracs.length; c++) {
+        const fr = fracs[c];
+        capCtx.clearRect(0, 0, CAP, CAP);
+        const player = new SVGA.Player(capCv);
+        player.setVideoItem(vi);
+        player.setContentMode('AspectFit');
+        const target = Math.max(1, Math.round(vi.frames * fr));
+        const got = await seekTo(player, vi, target);
+        const b = alphaBox(capCtx, CAP, CAP);
+        rec.shots.push({ pct: Math.round(fr * 100), frame: got, cover: Math.round(b.lit / b.n * 1000) / 10, empty: b.empty });
+
+        const x0 = c * CELL;
+        sctx.drawImage(capCv, 0, 0, CAP, CAP, x0, y0 + LABEL, CELL, CELL);
+        sctx.strokeStyle = b.empty ? '#f44' : '#444';
+        sctx.strokeRect(x0 + 0.5, y0 + LABEL + 0.5, CELL - 1, CELL - 1);
+        if (c === 0) {
+          sctx.fillStyle = '#7fe07f';
+          sctx.fillText(`${it.name}  ${rec.vw}x${rec.vh} ${rec.fps}fps ${rec.total}f ${Math.round(rec.total / rec.fps * 1000)}ms img${rec.imgs}`, x0 + 6, y0 + 4);
+        }
+        sctx.fillStyle = b.empty ? '#f66' : '#bbb';
+        sctx.fillText(`${Math.round(fr * 100)}% f${got} cov${rec.shots[rec.shots.length - 1].cover}%`, x0 + 6, y0 + LABEL + 4);
+      }
+    } catch (e) {
+      rec.err = String(e && e.message || e);
+      sctx.fillStyle = '#f66';
+      sctx.fillText(`${it.name}  ERR ${rec.err}`, 6, y0 + 4);
+    }
+    results.push(rec);
+    logEl.textContent = `[${tag || 'sheet'}] ${r + 1}/${list.length} ${rec.name}` + (rec.err ? ' ERR ' + rec.err : ' ok');
+  }
+
+  const outName = `sheet-${tag || 'all'}`;
+  const bytes = await savePng(outName, sheet);
+  logEl.textContent = results.map(o =>
+    o.name + ': ' + (o.err ? 'ERR ' + o.err :
+      `${o.vw}x${o.vh} ${o.fps}fps ${o.total}f ${Math.round(o.total / o.fps * 1000)}ms img=${o.imgs} | ` +
+      o.shots.map(s => `${s.pct}%(f${s.frame} cov=${s.cover}%${s.empty ? ' EMPTY' : ''})`).join(' '))
+  ).join('\n') + `\n\n落盘 out/${outName}.png (${bytes}B, ${sheet.width}x${sheet.height})`;
+  return { file: `out/${outName}.png`, bytes, width: sheet.width, height: sheet.height, results };
+};
+
+/**
+ * 生成礼物图标 — 抽一帧、按内容包围盒裁成正方形、缩到 192×192
+ *   __extractIcons([{ name:'bianbian', file:'bianbian', at:0.35, key:true }])
+ * key:true 时用众数色色键抠掉素材自带的压暗背景层；tol 默认 26
+ * 落盘名：<name>.png
+ */
+window.__extractIcons = async function (items) {
+  const results = [];
+  for (const it of items) {
+    const rec = { name: it.name, file: it.file || it.name, frame: 0, total: 0, fps: 0, box: null, cover: 0, alphaMax: 0, bytes: 0, killed: 0, err: '' };
+    try {
+      const vi = await loadVi((it.base || CAND_BASE) + rec.file + '.svga');
+      rec.total = vi.frames; rec.fps = vi.FPS;
+      rec.vw = vi.videoSize.width; rec.vh = vi.videoSize.height;
+
+      capCtx.clearRect(0, 0, CAP, CAP);
+      const player = new SVGA.Player(capCv);
+      player.setVideoItem(vi);
+      player.setContentMode('AspectFit');
+      const target = Math.max(1, Math.round(vi.frames * (it.at != null ? it.at : 0.35)));
+      rec.frame = await seekTo(player, vi, target);
+
+      const rawBox = alphaBox(capCtx, CAP, CAP);
+      if (rawBox.empty) throw new Error('frame fully transparent at ' + target);
+      rec.killed = it.key === true ? modalKey(capCtx, CAP, CAP, rawBox, it.tol != null ? it.tol : 26) : 0;
+
+      const b = alphaBox(capCtx, CAP, CAP);
+      if (b.empty) throw new Error('frame fully transparent after keying');
+      rec.alphaMax = b.alphaMax;
+      rec.cover = Math.round(b.lit / b.n * 1000) / 10;
+      rec.box = [b.minX, b.minY, b.maxX - b.minX + 1, b.maxY - b.minY + 1];
+
+      // 裁成带 6% 边距的正方形，再缩到 OUT
+      const bw = rec.box[2], bh = rec.box[3];
+      const side = Math.max(bw, bh);
+      const pad = Math.round(side * 0.06);
+      const s = side + pad * 2;
+      const sx = rec.box[0] + bw / 2 - s / 2;
+      const sy = rec.box[1] + bh / 2 - s / 2;
+
+      outCtx.clearRect(0, 0, OUT, OUT);
+      outCtx.imageSmoothingEnabled = true;
+      outCtx.imageSmoothingQuality = 'high';
+      outCtx.drawImage(capCv, sx, sy, s, s, 0, 0, OUT, OUT);
+      rec.bytes = await savePng(rec.name, outCv);
+    } catch (e) { rec.err = String(e && e.message || e); }
+    results.push(rec);
+    log(results, o =>
+      o.name + ' <- ' + o.file + ': ' + (o.err ? 'ERR ' + o.err :
+        `frame ${o.frame}/${o.total} @${o.fps}fps src=${o.vw}x${o.vh} box=${JSON.stringify(o.box)} ` +
+        `cover=${o.cover}% aMax=${o.alphaMax} killed=${o.killed} png=${o.bytes}B`));
+  }
+  return results;
+};
+</script>
+</body>
+</html>
