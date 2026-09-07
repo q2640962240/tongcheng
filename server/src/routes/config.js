@@ -18,13 +18,7 @@ const wxpay = require('../utils/wxpay')
 const alipay = require('../utils/alipay')
 const oss = require('../utils/oss')
 
-/** 管理员鉴权（与 admin.js 同款） */
-const adminAuth = (req, res, next) => {
-  const token = req.headers['x-admin-token']
-  if (!token || !token.startsWith('admin_')) return fail(res, '请先登录', 401)
-  req.adminId = token.replace('admin_', '')
-  next()
-}
+const { adminAuth } = require('../middleware/adminAuth')
 
 router.use(adminAuth)
 

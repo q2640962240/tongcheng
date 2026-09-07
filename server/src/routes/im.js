@@ -9,6 +9,7 @@
 const router = require('express').Router()
 const { success, fail } = require('../utils/response')
 const { auth } = require('../middleware/auth')
+const { adminAuth } = require('../middleware/adminAuth')
 const { getModuleConfig } = require('../utils/config')
 const { genUserSig, importIMAccount, importIMAccountV4 } = require('../utils/im')
 const { User } = require('../models')
@@ -40,11 +41,12 @@ router.get('/config', async (req, res, next) => {
 })
 
 /**
- * GET /api/im/diag  — 排障专用（无需登录）
+ * GET /api/im/diag  — 排障专用（需管理员令牌）
  * 返回 IM 模块在服务端的当前视图：配置是否齐全、userSig 签发算法、核心字段长度。
- * 用法：浏览器直接访问 https://zyb001.cn/api/im/diag 检查运营配置。
+ * 用法：curl -H "x-admin-token: <登录后台拿到的令牌>" https://zyb001.cn/api/im/diag
+ * 刻意不返回 secretKey 本身，只返回长度与「是否已填」。
  */
-router.get('/diag', async (req, res, next) => {
+router.get('/diag', adminAuth, async (req, res, next) => {
   try {
     const { cfg, ready } = await loadImCfg()
     const result = {
@@ -348,14 +350,9 @@ async function callCloudApi({ cfg, service, version, action, region, payload }) 
 /**
  * POST /api/im/batch-import (管理员)
  * 批量把业务用户（含 AI 虚拟大神）导入腾讯云 IM，管理员手动触发。
- * 鉴权：x-admin-token 头部（admin_ 前缀，与 admin 后台一致）。
  */
-router.post('/batch-import', async (req, res, next) => {
+router.post('/batch-import', adminAuth, async (req, res, next) => {
   try {
-    const token = req.headers['x-admin-token']
-    if (!token || !String(token).startsWith('admin_')) {
-      return fail(res, '管理员令牌无效', 401)
-    }
     const { cfg } = await loadImCfg()
     if (!cfg.enabled) return fail(res, 'IM 未启用', 503)
     if (!cfg.cloudSecretId || !cfg.cloudSecretKey) {

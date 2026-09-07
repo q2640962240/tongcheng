@@ -1,24 +1,16 @@
 const express = require('express')
 const router = express.Router()
 const { User, Service, ServiceCategory, Order, Wallet, Feedback, Admin, Transaction, Invite, Message, Post, Group, Banner, EliteOrder, Gift, GiftRecord, Comment, Review, SignIn, DailyTask, Follow, Greeting, Op } = require('../models')
-const { signToken } = require('../middleware/auth')
+const { adminAuth, signAdminToken, adminSecretMissing } = require('../middleware/adminAuth')
 const { success, paginate, fail } = require('../utils/response')
-
-/** 管理员鉴权中间件 */
-const adminAuth = (req, res, next) => {
-  const token = req.headers['x-admin-token']
-  if (!token) return fail(res, '请先登录', 401)
-  // 简易 token 校验（生产环境用 JWT）
-  if (!token.startsWith('admin_')) return fail(res, '管理员令牌无效', 401)
-  const adminId = token.replace('admin_', '')
-  if (!adminId) return fail(res, '管理员令牌无效', 401)
-  req.adminId = adminId
-  next()
-}
 
 /** 管理员登录 */
 router.post('/login', async (req, res, next) => {
   try {
+    // 必须挡在下面的「空库自动创建 superadmin」之前：否则密钥缺失时仍会建出管理员行，
+    // 却没有令牌可签发，留下一个「存在但永远登录不了」的账号
+    if (adminSecretMissing()) return fail(res, '服务端未配置 ADMIN_JWT_SECRET，管理后台暂不可用', 503)
+
     const { username, password } = req.body
     if (!username || !password) return fail(res, '请输入账号密码')
 
@@ -35,7 +27,7 @@ router.post('/login', async (req, res, next) => {
     if (!admin || !admin.verifyPassword(password)) return fail(res, '账号或密码错误')
 
     await admin.update({ lastLoginAt: new Date().toISOString() })
-    const token = `admin_${admin.id}`
+    const token = signAdminToken(admin.id)
     success(res, {
       token,
       admin: { id: admin.id, username: admin.username, nickname: admin.nickname, role: admin.role }

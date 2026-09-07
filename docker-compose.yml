@@ -72,10 +72,17 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: "${REDIS_PASSWORD:-BaiyeRedis2026!}"
-      JWT_SECRET: "${JWT_SECRET:-baiye_prod_jwt_secret_please_change_ME_2026_v1_abcdef}"
+      # ⚠️ 三个密钥都不给 fallback 默认值：必须来自 /opt/baiye/.env。
+      # 旧值曾以 `${JWT_SECRET:-<明文>}` 的形式写在这里并随 public 仓库发布，
+      # 2026-09-08 实测能用它伪造任意用户的登录令牌（AGENTS.md 坑点 33）。
+      # 缺失时 server/src/config/index.js 的 assertProdSecrets() 会让容器 crash-loop
+      # 并打印修法 —— 这是刻意的：静默退化成 'dev_secret' 比崩溃危险得多。
+      JWT_SECRET: "${JWT_SECRET:?必须在 .env 设置}"
       JWT_EXPIRES_IN: 7d
-      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET:-baiye_prod_jwt_refresh_secret_please_change_ME_2026_v1}"
+      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET:?必须在 .env 设置}"
       JWT_REFRESH_EXPIRES_IN: 30d
+      # 管理后台令牌用独立密钥，不复用也不派生自 JWT_SECRET（派生值可被算出来）
+      ADMIN_JWT_SECRET: "${ADMIN_JWT_SECRET:?必须在 .env 设置}"
       APP_NAME: "白夜"
       APP_DOMAIN: "${APP_DOMAIN:-https://zyb001.cn}"
       CORS_ORIGINS: "${CORS_ORIGINS:-*}"

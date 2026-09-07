@@ -1,20 +1,8 @@
 const express = require('express')
 const router = express.Router()
 const { Banner, Op } = require('../models')
-const { Admin } = require('../models')
 const { success, paginate, fail } = require('../utils/response')
-
-/** 管理鉴权（与 admin.js 保持一致，避免循环引用） */
-const adminAuth = async (req, res, next) => {
-  const token = req.headers['x-admin-token']
-  if (!token) return fail(res, '请先登录管理后台', 401)
-  const id = String(token).startsWith('admin_') ? Number(token.slice(6)) : NaN
-  if (!id) return fail(res, '无效 token', 401)
-  const admin = await Admin.findByPk(id)
-  if (!admin) return fail(res, '管理员不存在', 401)
-  req.adminId = admin.id
-  next()
-}
+const { adminAuth } = require('../middleware/adminAuth')
 
 /** 前端公开列表（只返回启用中、可按位置过滤、不暴露内部字段） */
 router.get('/', async (req, res, next) => {

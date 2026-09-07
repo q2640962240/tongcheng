@@ -45,7 +45,8 @@ import { login } from '../../api'
 
 const router = useRouter()
 const loading = ref(false)
-const form = ref({ username: 'admin', password: 'admin123' })
+// 不预填任何凭据：预填会让生产管理员口令出现在页面上并被打进构建产物
+const form = ref({ username: '', password: '' })
 
 const onLogin = async () => {
   if (!form.value.username || !form.value.password) {
