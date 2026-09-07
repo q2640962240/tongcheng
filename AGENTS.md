@@ -242,6 +242,31 @@ cd app && npm install && npm run dev:h5
     - **`/admin/login` 有空库自动引导**：若 `admin` 表查不到任何行，`username === 'admin' && password === 'admin123'` 会**自动创建一个 superadmin**。生产库该行已存在所以分支不触发，但**全新环境上第一个访问该端点的人就成为超管**。未修（超出本轮范围），部署新环境时要注意先把库初始化好再暴露端口。
     - **网关日志留存极短，事后审计能力接近于零**：`baiye-gateway` 容器内 `access.log -> /dev/stdout`、`error.log -> /dev/stderr`，**无落盘、无轮转**，`baiye_gateway-logs` 卷里只有这两个符号链接。容器 2026-09-07T19:47:39Z 启动，`docker logs` 总量仅 19KB ≈ 9 小时。想查「有没有被利用过」只能覆盖到这 9 小时。**在这 9 小时里已确认有主动扫描**：`195.182.16.23` 打 `GET /SDK/webLanguage`（已知设备漏洞探测路径）、`119.249.100.x` 打 robots.txt ×4、PerplexityBot、百度蜘蛛若干。若要长期审计需给 nginx 配落盘 + logrotate。
 
+35. **★ 封掉伪造洞 ≠ 管理后台安全了：合法口令 `admin`/`admin123` 本身是公开的且可用，而后台根本没有「改自己密码」这个功能 ★**（2026-09-08 坑点 32 收口之后查出，尚未处置）
+    - **反讽的证据来源**：坑点 32 那份 24/24 PASS 的验证脚本，C 组「真实管理员登录必须仍然可用」就是**从公网用 `admin`/`admin123` 登进去的** —— 拿到 200 + 157 字符的 12h JWT，然后 200 读到 `/api/admin/users` 的真实手机号、`/api/admin/config/modules/sms` 的明文云 AK/SK、`/api/im/diag`、`/api/admin/banners`。**「真令牌仍可用」这一项在证明功能没被锁死的同时，也证明了合法入口大开。** 以后写这类验证脚本，要把「我用的是什么凭证、这凭证是否公开」当成一条独立结论读出来，别只当成功路径的垫脚石。
+    - **上次「不改密码」的决定前提已经反转**：当时鉴权有 `admin_1` 伪造洞，改不改密码都拦不住人，所以口令不是瓶颈；洞封了之后，口令**变成唯一入口**，而它是公开的。
+    - **穷尽验证：改密功能不存在**（别再去后台里找）—— ① `server/src/routes/admin.js` 的全部路由里**没有任何管理员改自己密码的端点**，只有改**用户**密码的 `:337-343` / `:386-390`（走 `User.setPassword`）；② `admin/src` 里 `password` 字段只出现在三处：`Login.vue`（登录表单）、`Settings.vue:132`（配置中心 `v-else-if="f.type === 'secret'"` 的密钥输入框，与管理员口令无关）、`Users.vue`（改真人/AI **用户**的登录密码，`form.password=''` 表示不改）；③ `admin/src/router/index.js` 的 21 条路由（login / dashboard / users / chat-records / services{,/categories} / orders / finance{,/elite-orders} / invite / content / discover/{posts,groups} / operations/{banners,announcements,sign-ins} / auth/certifications / gifts / content/{comments,reviews}）里**没有对应页面**。
+    - **所以 `README.md:337` 的「登录后『管理员信息』立即改密」是文档承诺了一个不存在的能力** —— 本来归 D12「删假文案」，但它现在有安全含义：它会让人以为风险已经可以自己关掉。
+    - **生产 `admins` 表只有 1 行**（2026-09-08 实测，只打印非敏感字段）：`id=4 / username=admin / role=superadmin / hashLen=60 / hashIsBcrypt=true`。与坑点 32 里 JWT payload 的 `id:4` 吻合。改密不会漏掉别的账号。
+    - **`Admin` 模型没有 `setPassword`，靠 `password` 的 setter 自动 bcrypt**（`models/Admin.js:17-26`）：`set(val)` 里 `isBcryptHash(str) ? str : bcrypt.hashSync(str, 10)`，所以 `a.password = '新口令'; await a.save()` 就够了，且**重复赋值已哈希的值不会二次加密**。注意 setter 对空串是 `if (!str) return` **静默忽略**——传空密码不会报错也不会清空，任何改密脚本必须自己先卡长度。`verifyPassword()` 还兼容明文老数据（`isBcryptHash` 为假时直接字符串比较）。
+    - **★ 已验证的「零残留」改密预演手法：事务 + rollback ★** —— 想在生产证明写路径通、又不想真改口令，就在一个事务里改、reload、验证，然后回滚，再在事务外确认哈希一字未变：
+      ```js
+      const t = await seq.transaction()
+      const a = await Admin.findOne({ where: { username: 'admin' }, transaction: t })
+      const before = String(a.password)
+      a.password = pw; await a.save({ transaction: t })
+      const b = await Admin.findOne({ where: { username: 'admin' }, transaction: t })
+      // → hashChanged=true hashLen=60 isBcrypt=true verifyNew=true
+      await t.rollback()
+      const c = await Admin.findOne({ where: { username: 'admin' } })
+      // → hashUnchanged=true decoyRejected=true
+      ```
+      实测输出正是这两行。**这比「拿真口令试一次」安全得多**，且顺带证明了 setter、bcrypt、save、reload、verifyPassword 整条链在生产容器里都活着。
+    - **交给用户自己跑的命令必须让口令走 stdin，不能进 argv** —— `docker exec -e PW='...'` 或 `node -e "...'字面口令'..."` 都会出现在本机 shell history、远端 `ps` 和对话记录里。可用的形态是 `read -rs NEWPW` → `printf '%s' "$NEWPW" | ssh ... "docker exec -i -w /app baiye-server node -e '...'"`，脚本内用 `require('fs').readFileSync(0,'utf8').trim()` 读 fd 0。**两个踩过的坑**：① `readFileSync(0)` 要求 stdin 是管道（`ssh` 不加 `-t` 时天然满足）；② 通过 ssh 传 `node -e '...'` 时脚本在**本机双引号内**，所以脚本里的 `"` 要写成 `\"`，而 **`$` 会被本机 bash 先展开**——正则 `/^\$2[aby]\$/` 这种会被啃掉反斜杠，改用模型导出的 `Admin._isBcryptHash(v)` 就完全不用写 `$`。另：`process.stdin.on('end', ...)` 后面**不要**再跟 `()`，那是把 stream 当函数调，会报 `process.stdin.on(...) is not a function`。
+    - **仓库内 `admin123` 在当前 HEAD 有 26 处命中（不只是 git 历史）**：`README.md:74,88,304,337`（**把它当默认凭证公开发布**）、`server/src/routes/admin.js:19,22`（**活代码**：坑点 34 的空库自动引导）、`server/src/seed.js:14,137,141`、`server/.env.example:139`、`deploy/02-deploy-app.sh:140,219`、`deploy/04-first-boot.sh:57`、`server/scripts/smoke-check.js:29`、`smoke-extended.js:37`、`_e2e_diagnose.js:58,116,191`、`scripts/setup-test-accounts.js:112,170`、`server/test/e2e.test.js:581,582`、`.trae/specs/.../tasks.md:189,194`、`spec.md:70`、`AGENTS.md:242`。
+    - **优先级判断：改活口令能一次性作废这 26 处对生产的威胁** —— 公开的那个字符串不再对应任何活凭证。剩下的仓库清扫解决的是**另一个**问题：「新部署天生弱口令」（尤其 `admin.js:19-22` 那段活代码 + `README.md` 的 4 处发布），归 D12。**别把两件事混成一件，也别指望只做仓库清扫就能关掉线上的洞。**
+    - **⚠️ 截至 2026-09-08 深夜再次复查，GitHub 仓库仍是 `private: false`**（同一条 API 判据），坑点 33 里「用户会在控制台改 private」这一步**仍未执行**，泄露窗口开着。
+
 ## 服务器信息
 
 > ⚠️ **本表刻意不含任何口令。** 生产凭证（MySQL / Redis / 管理后台账号密码 / SSH 私钥路径 /
