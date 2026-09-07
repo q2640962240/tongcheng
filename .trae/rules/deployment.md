@@ -16,10 +16,13 @@
 | 仓库 | github.com/q2640962240/tongcheng | main |
 | 服务器路径 | /opt/baiye | git clone 目标 |
 | 容器 | Docker Compose (2.29+) | 6 容器 2 网络 |
-| 管理员 | admin / admin123 | https://zyb001.cn/admin/ |
-| MySQL | Baiye@2024! | DB companion_play |
-| Redis | BaiyeRedis2026! | 64MB + AOF |
-| JWT | baiye_prod_jwt_secret_please_change_ME_2026_v1_abcdef | — |
+| 管理员 | 账号口令见本机记忆库（见 AGENTS.md「服务器信息」） | https://zyb001.cn/admin/ |
+| MySQL | 口令见本机记忆库 | DB companion_play，仅绑 127.0.0.1:3306 |
+| Redis | 口令见本机记忆库 | 64MB + AOF，仅绑 127.0.0.1:6379 |
+| JWT | 旧值曾在此明文发布且与线上活密钥相同，**已于 2026-09-08 轮换作废** | 现值只在服务器 `/opt/baiye/.env`；见 AGENTS.md 坑点 33 |
+
+> ⚠️ 本表的服务器 IP / SSH 密钥名是**旧机器**（101.132.17.214），当前生产是 114.55.225.77。
+> 连接信息以 AGENTS.md「服务器信息」+ 本机记忆库为准；本文件只有「禁止事项」仍然有效。
 
 ---
 

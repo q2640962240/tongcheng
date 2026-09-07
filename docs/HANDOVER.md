@@ -66,7 +66,7 @@ companion-play-app/
 
 | 项 | 状态 |
 |---|---|
-| SSH | root@114.55.225.77 密钥登录 (`~/.ssh/tongcheng.pem`) |
+| SSH | root@114.55.225.77 密钥登录（私钥路径见本机记忆库，见「六、关键凭据」） |
 | HTTPS | https://zyb001.cn → 200 OK |
 | API | https://zyb001.cn/api/health → `{"status":"ok","driver":"mysql","dbOk":true}` |
 | 容器 | 6 个全部运行 (gateway, server, admin, h5, mysql, redis) |
@@ -264,19 +264,24 @@ AI 自动回复
 
 ## 六、关键凭据
 
+> ⚠️ **本节刻意不含任何口令。** 生产凭证（MySQL / Redis / 管理后台账号密码 / SSH 私钥路径 /
+> 三个 JWT 密钥的存在性 / 阿里云 RAM AK）统一存放在**本机记忆库**：
+> `C:\Users\chen\.qoder-cn\projects\D--tongcheng-companion-play-app\memory\reference-server-access.md`
+> （不在 git 仓库内、不会被推送）。背景与残留风险见 `AGENTS.md` 坑点 33。
+
 | 项 | 值 | 备注 |
 |---|---|---|
-| 服务器 IP | **114.55.225.77** | 阿里云 ECS (非轻量) |
-| SSH 用户 | root | 密钥: `~/.ssh/tongcheng.pem` |
+| 服务器 IP | **114.55.225.77** | 阿里云 ECS（非轻量），可由 `zyb001.cn` DNS 解析得到 |
+| SSH 用户 | root | 密钥登录，私钥路径见记忆库 |
 | 域名 | zyb001.cn | DNS A → 114.55.225.77 |
-| 管理员账号 | admin / admin123 | https://zyb001.cn/admin/ |
-| MySQL 密码 | Baiye@2024! | DB: companion_play |
-| Redis 密码 | BaiyeRedis2026! | 64MB + AOF |
-| JWT Secret | baiye_prod_jwt_secret_please_change_ME_2026_v1_abcdef | |
-| IM sdkAppId | 1600159799 | 腾讯云 IM |
-| SSL 证书 | Let's Encrypt | 有效至 2026-11-29 |
+| 管理后台 | https://zyb001.cn/admin/ | 账号口令见记忆库 |
+| MySQL | DB `companion_play`，容器 `baiye-mysql`，仅绑 `127.0.0.1:3306` | 口令见记忆库 |
+| Redis | 容器 `baiye-redis`，64MB + AOF，仅绑 `127.0.0.1:6379` | 口令见记忆库 |
+| JWT Secret | — | 旧值曾明文发布且与线上活密钥相同，**已于 2026-09-08 轮换作废**；现值只在服务器 `/opt/baiye/.env` |
+| IM sdkAppId | 1600159799 | 腾讯云 IM，`GET /api/im/config` 本就公开返回 |
+| SSL 证书 | Let's Encrypt | 有效至 2026-12-05（仓库内的 pem 是占位文件，见 AGENTS.md 坑点 33） |
 
-**注意**: 域名和 ECS 在不同阿里云账号下。RAM 子账号 `zyb001` (AccessKeyId: LTAI5t7HzC1KfbpCchhfDe7T) 无法管理 ECS 安全组。
+**注意**: 域名和 ECS 在不同阿里云账号下。RAM 子账号 `zyb001` 无法管理 ECS 安全组（AccessKeyId 见记忆库，且用户已决定轮换该 AK/SK）。
 
 ---
 

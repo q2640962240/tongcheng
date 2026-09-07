@@ -241,7 +241,7 @@ npm run dev           # http://localhost:3000
 ```
 
 种子数据初始化后：
-- 管理员账号：`admin` / `admin123`（仅初始化管理员与配置中心空模板，**生产级默认不预置任何测试用户 / 服务 / 订单**）
+- 管理员账号：`admin` + 默认口令（硬编码在 `server/src/seed.js` 与 `server/src/routes/admin.js` 的空库自动引导分支里，**任何真实部署都必须立刻改密**；仅初始化管理员与配置中心空模板，**生产级默认不预置任何测试用户 / 服务 / 订单**）
 - 真实用户需要用户端自行注册（短信验证码），或在管理后台「用户管理」手动创建。
 
 ### 启动管理后台
@@ -473,10 +473,10 @@ npm run dev:h5        # http://localhost:5173 （自动代理 /api 到 3000）
 | 域名 + SSL | `zyb001.cn` + `www.zyb001.cn`；Let's Encrypt SAN 证书（有效期至 2026-11-27），certbot cron 自动续期（`/etc/cron.d/baiye-cert-renew`）|
 | 部署 CI/CD | GitHub Actions `.github/workflows/deploy.yml`（Smart Build v2）：`push main` → appleboy SSH 连接 → `git diff OLD NEW` 智能判断 → 只构建变更服务（30s~3min 小改动，对比旧 15-30min 全量）；FORCE_REBUILD / ONLY_START 手动触发参数已支持 |
 | CI/CD Secrets | GitHub Settings → Secrets → Actions：SERVER_HOST / SERVER_PORT / SERVER_USER / SERVER_SSH_KEY（ed25519 私钥，完整 6-8 行，头尾含 BEGIN/END OPENSSH PRIVATE KEY）|
-| 生产管理员 | https://zyb001.cn/admin/ `admin / admin123`（**请尽快修改**）|
-| 生产 MySQL | 容器内 DB `companion_play`；utf8mb4_unicode_ci；环境变量 `MYSQL_ROOT_PASSWORD=Baiye@2024!` |
-| 生产 Redis | 容器内 `requirepass BaiyeRedis2026!`；64MB maxmemory-policy allkeys-lru；AOF fsync everysec |
-| 生产 JWT Secret | `baiye_prod_jwt_secret_please_change_ME_2026_v1_abcdef`（建议上线前替换新 commit）|
+| 生产管理员 | https://zyb001.cn/admin/ 账号口令见本机记忆库（AGENTS.md「服务器信息」）|
+| 生产 MySQL | 容器内 DB `companion_play`；utf8mb4_unicode_ci；口令由 `/opt/baiye/.env` 的 `MYSQL_ROOT_PASSWORD` 提供（见记忆库），仅绑 `127.0.0.1:3306` |
+| 生产 Redis | 容器内 `requirepass`，口令由 `.env` 的 `REDIS_PASSWORD` 提供（见记忆库）；64MB maxmemory-policy allkeys-lru；AOF fsync everysec；仅绑 `127.0.0.1:6379` |
+| 生产 JWT Secret | 旧值曾在此与 `docker-compose.yml` fallback 里明文发布、且与线上活密钥相同（可伪造任意用户令牌），**已于 2026-09-08 轮换作废**；compose 现为 `${JWT_SECRET:?}` 强校验，`config/index.js` 的 `assertProdSecrets()` 会在缺失/弱值/命中已泄露值时让容器 fail fast。见 AGENTS.md 坑点 33 |
 | APP_DOMAIN 默认 | `https://zyb001.cn`（docker-compose.yml environment）|
 
 #### 8.2 6 容器拓扑

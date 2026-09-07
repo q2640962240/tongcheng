@@ -2,10 +2,10 @@
 --
 -- 执行前提（缺一不可）：
 --   1. 已跑 2026-09-08-gifts-precheck.sql 且输出与「期望」全部一致
---   2. 已备份：
---      ssh -i ~/.ssh/tongcheng.pem root@114.55.225.77 \
+--   2. 已备份（SSH 私钥路径与 MySQL root 口令见本机记忆库，勿写入仓库）：
+--      ssh -i <SSH_KEY> root@114.55.225.77 \
 --        'mkdir -p /opt/baiye/backup && docker exec baiye-mysql sh -c \
---         "mysqldump -uroot -p\"Baiye@2024!\" --single-transaction companion_play gifts \
+--         "mysqldump -uroot -p\"<MYSQL_ROOT_PASSWORD>\" --single-transaction companion_play gifts \
 --          > /tmp/gifts-$(date +%F-%H%M).sql" && docker cp baiye-mysql:/tmp/gifts-*.sql /opt/baiye/backup/'
 --   3. 用户已批准本脚本（sort 属排序字段，price 出现在 INSERT 新行中）
 --

@@ -345,9 +345,10 @@ router.get('/search/:userId', auth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// AI 闸门阈值。取值依据 2026-09-08 生产实测：真人会话（12-25 / 12-27）滚动 10 分钟内
-// AI 回复峰值只有 2 / 3 条，而脚本刷出来的 AI↔AI 会话（12-13）同一窗口达到 20 条。
-// 15 条上限远高于任何真实对话，又能封住刷量（同时也就是封住 LLM 花费）。
+// AI 闸门阈值。取值依据 2026-09-08 生产实测（闸门只统计 senderId = aiUser.id 的回复）：
+// 全站任意 AI 发送方、任意会话的滚动 10 分钟历史峰值是 5 条（2026-09-01 那轮脚本刷量），
+// 真人↔AI 会话（12-25 / 12-27）只有 2 / 3 条。15 是「失控与 LLM 花费」的上限，
+// 约为观测最坏值的 3 倍，不是按峰值贴合出来的——别把它当业务限流来调。
 const AI_GATE_COOLDOWN_SEC = 2
 const AI_GATE_WINDOW_MIN = 10
 const AI_GATE_MAX_PER_WINDOW = 15

@@ -181,22 +181,105 @@ cd app && npm install && npm run dev:h5
     - **验证闸门本身也要用生产同款 schema**：取 `SHOW CREATE TABLE gifts` 照抄 DDL 建临时库（`baiye_gate_test`），**故意不插 id=1**，再逐项测四个行为：断言成立时静默不插行 / 不成立时 ERROR 1048 + 退出码 1 / 后续语句不执行 / 未提交事务在新连接里确实回滚。测完 `DROP DATABASE`——验证脚本若在中途被闸门中止，**它末尾的清理语句也不会执行**，临时库会残留在生产实例上（本次就残留了，已手工 DROP）。
     - 另：SQL 文件必须 `docker cp` 进容器再 `< /tmp/x.sql`，不能靠管道传（会丢字符集）；`mysqldump` 备份也要带 `--default-character-set=utf8mb4`，否则备份文件里的中文同样是坏的。
 
+30. **「在线状态」的写入点必须在鉴权中间件，不在 Socket.IO connect —— 否则这个功能对主通道用户从来没生效过**（2026-09-08 D7 修，`8d935b1` + `c23824f`，生产实测通过）
+    - **消费方只有一处**：`server/src/routes/user.js:121` 的 `isOnline = (now - lastActiveAt) < 5 分钟`，供首页/发现页的在线绿点。
+    - **修复前唯一的生产者是 `app.js` 的 Socket.IO connect**，但主通道是官方 TUIKit、走腾讯云 IM 收发，**从不连自建 Socket.IO**。只有兜底页 `pages/chat/chat.vue`（IM 就绪时立刻 `redirectTo` TUIChat，几乎不存活）和 `pages/chat-list/chat-list.vue`（在 `pages.json` 里注册了，但**不在 tabbar、全项目没有任何入口导航到它**）会 `chatSocket.connect()`。生产实测：6 个真人用户里 **5 个 `lastActiveAt` 为 NULL**，剩下 1 个已 stale 31 小时 → 绿点对所有人恒为 false。任务 #43「Phase 3.1: 在线状态」当年标记完成，实际是个死功能。
+    - **改法**：新增 `server/src/utils/presence.js`，在 `middleware/auth.js` 的 `auth` **和** `optionalAuth` 里各调一次 `touch(userId)`（`/user/discover` 用的是 `optionalAuth`，只挂 `auth` 会漏掉纯浏览场景）。主通道的活跃聊天会经 `POST /chat/im-sync` 回报、浏览会经列表接口，两条都覆盖到。`app.js` 的 connect 写入也改成走同一个 `touch`，避免两条路径各写一次。
+    - **两个必须一起写的细节**：① **内存节流 60s**，且必须**显著小于**消费方的 5 分钟窗口，否则用户明明在线也会被判掉线；② `User.update(..., { silent: true })`，否则心跳会把 `users.updated_at` 刷成每分钟一次，毁掉「资料最后修改时间」的语义（全项目没有任何地方消费 `users.updated_at`，但别把它变成噪声）。
+    - **生产实测证据**：一次 `GET /api/user/profile` 后 `last_active_at` 变成 2 秒前、`updated_at` 仍停在 3 小时前（`silent` 生效）；紧接着第二次请求 `last_active_at` **完全不变**（节流生效）；`GET /api/user/discover` 里 23 号 `isOnline=true`、`onlineIds=[23]`（修复前恒为 `[]`）。
+    - **前端一行没改**：原计划要给 `chatSocket.js` 加 60s `setInterval` 心跳 + `visibilitychange` 守卫，但主通道根本不连 socket，加了也只覆盖那条几乎不存活的兜底路径，收益接近零还要担坑点 17 的 `document` 守卫风险。**别"顺手把前端心跳补上"。**
+    - **管理员不会污染 presence**：`routes/admin.js` 用完全独立的 `x-admin-token` + `req.adminId`，不经 `auth`/`optionalAuth`，所以 `touch()` 永远拿不到管理员 ID（否则会把管理员 ID 当成用户 ID 写进 `users` 表）。
+
+31. **AI 自动回复闸门：三个触发点收口在 `tryAiAutoReply` 入口，而「对方 lastActiveAt 超过 N 分钟才回复」这一条不能用**（2026-09-08 D7）
+    - 触发点有三个：`chat.js` 的 im-sync、`chat.js` 的 `POST /chat/messages`、`app.js` 的 Socket.IO `message`。三者**都已经** gate 在 `other.userType === 'ai'` 上，所以闸门只加在 `tryAiAutoReply` 里，且必须在拉历史消息与调 LLM **之前**——否则被拦下的请求照样产生一次上下文查询和 token 花费。三个触发点零改动复用。
+    - **⚠️「按对方活跃度决定要不要回复」这个思路在本项目是错的**：触发前提就决定了对端必是 AI 用户，而 AI 用户从不登录，`lastActiveAt` 恒为 NULL 或极旧（生产 11 个 AI 用户里 10 个是 NULL，唯一非空的 12 号已 stale 31 小时）。该条件**恒真等于没写**；反过来若把 NULL 当成「刚活跃」处理，会让 10 个 AI 用户**永久哑掉**。同理，「两个真人账号互发消息、期望日志出现 skip」这种验证场景**根本不可能触发** `tryAiAutoReply`（真人对真人不进这个函数），别照着写测试。
+    - **真正落地的三条**：① `sender-is-ai`（发起方也是 AI 就不回）——**不是空防御**，生产 `messages` 29→30 真发生过一轮：AI 12 发给 AI 13，AI 13 回了本地兜底句。只到深度 1 未失控，是因为自动回复直接 `Message.create`、不会再进触发点；② `cooldown` 2 秒；③ `window-cap` 滚动 10 分钟内同一 AI 发送方最多 15 条。每次 skip 都打 `[ai-gate] skip reason=... conv=... sender=... ai=...`，否则「AI 怎么不回复了」这类问题无法定位。
+    - **阈值依据（别重复我犯过的统计错误）**：闸门只数 `senderId = aiUser.id` 的回复。会话 `12-13` 两端**都是 AI 用户**，按会话统计消息数会把两边都算进去、得出「20 条/10 分钟」的**假峰值**；按单发送方统计，全站历史真实峰值是 **5 条**，真人↔AI 会话（`12-25`/`12-27`）是 2/3 条。所以 15 是「失控与 LLM 花费」的上限（约观测最坏值 3 倍），**不是业务限流**，别拿它去调对话体验。
+    - **零污染验证手法**：在容器内直接 `require('/app/src/routes/chat').tryAiAutoReply({...})`，被闸门拦下时不会创建任何行。`cooldown` **不靠真实回复路径计时**——它会 `await` 腾讯 IM REST，可能 >2s，等它返回时冷却窗口已过期；改为插一条锚点消息、验完立刻 `destroy`。`window-cap` 不造 15 条垃圾消息，改用生产真实数据回放同一条查询、把 `limit` 换成 3，证明「limit 截断 + `length >= limit`」这个形状双向都对（`limit=3 / trueCount=3 → 触发`、`limit=15 → 不触发`）。实测：会话 `12-23` 消息数 1→2（放行 +1）→3（插锚点）→3（cooldown 拦下，不变）→2（删锚点）；`12-13` 33→33（sender-is-ai 拦下）；全站消息 308→309；探针残留 **0 行**。
+    - **验证脚本必须放容器内 `/app` 而不是 `/tmp`**：`/tmp/x.js` 解析不到 `/app/node_modules`，直接报 `Cannot find module 'jsonwebtoken'`。用 `docker cp` + `docker exec -w /app baiye-server node x.js`，跑完删掉。
+
+32. **管理 API 的鉴权曾是「token 以 `admin_` 开头就放行」，公网可伪造 —— 已收口成签名 JWT**（2026-09-08 P0，已修）
+    - **旧实现有四份互不相同的弱副本**：`routes/admin.js:7-16`、`routes/config.js:22-27`、`routes/im.js:355-357` 三份**只检查 `token.startsWith('admin_')`，既不验签名也不查库**；`routes/banners.js:8-17` 多一步 `Admin.findByPk(id)` 但同样接受未签名的 `admin_<id>`。而 `POST /admin/login` 签发的就是字面量 `'admin_' + admin.id`。
+    - **公网实测（修复前，https://zyb001.cn）**：带 `admin_1` 返回 200；带 **`admin_99999`（一个根本不存在的 id）也返回 200** —— 这一条证明连库都没查，不是「id 可猜」而是「无校验」。不带 header 返回 401（所以平时看着像有鉴权）。
+    - **能读到什么**：`/api/admin/users` 返回**真实手机号**；`/api/admin/config/modules/{sms,oss,im}` 返回**明文阿里云 accessKeyId + accessKeySecret（两对）**、**腾讯 IM secretKey + sdkAppId + adminUserId**。**能写什么**：34 个写端点全敞开（封号、调余额、审批提现、退款、改配置中心、删动态/礼物/评论）。拿到 IM secretKey + adminUserId 后可直接调 v4 REST **读任意用户私聊记录并冒充任意用户发消息**。
+    - **修法**：新建 `server/src/middleware/adminAuth.js` 作为**全站唯一实现**，四个路由文件改为 `require` 它。用 `jwt.verify` 验签 + `payload.type === 'admin'` 断言 + 有效期 12h。
+    - **密钥必须是独立的 `ADMIN_JWT_SECRET`，「派生自 `config.jwt.secret`」这个方案已被证伪**：我第一版写的是 `process.env.ADMIN_JWT_SECRET || \`${config.jwt.secret}::baiye-admin\``，理由是「复用会让用户 JWT 变管理员令牌，强制新增环境变量又怕漏改把人锁在外面」。**但实测发现线上 `JWT_SECRET` 与仓库公开串逐字节相同（见坑点 33），派生值任何读过仓库的人都算得出来 —— 等于没修。** 最终设计：生产环境**必须**有独立且合格的 `ADMIN_JWT_SECRET`，缺失**或命中公开占位串**（判定见坑点 33 的 `config.isWeakSecret`）就 **fail closed**（`adminAuth` 返回 503、`signAdminToken` 抛错、`/admin/login` 用 `adminSecretMissing()` 返回 503、`config/index.js` 启动时打 WARN），只有非生产环境才退回派生值图方便。`ADMIN_JWT_SECRET` 缺失只锁管理后台、不影响用户端，所以是 503 而不是让整个 API crash。
+    - **`/admin/login` 的 503 检查必须挡在「空库自动创建 superadmin」之前**，否则密钥缺失时仍会建出管理员行却没有令牌可签发，留下一个「存在但永远登录不了」的账号。
+    - **`type:'admin'` 是纵深防御不是必需**：普通用户 JWT 里没有 `type` 字段（解码确认过），所以即使将来两个 secret 被配成同一个值，用户 token 仍过不了这条断言。
+    - **查库那段必须带 `typeof Admin.findByPk === 'function'` 守卫**：`config.db.driver` 在本地开发是 `'json'`、生产是 `'mysql'`；JSON 驱动下 `define()` 返回的是 Collection 实例、**没有 `findByPk`**。签名校验才是真正的安全边界，查库只是拦掉「已被删除的管理员」，所以守卫失败时 `catch` 里**必须 fail closed**（返回 401），不能放行。
+    - **前端零改动**：`admin/src/api/http.js:11-13` 把 `localStorage.admin_token` 原样塞进 `x-admin-token`，`:29-33` 收到 401 就清 token + 跳 `/login`。所以令牌格式换成 JWT 后，用户只是**被要求重新登录一次**。`/admin/login` 的响应结构也刻意保持不变（`{token, admin}`）。
+    - **`req.adminId` 从 string 变成 number 是安全的**：消费方只有 `admin.js:245`（`extra.operatorId`）、`:531`（`handledBy`）、`:619`、`:1881`，且 `banners.js:15` 本来就赋的是 `admin.id`（number），number 才是既有先例。
+    - **`banners.js` 有个容易漏的点**：它被**同时挂载在两个路径**上 —— `/api/banners`（`app.js:127`，公开）和 `/api/admin/banners`（`app.js:130`）。而它的 `router.post('/')` / `put('/:id')` / `delete('/:id')` 是把 `adminAuth` 挂在**路由级**而不是 `router.use`，所以**公开挂载点上的 `POST /api/banners` 修复前一样可伪造**。改这个文件时别只看 admin 挂载点。
+
+33. **GitHub 仓库曾是 public，AGENTS.md 明文发布过生产口令；仓库里的证书是占位文件**（2026-09-08 已去敏）
+    - **可见性**：`api.github.com/repos/q2640962240/tongcheng` 未鉴权返回 200、`private=false`（private 仓库未鉴权会 404，所以这是可靠的判据；`github.com` 网页在本机被代理挡住返回 000，**要用 API 端点测**）。自 commit `b1d76dc` 起，公开的 AGENTS.md 里含 MySQL / Redis / 管理员口令、服务器 IP、SSH 私钥文件名、IM sdkAppId。**用户已决定改为 private**（控制台操作，不在本仓库内）。
+    - **为什么 DB/Redis 口令泄露暂未造成远程利用**：`baiye-mysql` 只绑 `127.0.0.1:3306`、`baiye-redis` 只绑 `127.0.0.1:6379`，公网实测这两个端口 closed/filtered（22/80/443 OPEN，3000 closed）。所以泄露的 DB/Redis 口令**需要先拿到 SSH 或代码执行才能用**。`.env` 与 SSH 私钥本体从未入库。**但 JWT 密钥不同 —— 它走的是 443，公网直接可利用，见下一条。**
+    - **★ 最严重的一条：两个 JWT 签名密钥也曾明文发布，且就是线上活密钥 ★** —— `docker-compose.yml:75,77` 写成 `${JWT_SECRET:-baiye_prod_jwt_...}` / `${JWT_REFRESH_SECRET:-baiye_prod_jwt_refresh_...}`，而服务器 `/opt/baiye/.env` 里的值与这两个 fallback **逐字节相同**（sha256 双向比对确认）。`middleware/auth.js:25` 只做 `jwt.verify(token, config.jwt.secret)`、不校验 issuer/audience，所以**任何人都能签一个 `{id:<任意用户>}` 的令牌冒充该用户**。生产实测（修复前）：伪造 id=23 的令牌打 `/api/user/profile` → **200 + 该用户资料**；用旧 refresh secret 伪造 `{id,type:'refresh'}` 打 `/api/auth/refresh` 同样能续期。影响面比坑点 32 的管理面更大——**可直接接管任意账号、送礼消耗其钻石、绑定自己的收款账号后提现其 giftIncome**。这也是坑点 32 里「派生 admin secret」方案作废的原因。
+    - **2026-09-08 已轮换并验证**：服务器 `.env` 换成三个 `openssl rand -hex 32`（64 字符）新值（`JWT_SECRET` / `JWT_REFRESH_SECRET` / 新增 `ADMIN_JWT_SECRET`），旧 `.env` 备份为 `.env.bak-20260908-042948`，`docker compose up -d --no-deps server` 重建生效。轮换后实测：旧 access 密钥伪造 → **401**、旧 refresh 密钥伪造 → **401**、新密钥签发 → **200 且 data.id 正确**、6 个容器全 healthy、首页与 `/api/banners` 均 200。**代价是所有已登录用户被登出一次**（App 尚未上线、真实用户个位数，用户已批准）。
+    - **⚠️ 轮换的部署顺序陷阱**：新 `docker-compose.yml` 用了 `${JWT_SECRET:?必须在 .env 设置}` 强校验，**compose 的任何子命令（含 `ps`/`config`/`logs`）在变量缺失时都会直接失败**。所以必须**先在服务器 `.env` 写好三个密钥、再推这份 compose**，顺序反了会让 CI 部署整段中断。
+    - **为什么不能只删 fallback 不轮换**：`process.env.JWT_SECRET || 'dev_secret'` 意味着环境变量为空时会**静默退化成人尽皆知的 `dev_secret`**，比泄露值更糟。所以 `config/index.js` 加了 `assertProdSecrets()`：生产环境下 `JWT_SECRET`/`JWT_REFRESH_SECRET` 若为空、命中公开占位串、长度 <32、或 sha256 命中已泄露值清单，就在**模块加载时抛错**让容器 crash-loop（刻意 fail fast，静默带病运行更危险）。已泄露值用 **sha256 常量**比对而不是明文，避免把密钥又写回源码。
+    - **拒绝名单里必须包含 `.env.example` 的示例串** —— 那几串（`please_change_to_a_strong_random_secret_at_least_32_bytes` 等）长度都 >32，**只靠长度检查会漏掉**，照抄示例文件部署生产同样等于密钥公开。判定逻辑抽成了 `config.isWeakSecret(v)`（返回原因字符串或 null），`middleware/adminAuth.js` 复用它：生产环境下**弱 `ADMIN_JWT_SECRET` 等同于「未配置」** → 管理接口 503 fail closed，而不是拿一个公开串去签管理员令牌。`ADMIN_JWT_SECRET` 在 `assertProdSecrets()` 里**只打 WARN 不抛错**，因为它只锁管理后台，为它 crash 整个服务代价不对等。
+    - **compose `:?` 强校验已预检通过（2026-09-08，服务器实跑）**：分别去掉 `ADMIN_JWT_SECRET` / `JWT_SECRET` / `JWT_REFRESH_SECRET` 后 `docker compose --project-directory /opt/baiye --env-file <残缺env> -f <新compose> config` 三次都是 **exit=15** 且错误信息点名对应变量；用完整 `.env` 则 **exit=0**。⚠️ 预检时**必须指向新文件**：第一次误把 `-f` 指到服务器上仍是旧版的 `/opt/baiye/docker-compose.yml`（旧版没有 `:?`），得到了「竟然成功了」的假阴性结论。
+
+    - **仓库里的 4 个 pem 是占位证书，不是活证书**：`deploy/certbot/etc/letsencrypt/live/zyb001.cn/{cert,chain,fullchain,privkey}.pem` 的 subject/issuer 均为 `O=BaiYePlaceholder`、自签名、2026-08-29→2036-08-30。三方 modulus 比对证明 `privkey.pem` **不是线上 TLS 私钥**（仓库 / 线上证书 / 服务器工作树三者 modulus 各不相同）。已 `git rm --cached` 取消跟踪。
+    - **取消跟踪为什么不会打断 HTTPS**：`.github/workflows/deploy.yml:84-171` 有三重证书保护 —— ① `git reset --hard` **之前**，若工作树证书是真的（subject 不含 `BaiYePlaceholder` **或** issuer 匹配 `Let's Encrypt|R3|ISRG`）就备份到 `/root/.baiye-certs-backup` 并置 `restore_flag=1`；② reset **之后**从备份还原；③ Fallback 1 = 宿主机 `/etc/letsencrypt/live/zyb001.cn`（须 LE 签发）；④ Fallback 2 = 备份目录。服务器上这三个来源**实测都是真 LE 证书**（notBefore 2026-09-06 / notAfter 2026-12-05）。`docker-compose.yml:140` 挂的是**宿主机路径** `./deploy/certbot/etc/letsencrypt`，与 git 跟踪与否无关；reset 删掉文件后脚本会 `mkdir -p` + `cp -f` 还原，之后它们在服务器上变成 untracked，`reset --hard` 不再动它们。
+    - **`.gitignore` 早就覆盖了**：`:25 *.pem`、`:26 *.key`、`:50 deploy/certbot/`、`:21-23 .env`。这 4 个文件是**在规则生效前就被提交**的，所以「已跟踪」压过了 ignore。验证覆盖必须用 `git check-ignore -v --no-index <path>` —— **不加 `--no-index` 时已跟踪文件恒报 NOT IGNORED**（默认会查索引），本轮就被这个坑误导过一次。
+    - **去敏范围不止 AGENTS.md**：同一批口令还散落在 `docs/HANDOVER.md`（含阿里云 AccessKeyId）、`docs/PROJECT.md`、`.trae/rules/deployment.md`、`scripts/sql/*.sql` 的注释里。**只删 AGENTS.md 等于没删**，四处一并处理。
+    - **⚠️ 未处理残留**：`docker-compose.yml` 里 **JWT 两个 fallback 已改成 `${VAR:?}` 强校验**，但 `DB_PASSWORD: "${MYSQL_ROOT_PASSWORD:-<活口令>}"` 与 `REDIS_PASSWORD: "${REDIS_PASSWORD:-<活口令>}"` **仍是明文活口令**（服务器 `.env` 里的值与之相同）；管理员口令本轮**用户明确选择不改**；git 历史未清理（清理需 force-push，要单独报批）。MySQL/Redis 那两处要动必须「改 `.env` 口令 + 去 fallback」两步一起做，见「服务器信息」节末。
+
+34. **同批查出的三个次级问题：无鉴权孤儿端点、永远为 undefined 的管理员判定、空库自动引导**
+    - **`GET /api/im/diag` 曾完全无鉴权**，公开返回 `sdkAppId` / `adminUserId` / `secretKeyLen` / `cloudSecretIdFilled` / `cloudSecretKeyFilled`，外加**内部 UserSig 签名算法描述**和管理后台 URL（**不返回 secretKey 本身**，只给长度）。全仓库 `admin/src`、`app/src`、`server/src` **零调用方**，是纯孤儿端点，加 `adminAuth` 不会破坏任何功能。教训：写「排障用」端点时默认它会一直留在生产上，必须自带鉴权。
+    - **`routes/posts.js:169` 的 `req._adminAuth` 全仓库从未被赋值**，所以 `DELETE /api/posts/:id` 的「作者或管理员」分支是**死代码**，真正的管理员删帖路径是 `admin.js:1440`（D1b 已补）。属残留，未清理。教训：看到 `req.xxx` 判定前先 `git grep` 它在哪里被**写入**，只搜读取点会误以为它有效。
+    - **`/admin/login` 有空库自动引导**：若 `admin` 表查不到任何行，`username === 'admin' && password === 'admin123'` 会**自动创建一个 superadmin**。生产库该行已存在所以分支不触发，但**全新环境上第一个访问该端点的人就成为超管**。未修（超出本轮范围），部署新环境时要注意先把库初始化好再暴露端口。
+    - **网关日志留存极短，事后审计能力接近于零**：`baiye-gateway` 容器内 `access.log -> /dev/stdout`、`error.log -> /dev/stderr`，**无落盘、无轮转**，`baiye_gateway-logs` 卷里只有这两个符号链接。容器 2026-09-07T19:47:39Z 启动，`docker logs` 总量仅 19KB ≈ 9 小时。想查「有没有被利用过」只能覆盖到这 9 小时。**在这 9 小时里已确认有主动扫描**：`195.182.16.23` 打 `GET /SDK/webLanguage`（已知设备漏洞探测路径）、`119.249.100.x` 打 robots.txt ×4、PerplexityBot、百度蜘蛛若干。若要长期审计需给 nginx 配落盘 + logrotate。
+
 ## 服务器信息
 
-| 项 | 值 |
-|---|---|
-| IP | 114.55.225.77 |
-| SSH | root@114.55.225.77 (密钥: `~/.ssh/tongcheng.pem`) |
-| 部署目录 | /opt/baiye |
-| MySQL | Baiye@2024! (DB: companion_play) |
-| Redis | BaiyeRedis2026! |
-| 管理员 | admin / admin123 |
-| IM sdkAppId | 1600159799 |
+> ⚠️ **本表刻意不含任何口令。** 生产凭证（MySQL / Redis / 管理后台账号密码 / SSH 私钥路径 /
+> 阿里云 RAM AK）统一存放在**本机记忆库**：
+> `C:\Users\chen\.qoder-cn\projects\D--tongcheng-companion-play-app\memory\reference-server-access.md`
+> 该文件不在 git 仓库内、不会被推送。需要口令时去读它，**不要写回本文件**。
+>
+> 历史包袱：本表自 commit `b1d76dc` 起在 **public** 仓库里明文发布过 MySQL / Redis / 管理员口令，
+> 2026-09-08 已移除（见坑点 33）。git 历史仍可检出，且这批口令**尚未轮换**（用户本轮只选了轮换
+> 阿里云 AK/SK 与腾讯 IM secretKey）。当前唯一的缓解是 MySQL/Redis 只绑 `127.0.0.1`。
+
+| 项 | 值 | 是否机密 |
+|---|---|---|
+| IP | 114.55.225.77 | 否（`zyb001.cn` DNS 可解析） |
+| SSH | `root@114.55.225.77`，密钥登录 | 密钥**路径**见记忆库 |
+| 部署目录 | `/opt/baiye` | 否 |
+| MySQL | 库 `companion_play`，容器 `baiye-mysql`，仅绑 `127.0.0.1:3306` | 口令见记忆库 |
+| Redis | 容器 `baiye-redis`，仅绑 `127.0.0.1:6379` | 口令见记忆库 |
+| 管理后台 | `https://zyb001.cn/admin/` | 账号口令见记忆库 |
+| IM sdkAppId | 1600159799 | 否（`GET /api/im/config` 公开返回） |
+| 容器名 | `baiye-gateway` / `-server` / `-admin` / `-h5` / `-mysql` / `-redis` | 否 |
+
+**已知残留（未处理，改动需单独报批）**：`docker-compose.yml` 把 MySQL/Redis 口令写成
+`${MYSQL_ROOT_PASSWORD:-<活口令>}` / `${REDIS_PASSWORD:-<活口令>}`，fallback 默认值就是生产口令
+本身；服务器 `/opt/baiye/.env` 虽已设这两个变量，但值与仓库公开的默认值**完全相同**
+（2026-09-08 实测 `MYSQL_ROOT_PASSWORD` len=11、`REDIS_PASSWORD` len=15）。要真正作废必须
+「改 `.env` 里的口令 + 去掉 compose 的 fallback」**两步一起做**——只改 compose 会让 `.env`
+缺失时静默用另一个口令起库，属于难排查的故障源。
 
 ## 待办事项
 
 1. Android APK 打包 (HBuilderX 本地)
-2. **配置中心密钥：短信/OSS/IM 已配好，剩支付与推送** — 2026-09-07 核对生产 `configs` 表：`sms` 5/7 项有值（provider/accessKeyId/accessKeySecret/signName/templateCode，空的 templateLogin/templateRegister 是可选覆盖）、`oss` 5/7、`im` 6/8 均已配置；**未配**的是 `wxpay` 1/8、`alipay` 2/6、`push` 1/6。⚠️ 别再把「短信未配置」当既成事实——这条待办曾长期笼统写着「短信/支付/OSS/推送」都没填，导致误判线上无法登录。判断某模块是否可用要直接查 `configs` 表或调 `getModuleConfig()`，不要照抄本行
+2. **配置中心密钥：短信/OSS/IM 已配好，剩支付、推送与 AI** — 2026-09-08 复核生产 `configs` 表全量（只数行数与非空值，不打印明文），共 **9 个模块**：
+   | module | 行数 | value 非空 | 状态 |
+   |---|---|---|---|
+   | `sms` | 7 | 5 | ✅ 已配（空的 templateLogin/templateRegister 是可选覆盖） |
+   | `oss` | 7 | 5 | ✅ 已配 |
+   | `im` | 8 | 6 | ✅ 已配 |
+   | `app` | 13 | 12 | ✅ 已配 |
+   | `tasks` | 7 | 7 | ✅ 已配 |
+   | `gift` | 1 | 1 | ✅ 已配 |
+   | `wxpay` | 8 | **1** | ❌ 未配 |
+   | `alipay` | 6 | **2** | ❌ 未配 |
+   | `push` | 6 | **1** | ❌ 未配 |
+   | `ai` | **0** | — | ❌ **表里一行都没有** |
+   - **⚠️ `ai` 模块从未配置，所以线上 AI 自动回复历来全是本地兜底句，LLM 一次都没真正接通**（2026-09-08 D7 查证）。链路：`chat.js` 的 `_callAiWithFallback` 按「主用户 `aiConfig` → `configs` 的 ai 备份 → 本地策略」三层降级；而 11 个 AI 用户里 **12 号的 `aiConfig.apiKey` 与 `baseUrl` 长度均为 0**（只有 `model` 有 13 字符）、**13-22 号 `aiConfig` 整个是 NULL**，加上 `configs` 无 `ai` 行 → `_loadAiBackupConfig()` 返回 null → `candidates` 数组为空 → for 循环一次都不执行 → 立即落 `_pickLocalFallback`。**日志铁证**：`[AI-AUTO-REPLY] fallback → local. errors= ` —— errors 为空说明连一次 HTTP 请求都没发出去（发了就会有超时/401 之类的错误串）。要接通需在后台配置中心补 `ai` 模块（apiKey/baseUrl/model），或给 AI 用户逐个填 `aiConfig`。
+   - ⚠️ 别再把「短信未配置」当既成事实——这条待办曾长期笼统写着「短信/支付/OSS/推送」都没填，导致误判线上无法登录。判断某模块是否可用要直接查 `configs` 表或调 `getModuleConfig()`，不要照抄本行。查询时**只打印 `CHAR_LENGTH(value)`，不要打印明文**
 3. 钻石充值接入微信/支付宝支付
 4. ~~礼物素材正式设计~~ **已完成，并于 2026-09-08 扩到 22 档（D4 生产已执行）** — 全部为 SVGA 矢量动画（L1-L3），图标由同一份 SVGA 抽帧生成，emoji 占位清零。见 ADR-0004。
    - **22 档阵容（sort / 名字 / 价格 / 等级）**：1 点赞 1 L1｜2 便便 2 L1｜3 绿帽子 5 L1｜4 扔鸡蛋 8 L1｜5 比心 10 L1｜6 星际少女 20 L1｜7 玫瑰 50 L2｜8 心动 80 L2｜9 一剑穿心 100 L2｜10 加油 150 L2｜11 钻石 200 L2｜12 天使 300 L2｜13 花好月圆 500 L2｜14 福袋 500 L3｜15 皇冠 1000 L3｜16 水晶球 2000 L3｜17 独角兽 5000 L3｜18 跑车 10000 L3｜19 旋转木马 20000 L3｜20 一锤定音 30000 L3｜21 流星雨 50000 L3｜22 缘定今生 88888 L3。加粗的 6 档（便便/绿帽子/扔鸡蛋/加油/一锤定音/缘定今生）是 D4 新增，其余 16 档 **name/price/素材路径一分未动，只重排了 sort**。
@@ -222,7 +305,8 @@ cd app && npm install && npm run dev:h5
    - **2026-09-07「防连点/滚动」验证批次**（23→25，点赞 ×1，两轮连点各只扣一次）：`gift_records` 60、61；`messages` 283、284；`transactions` 120、122（用户 23 `gift_send` −1）与 121、123（用户 25 `gift_income` +70 分）。用户 23 钻石 10→8；用户 25 `gift_income` 30119180→30119320 分、`charm_value` 430274→430276。IM 云端另有 2 条点赞自定义消息（C2C 23↔25）
    - **归属不明**：`gift_records` 50-56（同日 00:31–05:24，27→25 的棒棒糖/小红花/冰淇淋/钻石戒指/烟花/跑车/水晶球）也疑似同期测试数据，但不是我这两笔，清理前先问。另 `messages` 277-279（06:29:46）与 280-282（07:01:55）是两组「27→24 文本 / 27→12 语音 / 27→27 自发自收」的三连发，同一秒内产生，来源未查清，清理前先问
    - **⚠️ 已查明归属，禁止清理**：`gift_records` 62-67 + `transactions` 124-135（2026-09-07 14:47:49 与 15:09:23–15:10:02，全部 27→25：旋转木马 20000 / 点赞 1 / 流星雨 50000 / 旋转木马 20000 / 跑车 10000 / 花好月圆 500，合计 **100501 钻**）是**用户本人在 iOS 真机上测试礼物特效**产生的真实送礼，不是 AI 测试污染。判定依据：本项目只有一个会话 transcript，当天首条记录是 15:15:55（用户发来那 4 张截图），而 08:00–15:00 之间 AI 侧零活动，送礼全部落在这个空档里。账目对账吻合：用户 27 钻石 529675→**429174**（−100501），用户 25 `gift_income` 30119320→**37154390** 分（+7035070 = 100501×100×70%）、`charm_value` 430276→**530777**（+100501）。**这批数据要保留**——它是用户自己的操作记录，也是那 4 张截图的现场证据。（顺带：`transactions` 124-135 的 `balance_after` 依旧带着待办 #12 的双计错误，例如 #128 记 409674、#130 反而回升到 419674）
-   - IM 云端消息无法通过 REST 删除，会残留在会话里（C2C 25↔27 至少含 2 条流星雨自定义消息）
+   - **2026-09-08 D7 批次（presence + AI 闸门验证）——干净，只多 1 行，无需清理**：`messages` id **312**（2026-09-08 03:47:51，会话 `12-23`，AI 12 → 用户 23，text「哈哈，我刚才走神啦，你刚刚说的是……？」）是**闸门放行路径的真实产物**，不是探针。验证用的 cooldown 锚点行（content `D7-cooldown-probe`）验完已 `destroy`，`SELECT COUNT(*) FROM messages WHERE content LIKE '%D7-%probe%'` 复核为 **0**；window-cap 那组是「回放同一条查询、把 limit 换小」证明的，**零写入**。全站 `messages` 由 308 → **309**（已复核），差额就是 312 这一行。这批**不涉及钻石/收入/流水**，所以 `gift_records`、`transactions`、`wallets` 均无变化。副作用：users#23 的 `last_active_at` 被写成了验证时刻（这正是被测行为，且 `updated_at` 因 `silent:true` 未被 bump），IM 云端多 1 条 AI 12 → 用户 23 的文本消息
+   - IM 云端消息无法通过 REST 删除，会残留在会话里（C2C 25↔27 至少含 2 条流星雨自定义消息；C2C 12↔23 含 D7 那 1 条 AI 文本）
 9. **TUIKit 首屏空白竞态（原记录「偶发 + 刷新即恢复」已被 2026-09-08 生产实测推翻）** — 报错固定是 `Error in event handler for sdkStateReady: e.chat.getConversationList is not a function`。实测结论：**以 `#/TUIKit/components/TUIConversation/index` 作为入口路由（深链/整页重载）时列表必空，连刷两次都不恢复；改走「`#/pages/home/home` 整页载入 → 点消息 Tab」则 6 条会话全部正常渲染**。所以它不是偶发，是**入口路径决定的必现分支**，原先「刷新一次即恢复」很可能只是因为刷新后 uni 路由落到了别的入口。
    - **定位到哪一步**：console 里能看到 `_syncConversationList success count:6`，说明 **SDK 已经把会话拉回来了**；但紧接着 `TUIChatEngine.resetStore ok.` 之后 `sdkStateReady` 处理器抛错，TUIStore 没被填充 → 列表 DOM 停在 `tui-conversation` / `-header` / `-list` 各 1 个、`.tui-conversation-item` **0 条**（查选择器没错，列表真的是空的）。
    - **不是我们源码的问题**：`sdkStateReady` 处理器在三方 bundle 里（生产 `index-D6lcmXuO.js`），我们唯一一处 `getConversationList` 调用在 `TUIConversation/entry-conversation.ts:64-65`，已有 `typeof svc.getConversationList === 'function'` 守卫，且该文件的 `isReady()` 轮询（最长 10s）+ `TUIChatKit.init()/login()` 都跑完了，深链下依旧空白。**别再去改 `entry-conversation.ts` 试。**
