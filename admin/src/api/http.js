@@ -29,7 +29,9 @@ http.interceptors.response.use(
     if (error.response?.status === 401) {
       ElMessage.error('请重新登录')
       localStorage.removeItem('admin_token')
-      window.location.href = '/login'
+      // 后台部署在 /admin/ 子路径下（vite base + createWebHistory(BASE_URL)），
+      // 裸 '/login' 会跳出后台落到用户端站点上，必须拼 BASE_URL
+      window.location.href = `${import.meta.env.BASE_URL}login`
     } else {
       ElMessage.error(error.response?.data?.message || '网络异常')
     }
