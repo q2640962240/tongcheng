@@ -1,4 +1,12 @@
 {
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^z-paging-refresh$": "z-paging/components/z-paging/components/z-paging-refresh.vue",
+      "^z-paging-load-more$": "z-paging/components/z-paging/components/z-paging-load-more.vue",
+      "^z-paging(.*)": "z-paging/components/z-paging$1/z-paging$1.vue"
+    }
+  },
   "pages": [
     {
       "path": "pages/home/home",

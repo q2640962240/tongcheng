@@ -267,6 +267,38 @@ cd app && npm install && npm run dev:h5
     - **优先级判断：改活口令能一次性作废这 26 处对生产的威胁** —— 公开的那个字符串不再对应任何活凭证。剩下的仓库清扫解决的是**另一个**问题：「新部署天生弱口令」（尤其 `admin.js:19-22` 那段活代码 + `README.md` 的 4 处发布），归 D12。**别把两件事混成一件，也别指望只做仓库清扫就能关掉线上的洞。**
     - **⚠️ 截至 2026-09-08 深夜再次复查，GitHub 仓库仍是 `private: false`**（同一条 API 判据），坑点 33 里「用户会在控制台改 private」这一步**仍未执行**，泄露窗口开着。
 
+36. **z-paging 接入规范（2026-09-08 D8 落地，试点 `pages/transactions/transactions.vue`）** — 版本 `z-paging@2.8.8`（npm，MIT，明确支持 vue3 + 全平台）。它自带 renderjs 与 wxs、且本身是 Options API，**不踩坑点 19**。
+    - **★ easycom 必须写三条规则，计划里那条通用规则单独用会直接构建失败 ★** —— npm 包的 `components/` 下只有 5 个标准目录，但 `z-paging.vue` 内部还用了 `<z-paging-refresh>` 和 `<z-paging-load-more>` 两个标签，它们的文件在**非标准路径** `components/z-paging/components/` 下，而 `z-paging.vue` **没有 `components:` 选项**、完全依赖 easycom 解析。只写通用规则 `"^z-paging(.*)"` 会把它们映射成不存在的 `components/z-paging-refresh/z-paging-refresh.vue` → `Rollup failed to resolve import`。`pages.json` 现在的写法（**两条精确规则必须在通用规则之前**，easycom 按对象键插入顺序取第一个命中）：
+      ```json
+      "easycom": { "autoscan": true, "custom": {
+        "^z-paging-refresh$": "z-paging/components/z-paging/components/z-paging-refresh.vue",
+        "^z-paging-load-more$": "z-paging/components/z-paging/components/z-paging-load-more.vue",
+        "^z-paging(.*)": "z-paging/components/z-paging$1/z-paging$1.vue"
+      }}
+      ```
+      `pages.json` 原先**没有 `easycom` 节点**，是 D8 新加的（加在第一个顶层键）。
+    - **哪些页面接、哪些不接**：接 = 纯列表 + 后端给真实 total 的分页页（transactions 已接；D11 计划迁移 4 页）。**明确不接** = `home.vue`（多区块拼装 + banner + 横向滚动，不是单列表）、`chat.vue` / TUIChat（消息列表由 SDK 驱动，且有坑点 14 的「只播一次」基线逻辑，换分页容器会动到那套 watcher）。
+    - **`complete()` 的成功失败两路**：成功用 **`completeByTotal(list, total)`**（`js/modules/data-handle.js:238`）——后端 `paginate()` 已经给了真实 total，比默认的「本页条数 < pageSize 就认为到底」更准；失败用 **`complete(false)`**，组件会展示失败态而不是静默停在空列表。**注意 `complete(false)` 与自定义 `#empty` 的冲突，见下一条。**
+    - **★ 自定义 `#empty` 会顶掉内置失败视图，必须自己接住 `isLoadFailed` ★** —— `z-paging.vue:153` 是 `<slot v-if="zSlots.empty" name="empty" :isLoadFailed="isLoadFailed"/>` **`v-else`** 才渲染 `<z-paging-empty-view>`，而「加载失败，点击重试」这个 affordance 只存在于后者。所以一旦写了自定义空态，网络失败时页面会**谎报「暂无交易记录」**（本轮实测确认，断后端后空态文案一字未变）。修法是把插槽作用域参数接出来分流文案 + 整块可点重试：
+      ```vue
+      <template #empty="{ isLoadFailed }">
+        <view class="empty" @tap="isLoadFailed && reload()">
+          <text class="empty-text">{{ isLoadFailed ? '加载失败' : '暂无交易记录' }}</text>
+          <text class="empty-sub">{{ isLoadFailed ? '点击重试' : '首次交易将在这里显示' }}</text>
+        </view>
+      </template>
+      ```
+      实测双向通过：停后端 → 显示「⚠️ 加载失败 / 点击重试」；起后端后点这块 → 恰好 1 次 `page=1` 请求、200、20 条、空态消失。
+    - **★ `onShow` + `auto` 会叠加成「同一端点两次请求」（坑点 28 那一类）★** —— uni-app 首次进页面本来就触发 `onShow`，而 z-paging 的 `auto` 又会在 mounted 自发一次 `@query`。必须 `let firstShow = true`，首次 `onShow` 直接 return，只在「从别的页面返回」时才 `reload()`。实测首次进入**恰好 1 次** `/api/wallet/transactions`。
+    - **`#top` 插槽替代 `position: sticky`** —— 筛选条放进 `#top`（在滚动容器之外，天然吸顶），原来的 `position:sticky; top:0; z-index:5` 整段删掉。顺带消除了坑点 22 里「sticky 计入 scrollable overflow」的那处隐患。
+    - **fixed 模式下页面根元素不要抢布局** —— z-paging 自己算高度并用 `systemInfo.windowTop` 处理原生导航栏偏移（`js/modules/common-layout.js:18` + `z-paging-main.js:308-309`）。实测 `.z-paging-content` 拿到的是 `position:fixed; top:44px; height:597.6px`，**完全正确**。所以页面根类只留背景色，把原来的 `min-height:100vh` 和 `padding-bottom: calc(32rpx + env(safe-area-inset-bottom))` 都删掉。
+    - **`enablePullDownRefresh` 互斥规则，以及本轮查出的「反向失效」形态** —— 坑点 25 讲的是「开了配置没写回调 → 转圈不消失」；transactions 是**反过来**：写了 `onPullDownRefresh` 回调，但 `pages.json` **从来没给这个页面开** `enablePullDownRefresh`（全站只有 `pages/home/home` 与 `pages/discover/discover` 开了），所以那段回调是**死代码，用户在这个页面从来没下拉刷新成功过**。接 z-paging 时这段回调连同 `onReachBottom` 一起删掉即可，计划 8c 说的「必须同时删掉 pages.json 配置」对试点页**不适用**（它压根没配）——z-paging 是在**新增**一个此前不存在的下拉刷新。规则本身不变：**接了 z-paging 的页面必须确保 `enablePullDownRefresh` 为 false/缺省，且不留 `onPullDownRefresh` 回调**，否则一次下拉两次请求。实测下拉手势单独触发恰好 1 次 `page=1` 请求且列表不重复。
+    - **`box-sizing`**：坑点 22 的全局重置已覆盖 `view`/`scroll-view` 等标签，z-paging 编译后同样是 `uni-view`/`uni-scroll-view`，自动吃到。`.type-bar` 上那处存量补丁按坑点 22 的结论**保留不回收**。实测该页 `documentElement.scrollWidth - clientWidth = 0`。
+    - **⚠️ App 端未验证** —— 本轮全部证据来自 H5（且是**生产模式构建产物**，不是 dev server）。z-paging 官方声明支持 App，但本项目的 App 端尚未打包实测，与待办 16 的 iOS 清单一起过。小程序端也未验证。
+    - **★ 顺带查出一个既有的全局缺陷（不是 D8 引入，未修）★**：`App.vue` 全局样式给 `uni-page-body` 写了 **`min-height: 100vh`**，而它坐在 44px 原生导航栏**之下**（`uni-page-wrapper` 只有 597.6px）→ `uni-page-body` 变成 top=44 / height=641.6 / bottom=686，**每个带原生导航栏的页面都凭空多出 44px 竖向滚动**（`documentElement.scrollHeight - clientHeight = 44`）。对照验证：`pages/wallet/wallet` 内容本身就比视口高（pageBody 1043px），min-height 不是约束项所以看不出来；transactions 因为列表被 fixed 容器接管、pageBody 内容高度≈0，min-height 才成为约束项暴露出来。**这正是坑点 18 警告的 `100vh` 类问题。** 候选修法是 `min-height:100vh` → `min-height:100%`（父级 `uni-page-wrapper` 有确定高度 597.6px），但它影响全部 33 个页面、需要单独一轮逐页验证，**不要在别的任务里顺手改**。
+    - **本地验证手法（可复用，且比 dev server 可靠）** —— `npm run dev:h5` 在本项目**当前是坏的且零报错**：`main.js` 里 `import { createVueApp as createSSRApp } from 'vue'` 的裸标识符**不被改写**（同文件里 `pinia`、`@dcloudio/uni-h5` 都被正常改写成 `/node_modules/...`，`App.vue` 的导入也正常），浏览器报 `Failed to resolve module specifier "vue"` → **module script 根本不执行** → `#app` 空、`window.uni` undefined、只发 3 个请求、**console 零错误**。清 `node_modules/.vite` 重启无效（`deps/` 里只有 5 个 tencentcloud + i18next，**从来没有 `vue.js`**）。**诊断钥匙**：在页面里手动 `await import('/src/main.js')`，才会把被吞掉的错误抛出来。**可用替代路径**：`npm run build:h5`（产物与 CI 同源）+ 一个 ~50 行的 node 静态服务把 `dist/build/h5` 挂在 5173 并把 `/api` 反代到本地 3000 → 能走完整 UI 登录（本地 `POST /api/auth/sms` 的 `data.code` 恒为 **`888888`**），且测的就是要上线的那份产物。
+    - **⚠️ 两个配套陷阱**：① **Git Bash 会把 `/api` 形式的环境变量值转换成 Windows 路径** —— `VITE_API_BASE=/api npm run build:h5` 产物里出现的是 `"C:/Users/chen/AppData/Local/Programs/Git/api"`（静默、构建照样成功）。改用文件 `.env.production.local`（已被 `.gitignore:22 .env.*` 覆盖）写同一个值就正确内联成 `"/api"`。与坑点 26 的 `curl --data-urlencode` GBK 问题同源：**Windows Git Bash 会在你不注意时改写你传给原生程序的字符串**。② **本地后端别用 `npm run dev`（nodemon）** —— 它默认监视整个 cwd，包含 `data/*.json`；而 D7 的 `presence.touch()` 每个鉴权请求都写 `last_active_at` → 触发重启 → 内存里的 60s 节流表丢失 → 下个请求又写 → **自激重启循环**，浏览器侧表现为登录后一片 502。用 `node src/app.js` 直接跑。
+
 ## 服务器信息
 
 > ⚠️ **本表刻意不含任何口令。** 生产凭证（MySQL / Redis / 管理后台账号密码 / SSH 私钥路径 /
@@ -376,9 +408,13 @@ cd app && npm install && npm run dev:h5
 17. ~~部署后复测个人页请求次数~~ **已完成（2026-09-08，`ae63f5c` 上线后生产实测）** — 真实入口（`#/pages/home/home` 整页载入 → 点 tabbar「我的」）下：`GET /api/user/profile` **9 → 2**、`wallet/balance` **3 → 1**、`user/certifications` **3 → 1**、`POST /api/im/login` **1 → 1**（未变）、`im/config` 1 次。页面无回归：昵称「测试用户A」、魅力值 54051、钱包 [8 钻 / 37835.70 元]、8 个功能宫格、认证卡片正常。剩下的 2 次 profile 是 `App.vue:122` onLaunch 的 `restoreSession()`（startTime 1404ms）与 profile.vue `onShow` 的合并调用（44662ms），**分属两个时刻、无法再合并**——in-flight 闸门只吃同 tick 的并发。
     - ⚠️ **测量陷阱：深链直入会多量一轮**。用 `?v=xxx#/pages/profile/profile` 整页载入时量到的是 **3 / 2 / 2**，因为 uni-app H5 在这种入口下会让页面 `onShow` **触发两次**（两轮完整的 loadAll）。那是入口方式的产物，不是真实使用路径。**复测必须走「home 整页载入 → 点 tab」**，与待办 9 的会话列表验证入口要求一致。
     - **计数方法**：用页面内 `performance.getEntriesByType('resource').filter(e => e.name.includes('/api/'))` 并按 `norm(name)` 分组收集 `startTime`，比 `list_network_requests` 好——它带时间戳，能把「哪几次属于同一轮」分开，还能跨 tab 切换累积（不用在点击前后各列一次再手工做差）。
-    - **仍未修，同类缺陷在 home.vue**：同一次测量里 `/banners`、`/user/discover`、`/posts` **各加载 3 次**（startTime 2167 / 2373 / 5310 —— 前两次相隔约 200ms 像是同 tick 两个调用方，第三次晚 3s 像是 IM 登录后或城市解析回调再拉一遍）。这属于同一类「多条路径打同一端点」，但 home 的分页/刷新要在 D8/D11 接 z-paging 时一并重整，**不要单独打补丁**。
+    - **仍未修，同类缺陷在 home.vue**：同一次测量里 `/banners`、`/user/discover`、`/posts` **各加载 3 次**（startTime 2167 / 2373 / 5310 —— 前两次相隔约 200ms 像是同 tick 两个调用方，第三次晚 3s 像是 IM 登录后或城市解析回调再拉一遍）。这属于同一类「多条路径打同一端点」。**归属已变更（2026-09-08）**：原先写的「在 D8/D11 接 z-paging 时一并重整」已作废 —— D8 明确判定 `home.vue` **不接** z-paging（多区块拼装 + banner + 横向滚动，不是单列表，见坑点 36）。改归 D12，按坑点 28 的三条乘数逐条排查（重复 `onShow`/`onMounted`、两条路径打同一端点、store action 无 in-flight 合并），**不要单独打补丁**。
 18. **`profile.vue` 的「联系客服」是完整实现但无入口的死代码（2026-09-08 核对构建产物时发现）** — `onCustomerService()`（`:288-330`）逻辑齐全：调 `userApi.kefu()` 取客服微信、`showModal` 展示、确认后 `setClipboardData` 复制，还写了「未配置」和「获取失败」两条降级文案（都引导用户走「意见反馈」）。但**模板里没有任何地方绑它** —— 8 宫格入口是 我的动态/礼物商城/关注粉丝/精英特权/礼物排行/每日任务/反馈问题/设置，没有客服项。`<script setup>` 的顶层绑定只有被 render 函数引用才会保留，所以 rollup 直接把它摇掉了：构建产物 `pages-profile-profile.DaQgYAdB.js` 里 `kefu` 字符串出现 **0 次**。**发现方式值得复用**：数产物指纹时发现某个源码里明明存在的 API 调用消失了，顺着查就能揪出「写了但没接线」的功能，比通读模板快得多。
     - **两个方向，二选一，别放着不管**：① 接线——在 8 宫格加「联系客服」项（会挤掉或需要扩成 3 行，要先看排版）；② 删掉——连同 `api/index.js` 的 `userApi.kefu` 与服务端 `/user/kefu` 一起评估是否还有别处用。归 D12 的「删假文案 / 死代码清扫」一起做，**不要在其它任务里顺手加个入口**（属于范围蔓延，且排版影响需要单独验证）。
+19. **全站 44px 竖向溢出：`App.vue` 全局给 `uni-page-body` 写了 `min-height: 100vh`（2026-09-08 D8 期间顺带查出，未修）** — 该元素坐在 **44px 原生导航栏之下**（`uni-page-wrapper` 实测只有 597.6px），于是 `uni-page-body` 变成 top=44 / height=641.6 / bottom=686 → **每个带原生导航栏的页面都凭空多出 44px 竖向滚动**（`documentElement.scrollHeight - clientHeight = 44`）。这正是坑点 18 警告的 `100vh` 类问题。
+    - **为什么以前没人报**：内容比视口高的页面（如 `pages/wallet/wallet`，pageBody 1043px）里 min-height 根本不是约束项，看不出来。只有「内容高度 ≈ 0、由 fixed 容器接管」的页面才会暴露 —— D8 把 transactions 迁到 z-paging（fixed 模式）后正好撞上。**所以它不是 D8 引入的回归**，z-paging 自己的 `.z-paging-content` 实测是 `fixed; top:44px; height:597.6px`，完全正确。
+    - **候选修法**：`min-height: 100vh` → `min-height: 100%`（父级 `uni-page-wrapper` 有确定高度，百分比可解析）。**但它影响全部 33 个页面，必须单独一轮逐页验证**（尤其要复查各页 `100vh` / `100dvh` 混用与 fixed 底部栏的安全区），不要在别的任务里顺手改。归 D12 或单开一轮。
+    - **验证方法**（不需要截图）：`documentElement.scrollHeight - documentElement.clientHeight` 应为 0；再量 `uni-page-wrapper` / `uni-page-body` 的 `getBoundingClientRect()` 看 top 与 height 是否吻合。
 
 ## 文档索引
 

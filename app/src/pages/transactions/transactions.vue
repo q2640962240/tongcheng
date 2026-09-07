@@ -1,26 +1,43 @@
 <template>
-  <view class="page">
-    <!-- 类型筛选 -->
-    <scroll-view scroll-x class="type-bar">
-      <view class="type-item" :class="{ on: type === '' }" @tap="switchType('')">全部</view>
-      <view v-for="(label, val) in typeMap" :key="val" class="type-item" :class="{ on: type === val }" @tap="switchType(val)">
-        {{ label }}
-      </view>
-    </scroll-view>
-
-    <!-- 加载骨架 -->
-    <view v-if="loading && list.length === 0" class="loading-wrap">
-      <view class="loading-skeleton" v-for="i in 5" :key="i">
-        <view class="sk-avatar"></view>
-        <view class="sk-body">
-          <view class="sk-line sk-line-sm"></view>
-          <view class="sk-line sk-line-md"></view>
+  <z-paging
+    ref="paging"
+    v-model="list"
+    class="page"
+    :default-page-size="PAGE_SIZE"
+    @query="queryList"
+  >
+    <!-- 类型筛选：#top 是 z-paging 的吸顶区，本身就在滚动容器之外，
+         所以原来那套 position:sticky 可以删掉（也顺带消除了坑点 22 里 sticky 计入
+         scrollable overflow 的那处隐患） -->
+    <template #top>
+      <scroll-view scroll-x class="type-bar">
+        <view class="type-item" :class="{ on: type === '' }" @tap="switchType('')">全部</view>
+        <view
+          v-for="(label, val) in typeMap"
+          :key="val"
+          class="type-item"
+          :class="{ on: type === val }"
+          @tap="switchType(val)"
+        >
+          {{ label }}
         </view>
-        <view class="sk-amount"></view>
-      </view>
-    </view>
+      </scroll-view>
+    </template>
 
-    <!-- 列表 -->
+    <!-- 首屏骨架：z-paging 的 #loading 只在「第一页且还没数据」时出现 -->
+    <template #loading>
+      <view class="loading-wrap">
+        <view class="loading-skeleton" v-for="i in 5" :key="i">
+          <view class="sk-avatar"></view>
+          <view class="sk-body">
+            <view class="sk-line sk-line-sm"></view>
+            <view class="sk-line sk-line-md"></view>
+          </view>
+          <view class="sk-amount"></view>
+        </view>
+      </view>
+    </template>
+
     <view class="tx-list">
       <view v-for="t in list" :key="t.id" class="tx-item">
         <view class="tx-icon" :class="t.type">{{ typeIcon(t.type) }}</view>
@@ -33,33 +50,36 @@
           {{ isIncome(t.type) ? '+' : '-' }}{{ formatCurrency(t) }}
         </text>
       </view>
-      <view v-if="!loading && list.length === 0" class="empty">
-        <view class="empty-aurora"></view>
-        <text class="empty-icon">💰</text>
-        <text class="empty-text">暂无交易记录</text>
-        <text class="empty-sub">首次交易将在这里显示</text>
-      </view>
-      <view v-if="loading && list.length > 0" class="loading-more">
-        <text class="loading-text">加载中…</text>
-      </view>
     </view>
-  </view>
+
+    <!-- 用了自定义 #empty 就等于顶掉 z-paging 内置的 empty-view（「加载失败，点击重试」
+         那个载体），所以必须自己接住插槽作用域参数 isLoadFailed，否则网络失败时会谎报
+         「暂无交易记录」 -->
+    <template #empty="{ isLoadFailed }">
+      <view class="empty" @tap="isLoadFailed && reload()">
+        <view class="empty-aurora"></view>
+        <text class="empty-icon">{{ isLoadFailed ? '⚠️' : '💰' }}</text>
+        <text class="empty-text">{{ isLoadFailed ? '加载失败' : '暂无交易记录' }}</text>
+        <text class="empty-sub">{{ isLoadFailed ? '点击重试' : '首次交易将在这里显示' }}</text>
+      </view>
+    </template>
+  </z-paging>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import { onShow, onPullDownRefresh, onReachBottom } from '@dcloudio/uni-app'
+import { onShow } from '@dcloudio/uni-app'
 import { walletApi } from '../../api'
 import {
-  guard, unwrapPage, safeMap, getPath, toStr, toNum,
+  unwrapPage, safeMap, getPath, toStr, toNum,
   requireLogin, formatTime
 } from '../../utils/fallback'
 
+const PAGE_SIZE = 20
+
+const paging = ref(null)
 const list = ref([])
-const loading = ref(false)
 const type = ref('')
-const page = ref(1)
-const total = ref(0)
 
 const typeMap = {
   recharge: '充值', exchange: '兑换', consume: '消费',
@@ -106,56 +126,56 @@ const normalizeTx = (raw) => {
   }
 }
 
-const loadData = async (reset = true) => {
+/**
+ * z-paging 的分页回调。pageNo/pageSize 由组件内部管理，页面不再持有 page/total/loading。
+ * 成功走 completeByTotal（后端返回真实 total，比「本页条数 < pageSize」的推断更准），
+ * 失败走 complete(false) —— 这会让组件展示「加载失败，点击重试」而不是静默停在空列表。
+ */
+const queryList = async (pageNo, pageSize) => {
   if (!requireLogin()) {
-    loading.value = false
+    paging.value && paging.value.complete([])
     return
   }
-  if (reset) { page.value = 1; list.value = []; total.value = 0 }
-  loading.value = true
   try {
-    const pageData = await guard(
-      walletApi.transactions({ type: type.value, page: page.value, pageSize: 20 })
-        .then(r => unwrapPage(r, { list: [], total: 0 })),
-      { list: [], total: 0 }
-    )
-    const newList = safeMap(pageData.list, normalizeTx)
-    list.value = reset ? newList : list.value.concat(newList)
-    total.value = toNum(pageData.total, list.value.length)
+    const res = await walletApi.transactions({ type: type.value, page: pageNo, pageSize })
+    const pageData = unwrapPage(res, { list: [], total: 0 })
+    paging.value.completeByTotal(safeMap(pageData.list, normalizeTx), toNum(pageData.total, 0))
   } catch (_) {
-    if (reset) list.value = []
-  } finally {
-    loading.value = false
+    paging.value.complete(false)
   }
 }
 
-const switchType = (t) => { type.value = t; loadData(true) }
+// reload() 会把 pageNo 重置回 1 并重新触发 @query
+const reload = () => { paging.value && paging.value.reload() }
 
-onShow(() => loadData(true))
-onPullDownRefresh(async () => {
-  await loadData(true)
-  uni.stopPullDownRefresh()
-})
-onReachBottom(() => {
-  const t = toNum(total.value, 0)
-  const len = list.value.length
-  // total 未知时（<= 0）不触发加载；使用原生 < 比较
-  if (t > 0 && len < t && !loading.value) {
-    page.value++
-    loadData(false)
-  }
+const switchType = (t) => {
+  if (type.value === t) return
+  type.value = t
+  reload()
+}
+
+/**
+ * uni-app 首次进页面本来就会触发 onShow，而 z-paging 的 auto 又会在 mounted 时自己发一次
+ * @query —— 两者叠加就是「同一端点两次请求」（坑点 28 的那一类）。所以首次 onShow 跳过，
+ * 只在「从别的页面返回」时才 reload。
+ */
+let firstShow = true
+onShow(() => {
+  if (firstShow) { firstShow = false; return }
+  reload()
 })
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: $by-bg; padding-bottom: calc(32rpx + env(safe-area-inset-bottom)); }
+/* z-paging 在 fixed 模式下自己算高度与 windowTop（原生导航栏偏移），
+   所以这里只给背景色，不要再写 min-height:100vh / padding-bottom 去和它抢布局 */
+.page { background: $by-bg; }
 
 /* Type bar */
 .type-bar {
   box-sizing: border-box;
   white-space: nowrap; padding: 20rpx $by-page-pad-x;
   background: $by-card-bg; border-bottom: 1rpx solid $by-border;
-  position: sticky; top: 0; z-index: 5;
 }
 .type-item {
   display: inline-block; padding: 12rpx 28rpx; margin-right: 16rpx;
@@ -274,24 +294,4 @@ onReachBottom(() => {
 .empty-icon { font-size: 96rpx; position: relative; z-index: 1; }
 .empty-text { font-size: 30rpx; color: $by-text-1; font-weight: 600; position: relative; z-index: 1; }
 .empty-sub { font-size: 24rpx; color: $by-text-3; position: relative; z-index: 1; }
-
-/* Loading more */
-.loading-more {
-  padding: 32rpx 0; text-align: center;
-}
-.loading-text {
-  font-size: 24rpx; color: $by-text-3;
-  display: inline-block;
-  &::before {
-    content: ''; display: inline-block; width: 24rpx; height: 24rpx;
-    border: 3rpx solid $by-border-strong;
-    border-top-color: $by-gold;
-    border-radius: 50%;
-    margin-right: 12rpx; vertical-align: -4rpx;
-    animation: spin 0.8s linear infinite;
-  }
-}
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
 </style>
