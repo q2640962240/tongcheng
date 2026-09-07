@@ -201,7 +201,12 @@ const lastMessageSummary = (conversation: IConversationModel): string => {
   } catch (e) {
     return fallback;
   }
-  if (data?.businessID !== CHAT_MSG_CUSTOM_TYPE.GIFT) return fallback;
+  // 判定必须与 message-custom.vue 的 isGiftMessage 一致，否则同一批早期礼物消息
+  // （服务端补 businessID 之前由兜底通道转发进 IM 的那些）在聊天里是礼物卡、
+  // 在会话列表里却仍是「[自定义消息]」。IM 云端已投递的消息改不了，只能读侧放宽。
+  const isGift = data && typeof data === 'object'
+    && (data.businessID === CHAT_MSG_CUSTOM_TYPE.GIFT || (!data.businessID && !!data.giftName));
+  if (!isGift) return fallback;
   const qty = Number(data.quantity) > 0 ? Number(data.quantity) : 1;
   const name = data.giftName || '礼物';
   const text = qty > 1 ? `[礼物] 送出了${qty}个${name}` : `[礼物] ${name}`;

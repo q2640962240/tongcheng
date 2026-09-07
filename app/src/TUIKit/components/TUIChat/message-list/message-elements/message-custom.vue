@@ -72,7 +72,7 @@
         }}</a>
       </div>
     </template>
-    <template v-else-if="customData.businessID === CHAT_MSG_CUSTOM_TYPE.GIFT">
+    <template v-else-if="isGiftMessage">
       <view class="gift-message-card">
         <view class="gift-card-inner">
           <image class="gift-icon" :src="customData.giftImage" mode="aspectFill" />
@@ -123,6 +123,17 @@ watchEffect(() => {
   if (payload.data === CHAT_MSG_CUSTOM_TYPE.SERVICE) {
     extension.value = JSONToObject(payload.extension);
   }
+});
+
+// 生产上存在一批早期礼物消息：那时服务端 gifts.js 的 giftContent 还没写 businessID，
+// 兜底通道（viaIM:false）把这份内容原样转发进了 IM，于是它们在聊天里恒渲染成
+// 「[自定义消息]」。IM 云端已投递的消息改不了，只能在读侧放宽：没有 businessID 但带
+// giftName 的载荷同样按礼物处理。其余自定义消息类型都自带 businessID，不受影响。
+const isGiftMessage = computed(() => {
+  const data = customData.value as any;
+  if (!data || typeof data !== 'object') return false;
+  return data.businessID === CHAT_MSG_CUSTOM_TYPE.GIFT
+    || (!data.businessID && !!data.giftName);
 });
 
 // 礼物卡片显示**实付总价**。diamondAmount 在服务端消息体里是单价，直接渲染会让
