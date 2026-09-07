@@ -9,7 +9,8 @@ export const authApi = {
   sendSms: (phone, scene) => post('/auth/sms', { phone, scene: scene || 'login' }),
   login: (phone, code) => post('/auth/login', { phone, code }),
   loginByPassword: (phone, password) => post('/auth/login-password', { phone, password }),
-  refresh: (refreshToken) => post('/auth/refresh', { refreshToken }),
+  // noRefreshRetry 必需：这个端点自己的 401 若再触发一次续期，会与未释放的 refreshLock 循环 await
+  refresh: (refreshToken) => post('/auth/refresh', { refreshToken }, { noRefreshRetry: true }),
   setPassword: (payload) => post('/auth/password', payload),
   logout: () => post('/auth/logout')
 }

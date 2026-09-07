@@ -262,6 +262,9 @@ export const request = (options) => {
     const method = options.method || 'GET'
     const timeout = Number(options.timeout) || 15000 // 真机上默认 15s，避免等太久看上去像黑屏
     const silent = !!options.silent // 静默模式：失败时不弹 toast，由调用方自行处理
+    // 刷新端点自身必须置真：它的 401 若再进 tryRefresh()，会拿到尚未释放的 refreshLock
+    // （正是当前在等它的那个 promise）→ 循环 await → 永久不 settle
+    const noRefreshRetry = !!options.noRefreshRetry
     const base = getCurrentBaseURL()
     const finalURL = base + options.url
 
@@ -282,7 +285,8 @@ export const request = (options) => {
       success: async (res) => {
         if (res.statusCode === 401) {
           // 先尝试用 refreshToken 自动续期；成功则静默重试一次原请求
-          const refreshed = await tryRefresh()
+          // noRefreshRetry 的请求（即 /auth/refresh 自己）必须跳过，否则递归撞锁永久挂起
+          const refreshed = noRefreshRetry ? false : await tryRefresh()
           if (refreshed) {
             try {
               const newToken = getToken()
