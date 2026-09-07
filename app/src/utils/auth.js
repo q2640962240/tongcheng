@@ -36,6 +36,10 @@ export const removeToken = () => {
 
 export const getUser = () => {
   try {
+    // 这里读到的是**原生** uni-h5 的 getStorageSync（vite-plugin-uni 把裸 uni 编译成模块导入），
+    // 它只解 {type,data} 信封，普通 JSON 串原样返回字符串，所以下面的 JSON.parse 是对的。
+    // 不要加 `typeof raw === 'string'` 守卫：会自动 JSON.parse 的是 main.js:74 挂在 window.uni
+    // 上的项目自有 polyfill，本文件用不到它（详见 AGENTS.md 待办 13）。
     return JSON.parse(uni.getStorageSync(USER_KEY) || '{}')
   } catch {
     return {}
@@ -64,11 +68,11 @@ function b64UrlToAscii(input) {
 }
 
 /**
- * 当前登录用户 id。
+ * 当前登录用户 id：优先读 storage 里的 user，拿不到再解 JWT payload（服务端签的就是 {id, iat, exp}）。
  *
- * 不要改用 getUser().id：H5 端 uni.getStorageSync 会把存的 JSON 字符串自动解析成对象，
- * getUser() 里的 JSON.parse 于是收到一个对象、抛 SyntaxError、恒返回 {}。
- * 这里直接解 JWT 的 payload（服务端签的就是 {id, iat, exp}），三端一致且不依赖存储行为。
+ * getUser() 在三端都是好的（见它上面的注释）；JWT 兜底只覆盖 storage 被清、token 还在的情况。
+ * 解 base64 用下面的 b64UrlToAscii 而不是 atob —— App 端逻辑层跑在 JSCore/V8，没有任何浏览器全局
+ * （见 AGENTS.md 坑点 17）。
  */
 export const getUserId = () => {
   try {

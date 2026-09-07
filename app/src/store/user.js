@@ -9,6 +9,7 @@ import { ensureTUILogin, logoutTUILogin } from '../utils/tuilogin'
  * 目的：让官方 chat-uikit-uniapp 组件可用，自动将用户导入腾讯云 IM
  */
 let _tuiInitPromise = null
+let _profilePromise = null
 function kickOffTUIInit() {
   if (_tuiInitPromise) return _tuiInitPromise
   _tuiInitPromise = ensureTUILogin().then((r) => {
@@ -41,6 +42,9 @@ export const useUserStore = defineStore('user', {
       this.user = getUser()
       if (this.user && this.user.isElite) this.isElite = true
       // 已有登录态 → 异步触发 TIM SDK init + login（让用户被自动导入 IM）
+      // 这条路径与 App.vue onLaunch 的 setupGlobalMsgNotify() 重复，但 kickOffTUIInit 缓存
+      // _tuiInitPromise、ensureTUILogin 自己也有缓存与并发锁，生产实测每次进页面
+      // POST /api/im/login 恒为 1 次，所以这里保留它作为 msgNotify 动态 import 失败时的兜底。
       if (this.token && this.user && this.user.id) {
         setTimeout(() => kickOffTUIInit(), 500)
         // 异步刷新最新用户信息（含 isElite/认证状态），避免管理后台通过精英后前端状态不同步
@@ -87,12 +91,21 @@ export const useUserStore = defineStore('user', {
     },
 
     /** 获取用户信息 */
-    async fetchProfile() {
-      const res = await get('/user/profile')
-      this.user = res.data
-      this.isElite = res.data.isElite || false
-      setUser(res.data)
-      return res.data
+    fetchProfile() {
+      // profile.vue 的 onShow 会先调 restoreSession()（内部 fetchProfile）再调 loadAll()
+      // （又一次 fetchProfile），两者落在同一 tick。合并 in-flight 调用，一次进页面只打一个请求。
+      // 生产实测（2026-09-08，旧构建 index-C7lMOwJj.js）：单次进个人页共发出
+      // GET /api/user/profile 9 次、wallet/balance 3 次、user/certifications 3 次。
+      if (_profilePromise) return _profilePromise
+      _profilePromise = get('/user/profile')
+        .then((res) => {
+          this.user = res.data
+          this.isElite = res.data.isElite || false
+          setUser(res.data)
+          return res.data
+        })
+        .finally(() => { _profilePromise = null })
+      return _profilePromise
     },
 
     /** 申请精英认证 */

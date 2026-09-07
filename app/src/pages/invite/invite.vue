@@ -147,42 +147,80 @@ const copyLink = () => {
   })
 }
 
+/**
+ * 微信分享是否真的可用。
+ *
+ * manifest.json 只声明了 `modules.Share:{}`，`sdkConfigs` 里**没有 share 节点**（缺微信 appid
+ * 与 UniversalLinks），所以 App 端 `uni.share({provider:'weixin'})` 必走 fail。原来的 fail 回调
+ * 一律提示「分享取消」，把「没配置」伪装成「用户取消」。没有开放平台 appid 就不能硬编码假值，
+ * 只能运行时探测真实能力，探测不到就不给出这个入口。
+ * H5 与小程序端 wxShareReady 恒为 false（小程序的分享要走 `button open-type="share"`，
+ * uni.share 在该端不支持），菜单里只留两个复制项。
+ */
+const wxShareReady = ref(false)
+
+// #ifdef APP-PLUS
+function probeWxShare() {
+  if (typeof plus === 'undefined' || !plus.share || !plus.share.getServices) return
+  try {
+    plus.share.getServices(
+      (services) => { wxShareReady.value = toList(services).some((s) => s && s.id === 'weixin') },
+      () => { wxShareReady.value = false }
+    )
+  } catch (_) { wxShareReady.value = false }
+}
+
+function wxShare(scene) {
+  const code = inviteCode.value
+  if (!code) return uni.showToast({ title: '暂无邀请码', icon: 'none' })
+  uni.share({
+    provider: 'weixin',
+    scene,
+    type: 0,
+    title: shareInfoData.value.shareTitle || '来白夜，一起社交',
+    summary: shareInfoData.value.shareDesc || '邀请好友注册，双方各获3天精英体验',
+    href: `${siteOrigin()}/#/pages/login/login?inviteCode=${code}`,
+    imageUrl: '',
+    success: () => uni.showToast({ title: '分享成功', icon: 'success' }),
+    fail: (err) => {
+      const msg = String((err && err.errMsg) || '')
+      uni.showToast({
+        title: /cancel/i.test(msg) ? '已取消分享' : '分享失败，请改用复制邀请链接',
+        icon: 'none',
+        duration: 2500
+      })
+    }
+  })
+}
+// #endif
+
 const onInvite = () => {
+  // itemList 与处理函数成对生成：隐藏微信入口后 tapIndex 不会与硬编码序号错位
+  const actions = []
+  // #ifdef APP-PLUS
+  if (wxShareReady.value) {
+    actions.push({ label: '分享给微信好友', run: () => wxShare('WXSceneSession') })
+    actions.push({ label: '分享到朋友圈', run: () => wxShare('WXSceneTimeline') })
+  }
+  // #endif
+  actions.push({ label: '复制邀请码', run: copyCode })
+  actions.push({ label: '复制邀请链接', run: copyLink })
+
   uni.showActionSheet({
-    itemList: ['分享给微信好友', '分享到朋友圈', '复制邀请码', '复制邀请链接'],
+    itemList: actions.map((a) => a.label),
     success: (res) => {
-      const code = inviteCode.value
-      if (res.tapIndex === 2) {
-        copyCode()
-      } else if (res.tapIndex === 3) {
-        copyLink()
-      } else {
-        // #ifdef MP-WEIXIN || APP-PLUS
-        uni.share({
-          provider: 'weixin',
-          scene: res.tapIndex === 0 ? 'WXSceneSession' : 'WXSceneTimeline',
-          type: 0,
-          title: shareInfoData.value.shareTitle || '来白夜，一起社交',
-          summary: shareInfoData.value.shareDesc || '邀请好友注册，双方各获3天精英体验',
-          href: `${siteOrigin()}/#/pages/login/login?inviteCode=${code}`,
-          imageUrl: '',
-          success: () => uni.showToast({ title: '分享成功', icon: 'success' }),
-          fail: () => uni.showToast({ title: '分享取消', icon: 'none' })
-        })
-        // #endif
-        // #ifdef H5
-        uni.showToast({
-          title: 'H5 暂不支持微信分享，请复制邀请码或链接',
-          icon: 'none',
-          duration: 2500
-        })
-        // #endif
-      }
+      const hit = actions[res.tapIndex]
+      if (hit) hit.run()
     }
   })
 }
 
-onShow(loadData)
+onShow(() => {
+  loadData()
+  // #ifdef APP-PLUS
+  probeWxShare()
+  // #endif
+})
 </script>
 
 <style lang="scss" scoped>

@@ -144,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '../../store/user'
 import { useWalletStore } from '../../store/wallet'
@@ -216,36 +216,27 @@ const refreshCert = async () => {
   }
 }
 
-// ---- 刷新社交统计 ----
-const refreshSocialStats = async () => {
-  if (!isLoggedIn.value) return
-  try {
-    const profile = await guard(
-      userApi.profile().then(r => unwrap(r, null)),
-      null
-    )
-    const obj = toObj(profile, {})
-    socialStats.value = {
-      followingCount: toNum(obj.followingCount, 0),
-      followersCount: toNum(obj.followersCount, 0),
-      postsCount: toNum(obj.postsCount, 0)
-    }
-    charmValue.value = toNum(obj.charmValue, 0)
-  } catch (_) {
-    /* 静默 */
+// ---- 应用社交统计（数据来自 loadAll 里那一次 /user/profile，不再单独发请求）----
+const applySocialStats = (profileData) => {
+  const obj = toObj(profileData, {})
+  socialStats.value = {
+    followingCount: toNum(obj.followingCount, 0),
+    followersCount: toNum(obj.followersCount, 0),
+    postsCount: toNum(obj.postsCount, 0)
   }
+  charmValue.value = toNum(obj.charmValue, 0)
 }
 
-// ---- 并行加载：profile + balance + certifications + socialStats ----
+// ---- 并行加载：profile（同一份数据顺带喂给社交统计）+ balance + certifications ----
 const loadAll = async () => {
   if (!isLoggedIn.value) return
   try {
-    await Promise.all([
+    const [profileData] = await Promise.all([
       guard(userStore.fetchProfile().catch(() => null), null),
       guard(walletStore.fetchBalance().catch(() => null), null),
-      refreshCert(),
-      refreshSocialStats()
+      refreshCert()
     ])
+    applySocialStats(profileData)
   } catch (_) {
     /* 并行异常全部吞 */
   }
@@ -348,9 +339,6 @@ const onLogout = () => {
   })
 }
 
-onMounted(() => {
-  if (isLoggedIn.value) loadAll()
-})
 onShow(() => {
   userStore.restoreSession()
   if (isLoggedIn.value) loadAll()
