@@ -3,15 +3,42 @@ const router = express.Router()
 const { DailyTask, Wallet, User, Transaction, Op } = require('../models')
 const { auth } = require('../middleware/auth')
 const { success, fail } = require('../utils/response')
+const { getModuleConfig } = require('../utils/config')
 const sequelize = require('../config/database')
 
-const TASK_REWARDS = {
+/** 回落默认值：配置中心 tasks 模块缺字段或值非法时使用 */
+const TASK_REWARD_DEFAULTS = {
   login: 2,
   chat: 5,
   gift: 5,
   post: 3,
   share: 2,
   allDone: 10
+}
+
+/** 内部键 → 配置中心键（与 admin.js MODULE_META.tasks 对齐） */
+const TASK_CONFIG_KEYS = {
+  login: 'login_reward',
+  chat: 'chat_reward',
+  gift: 'gift_reward',
+  post: 'post_reward',
+  share: 'share_reward',
+  allDone: 'all_done_reward'
+}
+
+async function getTaskRewards() {
+  let cfg = {}
+  try { cfg = (await getModuleConfig('tasks')) || {} } catch (_) {}
+
+  const rewards = {}
+  for (const [key, fallback] of Object.entries(TASK_REWARD_DEFAULTS)) {
+    const raw = cfg[TASK_CONFIG_KEYS[key]]
+    const n = Number(raw)
+    rewards[key] = (raw === '' || raw == null || !Number.isFinite(n) || n < 0)
+      ? fallback
+      : Math.floor(n)
+  }
+  return { ...rewards, enabled: cfg.enabled !== false }
 }
 
 function todayStr() {
@@ -31,10 +58,11 @@ async function getOrCreateToday(userId) {
 router.get('/today', auth, async (req, res, next) => {
   try {
     const task = await getOrCreateToday(req.userId)
-    const rewards = TASK_REWARDS
+    const rewards = await getTaskRewards()
     const allDone = task.loginDone && task.chatDone && task.giftSent && task.postCreated && task.shareDone
     success(res, {
       date: task.date,
+      enabled: rewards.enabled,
       tasks: [
         { id: 'login', title: '每日登录', reward: rewards.login, done: !!task.loginDone, claimed: false },
         { id: 'chat', title: '发 3 条消息', reward: rewards.chat, done: !!task.chatDone, claimed: false, progress: Math.min(task.chatCount || 0, 3), target: 3 },
@@ -54,8 +82,11 @@ router.post('/:taskId/claim', auth, async (req, res, next) => {
   try {
     const { taskId } = req.params
     const task = await getOrCreateToday(req.userId)
-    const reward = TASK_REWARDS[taskId]
-    if (!reward) return fail(res, '无效的任务', 400)
+    if (!Object.prototype.hasOwnProperty.call(TASK_REWARD_DEFAULTS, taskId)) {
+      return fail(res, '无效的任务', 400)
+    }
+    const rewards = await getTaskRewards()
+    const reward = rewards[taskId]
 
     let taskDone = false
     if (taskId === 'login') taskDone = !!task.loginDone
@@ -68,11 +99,11 @@ router.post('/:taskId/claim', auth, async (req, res, next) => {
 
     const expectedClaimed = (() => {
       let sum = 0
-      if (taskId === 'login' || task.loginDone) sum += TASK_REWARDS.login
-      if (taskId === 'chat' || task.chatDone) sum += TASK_REWARDS.chat
-      if (taskId === 'gift' || task.giftSent) sum += TASK_REWARDS.gift
-      if (taskId === 'post' || task.postCreated) sum += TASK_REWARDS.post
-      if (taskId === 'share' || task.shareDone) sum += TASK_REWARDS.share
+      if (taskId === 'login' || task.loginDone) sum += rewards.login
+      if (taskId === 'chat' || task.chatDone) sum += rewards.chat
+      if (taskId === 'gift' || task.giftSent) sum += rewards.gift
+      if (taskId === 'post' || task.postCreated) sum += rewards.post
+      if (taskId === 'share' || task.shareDone) sum += rewards.share
       return sum
     })()
 
@@ -103,13 +134,14 @@ router.post('/all-done-claim', auth, async (req, res, next) => {
     const allDone = task.loginDone && task.chatDone && task.giftSent && task.postCreated && task.shareDone
     if (!allDone) return fail(res, '还有任务未完成', 400)
 
-    const baseTotal = TASK_REWARDS.login + TASK_REWARDS.chat + TASK_REWARDS.gift + TASK_REWARDS.post + TASK_REWARDS.share
+    const rewards = await getTaskRewards()
+    const baseTotal = rewards.login + rewards.chat + rewards.gift + rewards.post + rewards.share
     if (task.totalClaimed < baseTotal) return fail(res, '请先领取单个任务奖励', 400)
 
-    const allDoneClaimed = task.totalClaimed >= baseTotal + TASK_REWARDS.allDone
+    const allDoneClaimed = task.totalClaimed >= baseTotal + rewards.allDone
     if (allDoneClaimed) return fail(res, '已全部领取', 400)
 
-    const reward = TASK_REWARDS.allDone
+    const reward = rewards.allDone
     const wallet = await Wallet.findOne({ where: { userId: req.userId } })
     if (!wallet) return fail(res, '钱包不存在', 404)
 

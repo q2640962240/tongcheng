@@ -1436,6 +1436,17 @@ router.put('/posts/:id/audit', async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+/** 删除动态（级联删评论） */
+router.delete('/posts/:id', async (req, res, next) => {
+  try {
+    const post = await Post.findByPk(req.params.id)
+    if (!post) return fail(res, '动态不存在', 404)
+    const commentsRemoved = await Comment.destroy({ where: { postId: post.id } })
+    await post.destroy()
+    success(res, { id: post.id, commentsRemoved }, '动态已删除')
+  } catch (err) { next(err) }
+})
+
 /** 组局列表（后台）· 支持分页 / status 筛选 / keyword（匹配标题/发起人昵称/ID）*/
 router.get('/groups', async (req, res, next) => {
   try {

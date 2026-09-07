@@ -57,18 +57,18 @@ router.post('/send', auth, async (req, res, next) => {
 
     const receiverIncome = Math.floor(totalDiamond * withdrawRatio * 100)
 
+    // Sequelize 的 instance.update() 会就地修改实例，余额快照必须在 update 之前取，
+    // 否则下面 Transaction.balanceAfter 会在已变更的值上再算一次差额（双计）。
+    const senderBalanceAfter = wallet.diamond - totalDiamond
+    const receiverIncomeAfter = (receiver.giftIncome || 0) + receiverIncome
+    const receiverCharmAfter = (receiver.charmValue || 0) + totalDiamond
+
     // a. 扣减发送者 diamond
-    await wallet.update(
-      { diamond: wallet.diamond - totalDiamond },
-      { transaction: t }
-    )
+    await wallet.update({ diamond: senderBalanceAfter }, { transaction: t })
 
     // b. 加到接收者 giftIncome + charmValue
     await receiver.update(
-      {
-        giftIncome: (receiver.giftIncome || 0) + receiverIncome,
-        charmValue: (receiver.charmValue || 0) + totalDiamond
-      },
+      { giftIncome: receiverIncomeAfter, charmValue: receiverCharmAfter },
       { transaction: t }
     )
 
@@ -78,7 +78,7 @@ router.post('/send', auth, async (req, res, next) => {
       type: 'gift_send',
       amount: -totalDiamond,
       currency: 'diamond',
-      balanceAfter: wallet.diamond - totalDiamond,
+      balanceAfter: senderBalanceAfter,
       remark: `送出${qty}个${gift.name}`,
       extra: { receiverId: Number(receiverId), giftId: gift.id, giftName: gift.name, quantity: qty, diamondAmount: totalDiamond }
     }, { transaction: t })
@@ -87,7 +87,7 @@ router.post('/send', auth, async (req, res, next) => {
       type: 'gift_income',
       amount: receiverIncome,
       currency: 'fen',
-      balanceAfter: (receiver.giftIncome || 0) + receiverIncome,
+      balanceAfter: receiverIncomeAfter,
       remark: `收到${qty}个${gift.name}`,
       extra: { senderId: req.userId, giftId: gift.id, giftName: gift.name, quantity: qty, diamondAmount: totalDiamond, incomeFen: receiverIncome }
     }, { transaction: t })
