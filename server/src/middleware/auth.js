@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken')
 const config = require('../config')
+const presence = require('../utils/presence')
 
 /** 生成访问 token */
 const signToken = (userId) => {
@@ -23,6 +24,8 @@ const auth = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, config.jwt.secret)
     req.userId = decoded.id
+    // 在线状态写在这里而不是 Socket.IO connect：主通道 TUIKit 走腾讯云 IM，从不连自建 socket
+    presence.touch(req.userId)
     next()
   } catch (err) {
     return res.status(401).json({ code: 401, message: '登录已过期，请重新登录' })
@@ -36,6 +39,7 @@ const optionalAuth = (req, res, next) => {
     try {
       const decoded = jwt.verify(authHeader.slice(7), config.jwt.secret)
       req.userId = decoded.id
+      presence.touch(req.userId)
     } catch (e) {}
   }
   next()

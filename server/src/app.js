@@ -216,11 +216,8 @@ async function startApp() {
     console.log(`[WS] user_${socket.userId} connected`)
     socket.join(`user_${socket.userId}`)
 
-    // 更新最后活跃时间（用于在线状态判断）
-    setImmediate(() => {
-      const { User } = require('./models')
-      User.update({ lastActiveAt: new Date() }, { where: { id: socket.userId } }).catch(() => {})
-    })
+    // 更新最后活跃时间（用于在线状态判断）；与鉴权中间件共用同一个节流写入点
+    require('./utils/presence').touch(socket.userId)
 
     // 发送消息
     socket.on('message', async (data, ack) => {

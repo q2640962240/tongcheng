@@ -345,6 +345,42 @@ router.get('/search/:userId', auth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// AI 闸门阈值。取值依据 2026-09-08 生产实测：真人会话（12-25 / 12-27）滚动 10 分钟内
+// AI 回复峰值只有 2 / 3 条，而脚本刷出来的 AI↔AI 会话（12-13）同一窗口达到 20 条。
+// 15 条上限远高于任何真实对话，又能封住刷量（同时也就是封住 LLM 花费）。
+const AI_GATE_COOLDOWN_SEC = 2
+const AI_GATE_WINDOW_MIN = 10
+const AI_GATE_MAX_PER_WINDOW = 15
+
+/**
+ * 返回跳过原因；null 表示放行。三个触发点都经 tryAiAutoReply 收口到这里。
+ *
+ * 刻意**没有**「对方 lastActiveAt 距今 > N 分钟才回复」这一条：
+ * 触发前提本来就是 other.userType === 'ai'，而 AI 用户从不登录、
+ * lastActiveAt 恒为 NULL 或极旧（生产 11 个 AI 用户里 10 个是 NULL），
+ * 该条件恒真等于没写；若把 NULL 当成「刚活跃」处理，反而会让 10 个 AI 用户永久哑掉。
+ */
+async function _aiGateSkipReason({ sid, senderId, aiUser }) {
+  // 发起方也是 AI → 不回，避免 AI 互相聊。
+  // 生产 messages 29→30 真的出现过一轮：AI 12 发给 AI 13，AI 13 回了本地兜底句。
+  const sender = await User.findByPk(senderId, { attributes: ['id', 'userType'] })
+  if (sender && sender.userType === 'ai') return 'sender-is-ai'
+
+  const since = new Date(Date.now() - AI_GATE_WINDOW_MIN * 60 * 1000)
+  const recentAi = await Message.findAll({
+    where: { sessionId: sid, senderId: aiUser.id, type: 'text', createdAt: { [Op.gte]: since } },
+    order: [['createdAt', 'DESC']],
+    attributes: ['createdAt'],
+    limit: AI_GATE_MAX_PER_WINDOW
+  })
+  if (recentAi.length >= AI_GATE_MAX_PER_WINDOW) return 'window-cap'
+
+  const lastAt = recentAi[0] ? new Date(recentAi[0].createdAt).getTime() : 0
+  if (lastAt && Date.now() - lastAt < AI_GATE_COOLDOWN_SEC * 1000) return 'cooldown'
+
+  return null
+}
+
 /**
  * AI 自动回复：根据 AI 用户的 aiConfig 调用外部 LLM，生成一条回复消息并保存、推送
  * 失败不影响主消息返回，但会在日志里记录（避免真实用户看到 500）
@@ -354,11 +390,19 @@ async function tryAiAutoReply({ app, senderId, aiUser, lastContent }) {
   try {
     if (!aiUser || aiUser.userType !== 'ai') return
 
+    const sid = sessionId(senderId, aiUser.id)
+
+    // 闸门必须在拉历史/调 LLM 之前，否则被拦下的请求照样产生一次上下文查询与 token 花费
+    const skip = await _aiGateSkipReason({ sid, senderId, aiUser })
+    if (skip) {
+      console.log(`[ai-gate] skip reason=${skip} conv=${sid} sender=${senderId} ai=${aiUser.id}`)
+      return
+    }
+
     const cfg = (aiUser.aiConfig && typeof aiUser.aiConfig === 'object') ? aiUser.aiConfig : {}
     const systemPrompt = String(cfg.systemPrompt || '你是"白夜"伴玩平台的聊天伙伴，正在与用户进行自然聊天回复。请保持友善、温柔、有趣的语气，回复控制在 50-200 字之间，不要透露自己是 AI。').trim()
 
     // 拉取最近 15 条上下文（仅文本），更准确理解对话
-    const sid = sessionId(senderId, aiUser.id)
     const recent = await Message.findAll({
       where: { sessionId: sid, type: 'text' },
       order: [['createdAt', 'DESC']],
