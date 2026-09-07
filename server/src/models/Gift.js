@@ -11,6 +11,14 @@ const Gift = sequelize.define('Gift', {
     type: DataTypes.STRING(50),
     allowNull: false
   },
+  // 稳定业务键（拼音短码）。seed 按它匹配，改名不再插重复行（2026-09-07 线上曾因此 16→30）。
+  // 唯一索引分三步加：先加列 → 生产按 name 回填 → 手工 ALTER TABLE ADD UNIQUE INDEX，
+  // 不能一步到位：bootstrap 是 sync({alter:true})，既有行 code 全 NULL 时建唯一索引会失败或建出残缺索引。
+  code: {
+    type: DataTypes.STRING(32),
+    allowNull: true,
+    comment: '稳定业务键(拼音短码)，seed 按它匹配'
+  },
   imageUrl: {
     type: DataTypes.TEXT,
     allowNull: true

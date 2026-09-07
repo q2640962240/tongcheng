@@ -64,16 +64,28 @@ export default {
       this.run(newVal, ownerInstance)
     },
 
+    loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script')
+        s.src = src
+        s.onload = () => resolve()
+        s.onerror = () => reject(new Error('load fail: ' + src))
+        document.head.appendChild(s)
+      })
+    },
+
     ensureLib(base) {
       if (window.SVGA) return Promise.resolve(window.SVGA)
       if (this._libP) return this._libP
-      this._libP = new Promise((resolve, reject) => {
-        const s = document.createElement('script')
-        s.src = (base || '') + '/static/lib/svga.min.js'
-        s.onload = () => (window.SVGA ? resolve(window.SVGA) : reject(new Error('SVGA undefined')))
-        s.onerror = () => reject(new Error('svga.min.js load fail'))
-        document.head.appendChild(s)
-      })
+      // svga.min.js 的 zip 容器（SVGA 1.x）分支门控在 JSZip/JSZipUtils 两个全局上，
+      // npm 构建不打包它们（官方文档要求页面另挂）。缺了 zip 素材会掉进 proto 路径
+      // 报 pako "incorrect header check"，只能降级 CSS —— 缘定今生就是 zip 容器。
+      // 这两个是增强项：加载失败不阻断，zlib+protobuf 素材（绝大多数）照常播。
+      const b = base || ''
+      this._libP = this.loadScript(b + '/static/lib/jszip.min.js').catch(() => {})
+        .then(() => this.loadScript(b + '/static/lib/jszip-utils.min.js').catch(() => {}))
+        .then(() => this.loadScript(b + '/static/lib/svga.min.js'))
+        .then(() => (window.SVGA ? window.SVGA : Promise.reject(new Error('SVGA undefined'))))
       return this._libP
     },
 
@@ -105,7 +117,12 @@ export default {
         stage.style.height = '100%'
         holder.appendChild(stage)
 
-        const vi = await new Promise((res, rej) => new SVGA.Parser().load(p.src, res, rej))
+        // 3s 加载超时：大素材（缘定今生 588KB）弱网下载期间特效层是黑的，
+        // 超时直接走 onSvgaFail 的 CSS 降级，复用已有分支不新增。
+        const vi = await Promise.race([
+          new Promise((res, rej) => new SVGA.Parser().load(p.src, res, rej)),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('svga load timeout 3s')), 3000))
+        ])
         const player = new SVGA.Player(stage)
         this._player = player
         player.setVideoItem(vi)

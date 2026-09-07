@@ -477,37 +477,48 @@ async function ensureBanners({ transaction }) {
 // effectImage 指向 .svga（SVGA 矢量动画），由 app/src/components/SvgaStage.vue 用 renderjs 播放；
 // 小程序端不支持 renderjs，会自动降级为纯 CSS 特效层。
 // ⚠️ price / sort 是金额与排序字段，改动需用户批准。
-// ⚠️ ensureGifts / upgradeGifts 都按 name 匹配，改名后直接在生产跑 seed 会插入重复行；
-//    生产库改名必须走「按 sort 定向 UPDATE」，见 AGENTS.md 待办。
+// 匹配键是 code（稳定业务键），name 只作兜底（生产回填 code 之前的窗口期）；
+// 改名只影响展示，不会再插重复行（2026-09-07 线上曾因此 16→30，见 AGENTS.md 坑点 20）。
 const DEFAULT_GIFTS = [
-  { name: '点赞',     imageUrl: '/static/gifts/dianzan.png',        price: 1,     sort: 1,  active: true, animationLevel: 1, effectImage: '/static/svga/dianzan.svga' },
-  { name: '比心',     imageUrl: '/static/gifts/bixin.png',          price: 10,    sort: 2,  active: true, animationLevel: 1, effectImage: '/static/svga/bixin.svga' },
-  { name: '星际少女', imageUrl: '/static/gifts/xingji.png',         price: 20,    sort: 3,  active: true, animationLevel: 1, effectImage: '/static/svga/xingji.svga' },
-  { name: '玫瑰',     imageUrl: '/static/gifts/meigui.png',         price: 50,    sort: 4,  active: true, animationLevel: 2, effectImage: '/static/svga/meigui.svga' },
-  { name: '心动',     imageUrl: '/static/gifts/xindong.png',        price: 80,    sort: 5,  active: true, animationLevel: 2, effectImage: '/static/svga/xindong.svga' },
-  { name: '一剑穿心', imageUrl: '/static/gifts/yijian.png',         price: 100,   sort: 6,  active: true, animationLevel: 2, effectImage: '/static/svga/yijian.svga' },
-  { name: '钻石',     imageUrl: '/static/gifts/zuanshi.png',        price: 200,   sort: 7,  active: true, animationLevel: 2, effectImage: '/static/svga/zuanshi.svga' },
-  { name: '天使',     imageUrl: '/static/gifts/tianshi.png',        price: 300,   sort: 8,  active: true, animationLevel: 2, effectImage: '/static/svga/tianshi.svga' },
-  { name: '花好月圆', imageUrl: '/static/gifts/huahao.png',         price: 500,   sort: 9,  active: true, animationLevel: 2, effectImage: '/static/svga/huahao.svga' },
-  { name: '福袋',     imageUrl: '/static/gifts/fudai.png',          price: 500,   sort: 10, active: true, animationLevel: 3, effectImage: '/static/svga/fudai.svga' },
-  { name: '皇冠',     imageUrl: '/static/gifts/huangguan.png',      price: 1000,  sort: 11, active: true, animationLevel: 3, effectImage: '/static/svga/huangguan.svga' },
-  { name: '水晶球',   imageUrl: '/static/gifts/shuijingqiu.png',    price: 2000,  sort: 12, active: true, animationLevel: 3, effectImage: '/static/svga/shuijingqiu.svga' },
-  { name: '独角兽',   imageUrl: '/static/gifts/dushou.png',         price: 5000,  sort: 13, active: true, animationLevel: 3, effectImage: '/static/svga/dushou.svga' },
-  { name: '跑车',     imageUrl: '/static/gifts/paoche.png',         price: 10000, sort: 14, active: true, animationLevel: 3, effectImage: '/static/svga/paoche.svga' },
-  { name: '旋转木马', imageUrl: '/static/gifts/xuanzhuanmuma.png',  price: 20000, sort: 15, active: true, animationLevel: 3, effectImage: '/static/svga/xuanzhuanmuma.svga' },
-  { name: '流星雨',   imageUrl: '/static/gifts/liuxingyu.png',      price: 50000, sort: 16, active: true, animationLevel: 3, effectImage: '/static/svga/liuxingyu.svga' }
+  { code: 'dianzan',      name: '点赞',     imageUrl: '/static/gifts/dianzan.png',        price: 1,     sort: 1,  active: true, animationLevel: 1, effectImage: '/static/svga/dianzan.svga' },
+  { code: 'bianbian',     name: '便便',     imageUrl: '/static/gifts/bianbian.png',       price: 2,     sort: 2,  active: true, animationLevel: 1, effectImage: '/static/svga/bianbian.svga' },
+  { code: 'lvmaozi',      name: '绿帽子',   imageUrl: '/static/gifts/lvmaozi.png',        price: 5,     sort: 3,  active: true, animationLevel: 1, effectImage: '/static/svga/lvmaozi.svga' },
+  { code: 'jidan',        name: '扔鸡蛋',   imageUrl: '/static/gifts/jidan.png',          price: 8,     sort: 4,  active: true, animationLevel: 1, effectImage: '/static/svga/jidan.svga' },
+  { code: 'bixin',        name: '比心',     imageUrl: '/static/gifts/bixin.png',          price: 10,    sort: 5,  active: true, animationLevel: 1, effectImage: '/static/svga/bixin.svga' },
+  { code: 'xingji',       name: '星际少女', imageUrl: '/static/gifts/xingji.png',         price: 20,    sort: 6,  active: true, animationLevel: 1, effectImage: '/static/svga/xingji.svga' },
+  { code: 'meigui',       name: '玫瑰',     imageUrl: '/static/gifts/meigui.png',         price: 50,    sort: 7,  active: true, animationLevel: 2, effectImage: '/static/svga/meigui.svga' },
+  { code: 'xindong',      name: '心动',     imageUrl: '/static/gifts/xindong.png',        price: 80,    sort: 8,  active: true, animationLevel: 2, effectImage: '/static/svga/xindong.svga' },
+  { code: 'yijian',       name: '一剑穿心', imageUrl: '/static/gifts/yijian.png',         price: 100,   sort: 9,  active: true, animationLevel: 2, effectImage: '/static/svga/yijian.svga' },
+  { code: 'jiayou',       name: '加油',     imageUrl: '/static/gifts/jiayou.png',         price: 150,   sort: 10, active: true, animationLevel: 2, effectImage: '/static/svga/jiayou.svga' },
+  { code: 'zuanshi',      name: '钻石',     imageUrl: '/static/gifts/zuanshi.png',        price: 200,   sort: 11, active: true, animationLevel: 2, effectImage: '/static/svga/zuanshi.svga' },
+  { code: 'tianshi',      name: '天使',     imageUrl: '/static/gifts/tianshi.png',        price: 300,   sort: 12, active: true, animationLevel: 2, effectImage: '/static/svga/tianshi.svga' },
+  { code: 'huahao',       name: '花好月圆', imageUrl: '/static/gifts/huahao.png',         price: 500,   sort: 13, active: true, animationLevel: 2, effectImage: '/static/svga/huahao.svga' },
+  { code: 'fudai',        name: '福袋',     imageUrl: '/static/gifts/fudai.png',          price: 500,   sort: 14, active: true, animationLevel: 3, effectImage: '/static/svga/fudai.svga' },
+  { code: 'huangguan',    name: '皇冠',     imageUrl: '/static/gifts/huangguan.png',      price: 1000,  sort: 15, active: true, animationLevel: 3, effectImage: '/static/svga/huangguan.svga' },
+  { code: 'shuijingqiu',  name: '水晶球',   imageUrl: '/static/gifts/shuijingqiu.png',    price: 2000,  sort: 16, active: true, animationLevel: 3, effectImage: '/static/svga/shuijingqiu.svga' },
+  { code: 'dushou',       name: '独角兽',   imageUrl: '/static/gifts/dushou.png',         price: 5000,  sort: 17, active: true, animationLevel: 3, effectImage: '/static/svga/dushou.svga' },
+  { code: 'paoche',       name: '跑车',     imageUrl: '/static/gifts/paoche.png',         price: 10000, sort: 18, active: true, animationLevel: 3, effectImage: '/static/svga/paoche.svga' },
+  { code: 'xuanzhuanmuma', name: '旋转木马', imageUrl: '/static/gifts/xuanzhuanmuma.png',  price: 20000, sort: 19, active: true, animationLevel: 3, effectImage: '/static/svga/xuanzhuanmuma.svga' },
+  { code: 'luochui',      name: '一锤定音', imageUrl: '/static/gifts/luochui.png',        price: 30000, sort: 20, active: true, animationLevel: 3, effectImage: '/static/svga/luochui.svga' },
+  { code: 'liuxingyu',    name: '流星雨',   imageUrl: '/static/gifts/liuxingyu.png',      price: 50000, sort: 21, active: true, animationLevel: 3, effectImage: '/static/svga/liuxingyu.svga' },
+  { code: 'yuanding',     name: '缘定今生', imageUrl: '/static/gifts/yuanding.png',       price: 88888, sort: 22, active: true, animationLevel: 3, effectImage: '/static/svga/yuanding.svga' }
 ]
 async function ensureGifts({ transaction }) {
   const existing = await Gift.findAll({ transaction })
   if (existing.length > 0) {
     let patched = 0
-    const giftMap = {}
-    for (const g of DEFAULT_GIFTS) giftMap[g.name] = g
+    const byCode = {}
+    const byName = {}
+    for (const g of DEFAULT_GIFTS) { byCode[g.code] = g; byName[g.name] = g }
     for (const g of existing) {
       let needUpdate = false
       const patch = {}
-      const def = giftMap[g.name]
+      const def = (g.code && byCode[g.code]) || byName[g.name]
       if (def) {
+        if (def.code && g.code !== def.code) {
+          patch.code = def.code
+          needUpdate = true
+        }
         if (def.imageUrl !== g.imageUrl) {
           patch.imageUrl = def.imageUrl
           needUpdate = true
@@ -530,17 +541,19 @@ async function ensureGifts({ transaction }) {
 
 async function upgradeGifts({ transaction }) {
   const existing = await Gift.findAll({ transaction })
-  const nameMap = {}
-  for (const g of existing) nameMap[g.name] = g
+  const byCode = {}
+  const byName = {}
+  for (const g of existing) { if (g.code) byCode[g.code] = g; byName[g.name] = g }
 
   let created = 0, updated = 0
   for (const def of DEFAULT_GIFTS) {
-    const row = nameMap[def.name]
+    const row = byCode[def.code] || byName[def.name]
     if (!row) {
       await Gift.create(def, { transaction })
       created++
     } else {
       const upd = {}
+      if (def.code && row.code !== def.code) upd.code = def.code
       if (row.sort !== def.sort) upd.sort = def.sort
       if (row.imageUrl !== def.imageUrl) upd.imageUrl = def.imageUrl
       if (row.animationLevel !== def.animationLevel) upd.animationLevel = def.animationLevel
