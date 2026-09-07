@@ -425,8 +425,11 @@ async function ensureAiPosts({ transaction }) {
       auditStatus: 'approved',
       online: true,
       category: 'dynamic',
-      likeCount: Math.floor(5 + Math.random() * 200),
-      commentCount: Math.floor(Math.random() * 20),
+      // 点赞/评论数只能由真实交互产生：这里伪造计数会留下没有 likes 数组、
+      // 没有 comments 行的「幽灵热度」，详情页评论列表恒为空，且用户第一次点赞
+      // 会把 179 直接重置成 1
+      likeCount: 0,
+      commentCount: 0,
       top: i === 0
     }, { transaction })
     created++

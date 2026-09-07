@@ -216,7 +216,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { userApi, postApi, bannerApi, locationApi } from '../../api'
 import { useUserStore } from '../../store/user'
 import {
@@ -388,6 +388,15 @@ onShow(() => {
   loadLatestPosts(true)
   if (userStore.token) msgBadge.value = true
 })
+onPullDownRefresh(async () => {
+  try {
+    await Promise.all([loadBanners(true), loadRecommendUsers(true), loadLatestPosts(true)])
+  } catch (_) {
+  } finally {
+    // 不收尾的话 iOS 原生下拉圈会一直转
+    uni.stopPullDownRefresh()
+  }
+})
 onMounted(() => tryAutoLocate())
 
 /* -------- 事件 -------- */
@@ -407,7 +416,7 @@ const onGoVerify = () => uni.navigateTo({ url: '/pages/verification-hub/verifica
 const onUserTap = (u) => uni.navigateTo({ url: `/pages/user-profile/user-profile?id=${u.id}` })
 const onOnlineChat = (u) => uni.navigateTo({ url: `/pages/chat/chat?userId=${u.id}` })
 const onMorePosts = () => uni.navigateTo({ url: '/pages/discover/discover?tab=posts' })
-const onPostTap = (p) => uni.navigateTo({ url: `/pages/discover/discover?tab=posts&postId=${p.id}` })
+const onPostTap = (p) => uni.navigateTo({ url: `/pages/post/detail?id=${p.id}` })
 </script>
 
 <style lang="scss" scoped>

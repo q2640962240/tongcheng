@@ -91,18 +91,22 @@ export default {
         const SVGA = await this.ensureLib(p.base)
         this.stopPrev()
         holder.innerHTML = ''
-        const w = holder.clientWidth || window.innerWidth
-        const h = holder.clientHeight || window.innerHeight
-        const dpr = Math.min(window.devicePixelRatio || 1, 2)
-        const cv = document.createElement('canvas')
-        cv.width = Math.round(w * dpr)
-        cv.height = Math.round(h * dpr)
-        cv.style.width = w + 'px'
-        cv.style.height = h + 'px'
-        holder.appendChild(cv)
+        // 交给库自己建 canvas：传 DIV 时 _resize() 每帧按 holder 尺寸做 AspectFit
+        // （属性尺寸=videoSize + transform 缩放居中），既铺满 holder 又是超采样，比按屏幕 dpr 更清晰。
+        // 不能直接传 holder：uni-app 把 <view> 编译成 <uni-view>，过不了库里的 instanceof HTMLDivElement。
+        // 更不能自己 new canvas 传进去 —— 那样库不会创建 _drawingCanvas，_resize() 只按 canvas 的
+        // CSS 尺寸算 _globalTransform，却把内容画进「属性尺寸」的位图：早先这里按 dpr 放大属性尺寸，
+        // iOS(dpr 截到 2) 上画面就被缩到一半并锚在左上角；桌面 dpr=1 时属性==CSS，所以从没暴露过。
+        const stage = document.createElement('div')
+        stage.style.position = 'absolute'
+        stage.style.left = '0'
+        stage.style.top = '0'
+        stage.style.width = '100%'
+        stage.style.height = '100%'
+        holder.appendChild(stage)
 
         const vi = await new Promise((res, rej) => new SVGA.Parser().load(p.src, res, rej))
-        const player = new SVGA.Player(cv)
+        const player = new SVGA.Player(stage)
         this._player = player
         player.setVideoItem(vi)
         player.loops = 1

@@ -126,6 +126,20 @@ cd app && npm install && npm run dev:h5
     - **验证陷阱一（本次中招）**：统计请求次数时给 `XMLHttpRequest.prototype.send` 装钩子，**一个 document 只能装一次**。我在同一个页面先后装了两次，第二次包裹了第一次，于是 1 个真实请求被记成 2 条时间戳完全相同的日志，一度误判「守卫放过了 2 次」。**判定有没有重复扣费要以数据库行数/余额为准，不能只看前端日志条数。**
     - **验证陷阱二**：`pages/chat/chat.vue` 的 `onLoad` 只认 `conversationID / userId / peerUserId / to / id / uid / providerId`（`:676`），**不认 `toUserId`**。用错键时 `peerId` 为空 → 弹「会话参数缺失」并 `return`（因此也就**不会**重定向到 TUIChat，页面停在自建兜底聊天），此时礼物面板的 `receiverId` 是空串，送礼必返 `400 参数不完整`。线上入口全部用 `userId=` 或 `to=`，所以这不是生产 bug，但拿它做测试会得出完全错误的结论。反过来说：**IM 就绪时 `chat.vue:726` 会 `redirectTo` 官方 TUIChat，自建 `GiftPanel` 只是兜底路径**，用户实际看到的是 TUIKit 那个面板。
 
+24. **SVGA 播放器必须传「真 DIV」，绝不能传 canvas，更不能按 dpr 放大属性尺寸** — iOS App 上礼物特效缩成左上角一小块（用户 2026-09-07 截图报告）就是这个，桌面 H5 完全看不出来。2026-09-07 修（`SvgaStage.vue`）。
+    - **库的容器契约**（读 `app/src/static/lib/svga.min.js` 逆出来的，不是猜的）：`Player._init()` 只在 `container instanceof HTMLDivElement || container === undefined` 时才创建 `_drawingCanvas`；**传 canvas 进去 `_drawingCanvas` 恒为 undefined**。而 `_update()`（`setVideoItem()` 和每一帧都会调）→ `_resize()` 有两段：第一段仅在 `_drawingCanvas` 存在时执行，按「holder 尺寸 vs videoSize」设 `canvas.width/height` 并写 CSS `matrix()` 缩放居中；第二段在 `_drawingCanvas` 不存在时，用 `_container.clientWidth/clientHeight`（**CSS px**）算 `_globalTransform`。`Renderer.drawFrame/clear` 取 `(_drawingCanvas || _container).getContext('2d')` 并按 `.width/.height`（**属性 px / 位图尺寸**）clearRect。
+    - **于是传 canvas 时**：变换矩阵按 CSS px 算，内容却画进属性尺寸的位图。旧代码 `cv.width = w * min(dpr,2)`，属性尺寸是 CSS 的 2 倍 → 画面缩到 1/2 并锚在左上角。iOS dpr=3 被截到 2，正好「左上角一小块」；**桌面 dpr=1 时属性==CSS，所以从来没暴露过**。
+    - **正确写法**：`document.createElement('div')` 铺满 holder，交给库走 DIV 分支——它会自建 canvas，属性尺寸取 videoSize（750×1334）、CSS 尺寸由 `matrix()` 缩放，既铺满 holder 又是超采样，比按屏幕 dpr 更清晰。**两个反直觉的点**：① 不能直接把 holder 传进去，uni-app 把 `<view>` 编译成 `<uni-view>`，过不了 `instanceof HTMLDivElement`；② 不要给 canvas 写 `style.width/height`（会和库的 transform 叠成双重缩放）。
+    - **实测证据**（生产构建，模拟 390×844 holder，流星雨 `videoSize 750×1334`）：修复前内容只占位图 `[0.518, 0.451]` 且锚左上角；修复后 `canvas.parentNode.tagName === 'DIV'`、`attr [750,1334]`、无内联宽高、`transform matrix(0.52, 0, 0, 0.52, -180, -245)`、`getBoundingClientRect()` = `390 × 693.7 @ (0, 75.2)` 对 holder `390 × 844 @ (0,0)` —— 铺满宽度、垂直居中，连续 4 次采样稳定。
+    - **验证环境坑**：自动化浏览器标签页 `innerWidth/innerHeight` 恒为 0 且 `visibilityState: 'hidden'`，`requestAnimationFrame` 被挂起 → 播放器永远不推帧，每帧的 `_resize()` 也就不执行，量到的全是 0×0。必须先 `window.requestAnimationFrame = cb => setTimeout(() => cb(performance.now()), 16)`（每个 document 只能装一次），再用 MutationObserver 在 `.gift-anim-layer` 出现瞬间给 layer/stage/holder 强制 px 尺寸并带 `flex: 0 0 auto`（`.svga-stage` 是 flex 容器，0 宽父级里 `width:390px` 会被压成 0）。另：`.gift-anim-layer` 带 `v-if="current.id"`，**不播特效时根本不存在**，别拿「查不到 layer」当渲染失败。
+
+25. **`enablePullDownRefresh: true` 必须配 `onPullDownRefresh` + `uni.stopPullDownRefresh()`** — 只开配置不写回调，下拉后加载圈永远不消失，用户看到的就是「一直刷新」（2026-09-07 图三报告的现象之一）。回调里无论成功失败都要在 `finally` 中调 `stopPullDownRefresh()`，否则一次接口报错就把页面卡死在刷新态。`home.vue` 与 `discover.vue` 已按此补齐。
+
+26. **seed 伪造社交计数 = 「没有真实的点赞评论体系」的根因** — `server/src/seed.js` 曾给每条 AI 动态写 `likeCount: 5+random*200`、`commentCount: random*20`，却**不写 `likes` 数组、不建 `comments` 行**。2026-09-07 生产实测：15 条动态里 13 条 `likes` 为 NULL 而 `like_count` 高达 179，`comments` 表 **0 行**而 10 条动态声称有评论。后果有三：① 卡片显示「💬 12」点进详情是「评论 0」；② `POST /posts/:id/like` 写的是 `likes.length`，用户第一次点赞会把 179 **直接重置成 1**；③ 数字不可能通过任何交互变成真的。
+    - **已修**：`seed.js` 两个计数改为 0（新环境不再伪造）；`pages/post/detail.vue` 的评论数一律以 `GET /posts/:id/comments` 返回的真实 `total` 覆盖 `post.commentCount`（并因此**不能**在 `loadDetail` 里再写一次 `commentCount`——两个请求并发，详情后到会把真实值盖回伪造值）。
+    - **存量已校正**（2026-09-07，经用户批准）：`UPDATE posts SET like_count = COALESCE(JSON_LENGTH(likes),0)` + `UPDATE posts p SET comment_count = (SELECT COUNT(*) FROM comments c WHERE c.post_id=p.id)`。校正后全站 `SUM(like_count)=2`（post 1/14 的真实 `[27]`）、`SUM(comment_count)=0`。**发现页从此显示 0 赞 0 评论是正确状态，不是数据丢了。**
+    - 顺带一条查询坑：`groups` 是 MySQL 8 保留字，手写 SQL 必须反引号 `` `groups` ``；另外 Windows Git Bash 下 `curl --data-urlencode "city=深圳"` 会按 **GBK** 编码（服务端收到 `%C9%EE%DB%DA`），测中文参数要直接写 UTF-8 转义 `%E6%B7%B1%E5%9C%B3`。
+
 ## 服务器信息
 
 | 项 | 值 |
@@ -159,6 +173,20 @@ cd app && npm install && npm run dev:h5
 11. **iOS ATS 与「服务器地址」热切换冲突** — `request.js` 支持在 App 内把 BASE_URL 改成 `http://电脑IP:3000/api` 便于联调，但 iOS App Transport Security 默认禁止明文 HTTP。打包后该调试入口在 iOS 上会静默失败，需确认 HBuilderX 生成的 Info.plist 是否含 `NSAllowsArbitraryLoads`，或联调时改用 HTTPS 隧道
 12. **`transactions.balance_after` 把差额算了两次**（2026-09-07 生产端到端实测发现，未修）— `gifts.js:61` 的 `wallet.update({ diamond: wallet.diamond - totalDiamond })` 会**就地修改实例**，返回后 `wallet.diamond` 已是新值；而 `:81` 又写 `balanceAfter: wallet.diamond - totalDiamond`，等于扣了两次。接收方 `:67`/`:90` 同理（加两次）。实测证据：送 1 个流星雨（50000 钻）后，用户 27 真实余额 579676，`transactions#114.balance_after` 却记 529676；用户 25 真实 `gift_income` 26619110 分，`#115.balance_after` 记 30119110。**最小复现**（同日，故意送 1 钻的点赞）：用户 27 真实余额 529675，`#118.balance_after` 记 529674——差额正好等于一个礼物金额，收方 `#119` 的 +70 分同样翻倍，可排除其他干扰因素。**钱包与收入本身是对的，只有审计字段错**，影响管理后台交易明细与对账。修法：在 `update()` 之前把目标值存成局部变量（`const senderBalanceAfter = wallet.diamond - totalDiamond`），`update` 和 `balanceAfter` 都用它。**第三组证据（同日 07:39/07:42 两笔 1 钻点赞，用户 23→25）**：真实钻石 10→9→8，而 `#120.balance_after=8`、`#122.balance_after=7` 各少 1；收方真实 `gift_income` 30119320 分，而 `#121.balance_after=30119320`、`#123.balance_after=30119390` 各多 70 分——双计逐笔稳定复现，且**最后一笔的 `balance_after` 与真实值总是差恰好一个礼物金额**，可据此批量校正历史数据。
 13. **`auth.js getUser()` 在 H5 恒返回 `{}`**（2026-09-07 浏览器实测确认，未修）— `setUser()` 存的是 `JSON.stringify(user)`，而 uni-h5 的 `getStorageSync` 会把「看起来像 JSON」的字符串**自动解析成对象**再返回（实测：存 `'{"a":1}'` → 原样落 localStorage → 取回得到 `{a:1}` 对象）。`getUser()` 于是执行 `JSON.parse(对象)` → `JSON.parse("[object Object]")` → 抛 `SyntaxError` → 被 catch 吞掉返回 `{}`。**后果**：`store/user.js` 的 `restoreSession()` 里 `if (this.token && this.user && this.user.id)` 恒为假，`kickOffTUIInit()` 与 `fetchProfile()` 在「带已有登录态刷新页面」时**根本不会执行**——它们是死代码，IM 登录之所以没出事是因为另有两条独立路径：`App.vue:125` 用 `isLoggedIn`（`!!user.id || !!token`，靠 token 成立）挂载 `msgNotify`，其内部会调幂等的 `ensureTUILogin()`；`entry-chat-only.ts:50` / `entry-conversation.ts:39` / `chat.vue:721` 也各自直接调。`userStore.userId`/`nickname`/`avatar` 刷新后则确实全为空。当前绕行：新增 `getUserId()`（解 JWT payload 取 `id`，纯 JS base64 解码不用 `atob`，App 端也能跑），`giftAnimPlayed.js` 与 `chat.vue isMine()` 已改用它。**没有直接修 `getUser()` 的原因**：修好会一次性激活上面那段死代码（每次启动都登录 IM + 拉资料），有可能加重待办 #9 的首屏竞态，需要单独评估后再改。改法本身是一行：`const raw = uni.getStorageSync(USER_KEY); return typeof raw === 'string' ? JSON.parse(raw) : (raw || {})`
+
+14. ~~礼物特效音效~~ **用户已明确决定不做（2026-09-07）** — 曾实现过一版：`utils/giftSfx.js`（`uni.createInnerAudioContext()` 单例 + H5 首次触摸解锁）、`scripts/gen-gift-sounds.js`（零依赖 WAV 合成器）、`static/sounds/` 19 个 wav（16 个与 SVGA 同名 + `gift-l1/l2/l3` 等级通用音），并在 H5 实测播放成功。**用户指令「不做特效的音效，特效相关的音效都做回退」后已全部删除**，`GiftAnimation.vue` 回到 HEAD。⚠️ 后续会话不要「顺手把音效加回来」；若真要重做，注意 App 端自动播放策略与 iOS 静音开关，且素材必须落在 `src/static/`（坑点 16）
+15. **`groups` 表存量 city 仍是未规范化的 `'深圳'`（2 行）** — 读侧已用 `Op.in: cityVariants` 同时匹配 `'深圳'`/`'深圳市'`，所以功能上不缺；新建/编辑走 `normalizeCityName()` 写规范值。**没有跑存量 UPDATE**（会把 2 行改成 `'深圳市'`），因为读侧已兼容、改它没有收益还要动生产数据。若将来要按 city 做聚合统计或加唯一索引，再统一规范化
+16. **iOS 真机验证清单（2026-09-07 这批修复，需 HBuilderX 打包后逐项过）** — H5 侧已全部实测通过，但用户报的四个现象都在 iOS App 上，且 App 端 WKWebView 与 H5 有三处关键差异（`file://` 源要靠 `siteOrigin + /static/...` 绝对 URL、dpr=3、无 `window` 兜底路径）：
+    - [ ] 送 L3 礼物（流星雨）→ 特效**铺满全屏**，不再缩在左上角一小块（坑点 24）
+    - [ ] 送 L1/L2 礼物 → 特效按 46vw / 82vw 居中，比例正确
+    - [ ] SVGA 下载失败时能降级成 CSS 特效而不是黑屏（可断网或改错 URL 试）
+    - [ ] 特效播完自动消失，不残留（`onFinished` → `callMethod('onSvgaEnd')` 走通，坑点 19）
+    - [ ] 发布组局 → 页面**不再一直转圈**，返回发现页后筛选城市自动切到发布城市，且能看到刚发的卡片
+    - [ ] 发现页/首页下拉刷新 → 松手后加载圈会消失
+    - [ ] 点动态卡片任意区域 → 进详情页；点卡片上的 ❤️/💬/↗️ 不会误触进详情
+    - [ ] 详情页点赞 → 立刻变色变数，断网时回滚并提示「操作失败，请重试」
+    - [ ] 详情页发评论 → 出现「评论成功」、评论置顶显示、计数 +1
+    - [ ] 确认发现页动态显示 0 赞 0 评论是**预期结果**（坑点 26 已校正伪造计数），不是数据丢失
 
 ## 文档索引
 

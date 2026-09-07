@@ -30,7 +30,9 @@ router.get('/', optionalAuth, async (req, res, next) => {
     }
     const ignored = !!keywordRaw && keywordRaw.length < 2
     const where = { status: { [Op.in]: ['open', 'full'] } }
-    if (cityNorm) where.city = cityNorm
+    // 存量数据里 city 有原值（'深圳'）也有规范值（'深圳市'），精确匹配会把其中一半滤掉，
+    // 后面的内存模糊匹配因此永远收不到这些行，所以这里两种变体都要进 SQL
+    if (cityVariants.size) where.city = { [Op.in]: Array.from(cityVariants) }
     if (req.query.category) where.category = req.query.category
     if (req.query.expectMax) where.expectMax = { [Op.lte]: Number(req.query.expectMax) }
     if (!ignored && keywordRaw) {
@@ -44,7 +46,7 @@ router.get('/', optionalAuth, async (req, res, next) => {
       }
       where[Op.or] = ors
     }
-    // 城市走模糊匹配，无法用 SQL 精确表达，因此全量取出后内存过滤再分页
+    // 城市变体已进 SQL，内存过滤只是兜住前缀关系（如 '深圳市' vs '深圳南山'），仍需全量取出后分页
     const allRows = await Group.findAll({
       where,
       order: [['hot', 'DESC'], ['id', 'DESC']]
@@ -90,7 +92,7 @@ router.post('/', auth, sensitiveFilter(['title', 'description', 'tags']), async 
       title: String(title),
       description: description || '',
       tags: Array.isArray(tags) ? tags : [],
-      category, city: city || '', expectMin, expectMax,
+      category, city: normalizeCityName(city) || String(city || '').trim(), expectMin, expectMax,
       activityAt: activityAt || null, cover, icon,
       location: typeof location === 'object' ? location : {},
       status: 'open', joinCount: 1, hot: false
@@ -129,6 +131,7 @@ router.put('/:id', auth, sensitiveFilter(['title', 'description', 'tags']), asyn
     const allowed = ['title', 'description', 'tags', 'category', 'city', 'expectMin', 'expectMax', 'activityAt', 'cover', 'icon', 'status']
     const update = {}
     for (const k of allowed) if (req.body[k] !== undefined) update[k] = req.body[k]
+    if (update.city !== undefined) update.city = normalizeCityName(update.city) || String(update.city || '').trim()
     await g.update(update)
     success(res, null, '已更新')
   } catch (e) { next(e) }

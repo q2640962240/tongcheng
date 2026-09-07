@@ -371,7 +371,7 @@ const groupStatusText = (s) => {
 
 /* actions */
 const goUser = (u) => uni.navigateTo({ url: `/pages/user-profile/user-profile?id=${toStr(getPath(u, 'id'), '')}` })
-const goPost = (p) => uni.navigateTo({ url: `/pages/group/detail?id=${toStr(getPath(p, 'id'), '')}&mode=post` })
+const goPost = (p) => uni.navigateTo({ url: `/pages/post/detail?id=${toStr(getPath(p, 'id'), '')}` })
 const goGroup = (g) => uni.navigateTo({ url: `/pages/group/detail?id=${toStr(getPath(g, 'id'), '')}` })
 const preview = (images, i) => {
   const imgs = safeMap(toList(images), (img) => coverUrl(img))

@@ -175,7 +175,7 @@ async function onSubmit() {
       activityAt,
       location: { city: city.value },
     });
-    try { uni.setStorageSync('group.dirty', 1); } catch (_) {}
+    try { uni.setStorageSync('group.dirty', city.value); } catch (_) {}
     uni.hideLoading();
     uni.showToast({ title: '组局创建成功', icon: 'success' });
     setTimeout(() => uni.navigateBack(), 800);

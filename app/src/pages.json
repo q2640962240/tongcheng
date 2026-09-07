@@ -148,6 +148,12 @@
       }
     },
     {
+      "path": "pages/post/detail",
+      "style": {
+        "navigationBarTitleText": "动态详情"
+      }
+    },
+    {
       "path": "pages/group/detail",
       "style": {
         "navigationBarTitleText": "组局详情",

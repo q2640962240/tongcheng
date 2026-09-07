@@ -126,6 +126,7 @@
         v-for="p in postsList"
         :key="p.id"
         class="post-card card"
+        @tap="goPostDetail(p)"
       >
         <view class="post-head">
           <image class="post-avatar" :src="p.user && p.user.avatar" mode="aspectFill" />
@@ -146,22 +147,22 @@
             class="post-image"
             :src="img"
             mode="aspectFill"
-            @tap="previewImg(p.images, i)"
+            @tap.stop="previewImg(p.images, i)"
           />
         </view>
         <view class="post-tags" v-if="p.category">
           <text class="tag tag-blue">#{{ categoryLabel(p.category) }}</text>
         </view>
         <view class="post-actions">
-          <view class="action" :class="{ active: p.liked }" @tap="onLike(p)">
+          <view class="action" :class="{ active: p.liked }" @tap.stop="onLike(p)">
             <text class="a-icon">{{ p.liked ? '❤️' : '🤍' }}</text>
             <text class="a-text">{{ p.likeCount || 0 }}</text>
           </view>
-          <view class="action" @tap="goPostDetail(p)">
+          <view class="action" @tap.stop="goPostDetail(p)">
             <text class="a-icon">💬</text>
             <text class="a-text">{{ p.commentCount || 0 }}</text>
           </view>
-          <view class="action" @tap="onShare(p)">
+          <view class="action" @tap.stop="onShare(p)">
             <text class="a-icon">↗️</text>
             <text class="a-text">分享</text>
           </view>
@@ -275,7 +276,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { postApi, groupApi, userApi, locationApi } from '../../api'
 import { getCurrentBaseURL, openServerUrlModal } from '../../utils/request'
 import {
@@ -510,19 +511,57 @@ watch(currentTab, async (t) => {
 
 watch([groupCityIdx, groupCatIdx], debounce(() => loadGroups(true), 180))
 
+/* 把发布组局时选的城市映射到筛选 picker 下标；兜住「深圳 / 深圳市」这类后缀差异 */
+const matchGroupCityIdx = (raw) => {
+  const c = toStr(raw, '').trim()
+  if (!c) return -1
+  const list = safeMap(groupCities.value, (x) => toStr(x, ''))
+  const exact = list.indexOf(c)
+  if (exact >= 0) return exact
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i]
+    if (!item || item === '全国') continue
+    if (item.startsWith(c) || c.startsWith(item)) return i
+  }
+  return -1
+}
+
 onShow(async () => {
   // onShow 时：异步流水线解析城市 + 首次展示并行加载当前 tab 所需资源
-  const bootTasks = [readCity()]
+  let dirtyCity = ''
   try {
-    if (uni.getStorageSync('group.dirty')) {
-      uni.removeStorageSync('group.dirty')
-      bootTasks.push(loadGroups(true))
-    }
+    dirtyCity = toStr(uni.getStorageSync('group.dirty'), '')
+    if (dirtyCity) uni.removeStorageSync('group.dirty')
   } catch (_) {}
+
+  const bootTasks = [readCity()]
   if (toStr(currentTab.value) === 'posts' && postsList.value.length === 0) bootTasks.push(loadPosts(true, true))
-  if (toStr(currentTab.value) === 'groups' && groupsList.value.length === 0) bootTasks.push(loadGroups(true, true))
   if (toStr(currentTab.value) === 'finder' && finderList.value.length === 0) bootTasks.push(loadFinder(true))
+  // 组局列表留到城市切换之后再拉，否则会用旧城市白拉一次
+  if (toStr(currentTab.value) === 'groups' && groupsList.value.length === 0 && !dirtyCity) bootTasks.push(loadGroups(true, true))
   await Promise.all(bootTasks)
+
+  if (dirtyCity) {
+    // 必须排在 readCity() 之后：定位流水线里的 applyCityToState 会把筛选城市改成定位结果
+    const idx = matchGroupCityIdx(dirtyCity)
+    const changed = idx >= 0 && idx !== groupCityIdx.value
+    if (idx >= 0) groupCityIdx.value = idx
+    // 变了就由上面的 debounce watcher 负责重载，这里只补「没变 / 匹配不到」的情况
+    if (!changed) await loadGroups(true)
+  }
+})
+
+onPullDownRefresh(async () => {
+  try {
+    const t = toStr(currentTab.value)
+    if (t === 'posts') await loadPosts(true, true)
+    else if (t === 'groups') await loadGroups(true, true)
+    else if (t === 'finder') await loadFinder(true)
+  } catch (_) {
+  } finally {
+    // 不收尾的话 iOS 原生下拉圈会一直转
+    uni.stopPullDownRefresh()
+  }
 })
 
 onMounted(() => {
@@ -573,7 +612,7 @@ const goCreateGroup = () => {
   uni.navigateTo({ url: '/pages/group/publish' })
 }
 const goGroupDetail = (g) => uni.navigateTo({ url: `/pages/group/detail?id=${toStr(getPath(g, 'id'), '')}` })
-const goPostDetail = (p) => uni.navigateTo({ url: `/pages/group/detail?id=${toStr(getPath(p, 'id'), '')}&mode=post` })
+const goPostDetail = (p) => uni.navigateTo({ url: `/pages/post/detail?id=${toStr(getPath(p, 'id'), '')}` })
 // 旧达人主页已移除，统一跳转到新个人主页
 const goUser = (u) => uni.navigateTo({ url: `/pages/user-profile/user-profile?id=${toStr(getPath(u, 'id'), '')}` })
 const onRangeChange = (e) => {
