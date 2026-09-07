@@ -30,7 +30,8 @@ function touch(userId) {
   lastWrite.set(id, now)
   // 延迟 require：models 在 app 启动时才完成 sequelize 初始化
   const { User } = require('../models')
-  User.update({ lastActiveAt: new Date(now) }, { where: { id } }).catch(() => {})
+  // silent: 心跳不该 bump users.updated_at，否则「资料最后修改时间」会被刷成每分钟一次
+  User.update({ lastActiveAt: new Date(now) }, { where: { id }, silent: true }).catch(() => {})
 }
 
 module.exports = { touch, THROTTLE_MS }
