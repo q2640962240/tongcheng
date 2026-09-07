@@ -140,6 +140,12 @@ cd app && npm install && npm run dev:h5
     - **存量已校正**（2026-09-07，经用户批准）：`UPDATE posts SET like_count = COALESCE(JSON_LENGTH(likes),0)` + `UPDATE posts p SET comment_count = (SELECT COUNT(*) FROM comments c WHERE c.post_id=p.id)`。校正后全站 `SUM(like_count)=2`（post 1/14 的真实 `[27]`）、`SUM(comment_count)=0`。**发现页从此显示 0 赞 0 评论是正确状态，不是数据丢了。**
     - 顺带一条查询坑：`groups` 是 MySQL 8 保留字，手写 SQL 必须反引号 `` `groups` ``；另外 Windows Git Bash 下 `curl --data-urlencode "city=深圳"` 会按 **GBK** 编码（服务端收到 `%C9%EE%DB%DA`），测中文参数要直接写 UTF-8 转义 `%E6%B7%B1%E5%9C%B3`。
 
+27. **「SQL 精确 IN + 内存模糊兜底」的组合里，变体集合必须对称展开** — `groups.js` 组局列表按城市筛选是「先 `where.city IN (变体)` 收窄，再用 `matchCity()` 双向 `startsWith` 兜住前缀关系」两段式。第二段的兜底**只能作用于第一段已经取出来的行**，所以任何没进 IN 的形态都等于永久不可见。2026-09-07 第一版只写成 `if (cityNorm !== cityRaw) variants.add(cityNorm)`，于是查询 `'深圳'` 能命中（norm=`'深圳市'`≠原值，两个形态都进 IN），查询 `'深圳市'` 却**返回 0 条**（norm 等于原值 → 短名 `'深圳'` 从不进 SQL）。线上实测：修复前 `city=深圳` total 2、`city=深圳市` total 0；修复后两者都是 2（生产 `groups` 仅 2 行，city 均为短名 `'深圳'`）。
+    - **改法**：对 `cityRaw` 与 `cityNorm` **各自**补「带市 / 不带市」两种形态（`4c4bc6a`）。前端 picker 给的是规范名、老 App 版本给的是短名，两个方向都必须成立。
+    - **只补 `'市'` 后缀，不要顺手剥 `'州'/'盟'/'地区'`**：剥完只剩单字（`'广州'`→`'广'`），`matchCity` 的双向 `startsWith` 拿它去比会误命中 `'广安市'` 这类同前缀城市。剥 `'市'` 时也要要求剩余 ≥ 2 字。
+    - 副作用是可接受的：`'湘西'` 会多出一个 `'湘西市'` 这类永不命中的噪声变体。因为 IN 是精确匹配、`matchCity` 又只看 IN 已筛出的行，噪声**不会**造成误命中，只是集合里多几项。
+    - 反向验证也要做：改完测 `city=广州`/`广州市`/`深圳南山` 应仍为 0，确认没有把筛选放宽成「全都返回」。
+
 ## 服务器信息
 
 | 项 | 值 |
@@ -175,7 +181,7 @@ cd app && npm install && npm run dev:h5
 13. **`auth.js getUser()` 在 H5 恒返回 `{}`**（2026-09-07 浏览器实测确认，未修）— `setUser()` 存的是 `JSON.stringify(user)`，而 uni-h5 的 `getStorageSync` 会把「看起来像 JSON」的字符串**自动解析成对象**再返回（实测：存 `'{"a":1}'` → 原样落 localStorage → 取回得到 `{a:1}` 对象）。`getUser()` 于是执行 `JSON.parse(对象)` → `JSON.parse("[object Object]")` → 抛 `SyntaxError` → 被 catch 吞掉返回 `{}`。**后果**：`store/user.js` 的 `restoreSession()` 里 `if (this.token && this.user && this.user.id)` 恒为假，`kickOffTUIInit()` 与 `fetchProfile()` 在「带已有登录态刷新页面」时**根本不会执行**——它们是死代码，IM 登录之所以没出事是因为另有两条独立路径：`App.vue:125` 用 `isLoggedIn`（`!!user.id || !!token`，靠 token 成立）挂载 `msgNotify`，其内部会调幂等的 `ensureTUILogin()`；`entry-chat-only.ts:50` / `entry-conversation.ts:39` / `chat.vue:721` 也各自直接调。`userStore.userId`/`nickname`/`avatar` 刷新后则确实全为空。当前绕行：新增 `getUserId()`（解 JWT payload 取 `id`，纯 JS base64 解码不用 `atob`，App 端也能跑），`giftAnimPlayed.js` 与 `chat.vue isMine()` 已改用它。**没有直接修 `getUser()` 的原因**：修好会一次性激活上面那段死代码（每次启动都登录 IM + 拉资料），有可能加重待办 #9 的首屏竞态，需要单独评估后再改。改法本身是一行：`const raw = uni.getStorageSync(USER_KEY); return typeof raw === 'string' ? JSON.parse(raw) : (raw || {})`
 
 14. ~~礼物特效音效~~ **用户已明确决定不做（2026-09-07）** — 曾实现过一版：`utils/giftSfx.js`（`uni.createInnerAudioContext()` 单例 + H5 首次触摸解锁）、`scripts/gen-gift-sounds.js`（零依赖 WAV 合成器）、`static/sounds/` 19 个 wav（16 个与 SVGA 同名 + `gift-l1/l2/l3` 等级通用音），并在 H5 实测播放成功。**用户指令「不做特效的音效，特效相关的音效都做回退」后已全部删除**，`GiftAnimation.vue` 回到 HEAD。⚠️ 后续会话不要「顺手把音效加回来」；若真要重做，注意 App 端自动播放策略与 iOS 静音开关，且素材必须落在 `src/static/`（坑点 16）
-15. **`groups` 表存量 city 仍是未规范化的 `'深圳'`（2 行）** — 读侧已用 `Op.in: cityVariants` 同时匹配 `'深圳'`/`'深圳市'`，所以功能上不缺；新建/编辑走 `normalizeCityName()` 写规范值。**没有跑存量 UPDATE**（会把 2 行改成 `'深圳市'`），因为读侧已兼容、改它没有收益还要动生产数据。若将来要按 city 做聚合统计或加唯一索引，再统一规范化
+15. **`groups` 表存量 city 仍是未规范化的 `'深圳'`（2 行）** — 读侧用 `Op.in: cityVariants` 匹配 `'深圳'`/`'深圳市'`，但**变体展开第一版是不对称的**（只在 `cityNorm !== cityRaw` 时补第二个形态），导致查询已规范化的 `'深圳市'` 时短名从不进 SQL、线上返回 0 条；2026-09-07 已修成对称展开，两个方向实测都是 2 条（详见坑点 27）。新建/编辑走 `normalizeCityName()` 写规范值。**没有跑存量 UPDATE**（会把 2 行改成 `'深圳市'`），因为读侧已双向兼容、改它没有收益还要动生产数据。若将来要按 city 做聚合统计或加唯一索引，再统一规范化
 16. **iOS 真机验证清单（2026-09-07 这批修复，需 HBuilderX 打包后逐项过）** — H5 侧已全部实测通过，但用户报的四个现象都在 iOS App 上，且 App 端 WKWebView 与 H5 有三处关键差异（`file://` 源要靠 `siteOrigin + /static/...` 绝对 URL、dpr=3、无 `window` 兜底路径）：
     - [ ] 送 L3 礼物（流星雨）→ 特效**铺满全屏**，不再缩在左上角一小块（坑点 24）
     - [ ] 送 L1/L2 礼物 → 特效按 46vw / 82vw 居中，比例正确
