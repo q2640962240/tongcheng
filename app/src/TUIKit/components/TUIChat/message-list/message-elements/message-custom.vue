@@ -78,7 +78,7 @@
           <image class="gift-icon" :src="customData.giftImage" mode="aspectFill" />
           <view class="gift-info">
             <text class="gift-name">{{ customData.giftName }}</text>
-            <text class="gift-price">💎 {{ customData.diamondAmount }}</text>
+            <text class="gift-price">💎 {{ giftPriceText }}</text>
           </view>
         </view>
       </view>
@@ -90,7 +90,7 @@
 </template>
 
 <script lang="ts" setup>
-import { watchEffect, ref } from '../../../../adapter-vue';
+import { watchEffect, ref, computed } from '../../../../adapter-vue';
 import { TUITranslateService, IMessageModel } from '@tencentcloud/chat-uikit-engine-lite';
 import { isUrl, JSONToObject } from '../../../../utils/index';
 import { CHAT_MSG_CUSTOM_TYPE } from '../../../../constant';
@@ -124,6 +124,19 @@ watchEffect(() => {
     extension.value = JSONToObject(payload.extension);
   }
 });
+
+// 礼物卡片显示**实付总价**。diamondAmount 在服务端消息体里是单价，直接渲染会让
+// 「送 2 个水晶球（实付 4000）」显示成「💎2000」。IM 云端的历史自定义消息既没有
+// totalDiamond 也没有 quantity，但那条通道数量恒为 1，兜底算出来仍等于实付总价。
+const giftPriceText = computed(() => {
+  const data = customData.value as any;
+  const qty = Number(data?.quantity) > 0 ? Number(data.quantity) : 1;
+  const unit = Number(data?.diamondAmount) || 0;
+  const total = Number(data?.totalDiamond) > 0 ? Number(data.totalDiamond) : unit * qty;
+  if (!total) return '';
+  return qty > 1 ? `${total} ×${qty}` : `${total}`;
+});
+
 const openLink = (url: any) => {
   window.open(url);
 };

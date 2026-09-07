@@ -130,6 +130,10 @@ const sendGift = async () => {
         giftName: gift.name,
         giftImage: gift.imageUrl,
         diamondAmount: gift.price,
+        // 与服务端写入 DB 的消息体保持同形：diamondAmount 是单价，totalDiamond 是实付总价。
+        // 缺这两个字段时接收端卡片永远无法显示数量，只能把单价当总价渲染。
+        quantity: 1,
+        totalDiamond: giftData.diamondAmount || gift.price,
         animationLevel,
         effectImage,
         senderName,

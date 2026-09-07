@@ -43,10 +43,10 @@
                 </view>
                 <view class="gift-card-info">
                   <text class="gift-card-name">{{ parseGiftContent(m).giftName || '礼物' }}</text>
-                  <text class="gift-card-price">{{ parseGiftContent(m).diamondAmount || 0 }}💎</text>
+                  <text class="gift-card-price">{{ giftTotalDiamond(parseGiftContent(m)) }}💎</text>
                 </view>
                 <text v-if="(parseGiftContent(m).quantity || 0) > 1" class="gift-card-qty">×{{ parseGiftContent(m).quantity }}</text>
-                <text v-if="!isMine(m) && parseGiftContent(m).diamondAmount" class="gift-card-charm">+{{ Math.floor(parseGiftContent(m).diamondAmount * (parseGiftContent(m).quantity || 1) * 0.7) }} 魅力</text>
+                <text v-if="!isMine(m) && giftTotalDiamond(parseGiftContent(m))" class="gift-card-charm">+{{ Math.floor(giftTotalDiamond(parseGiftContent(m)) * 0.7) }} 魅力</text>
               </view>
             </template>
             <template v-else>
@@ -534,6 +534,15 @@ function parseGiftContent(m) {
 function isEmojiGift(str) {
   if (!str) return false
   return !str.startsWith('http') && !str.startsWith('/') && !str.startsWith('data:')
+}
+
+// 礼物实付总价。消息体里 diamondAmount 是**单价**（服务端 gifts.js 写入），totalDiamond 才是总价；
+// 早期消息可能只有单价 + 数量，按单价 × 数量兜底，两种形态都不会把单价当总价显示。
+function giftTotalDiamond(gc) {
+  if (!gc) return 0
+  const qty = Number(gc.quantity) > 0 ? Number(gc.quantity) : 1
+  const total = Number(gc.totalDiamond)
+  return total > 0 ? total : (Number(gc.diamondAmount) || 0) * qty
 }
 
 function onGiftSent(gift) {

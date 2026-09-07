@@ -83,7 +83,7 @@
                 class="middle-box-at"
               >{{ conversation.getGroupAtInfo() }}</span>
               <div class="middle-box-content">
-                {{ conversation.getLastMessage("text") }}
+                {{ lastMessageSummary(conversation) }}
               </div>
             </div>
           </div>
@@ -126,6 +126,7 @@ import Avatar from '../../common/Avatar/index.vue';
 import ActionsMenu from '../actions-menu/index.vue';
 import muteIcon from '../../../assets/icon/mute.svg';
 import { isPC, isH5, isUniFrameWork, isMobile } from '../../../utils/env';
+import { CHAT_MSG_CUSTOM_TYPE } from '../../../constant';
 
 const emits = defineEmits(['handleSwitchConversation', 'getPassingRef']);
 const currentConversation = ref<IConversationModel>();
@@ -184,6 +185,30 @@ const isShowUserOnlineStatus = (conversation: IConversationModel): boolean => {
     displayOnlineStatus.value
     && conversation.type === TUIChatEngine.TYPES.CONV_C2C
   );
+};
+
+// Lite SDK 的 getLastMessageText() 对自定义消息只取 messageForShow（恒为「[自定义消息]」），
+// 并不解析 payload.data，所以服务端在 Desc 里传的「送出了N个XX」根本用不上。
+// 这里只接管礼物消息的摘要，其余一律交回 SDK，避免复刻它的草稿/撤回/群提示分支。
+const lastMessageSummary = (conversation: IConversationModel): string => {
+  const fallback = conversation.getLastMessage('text') || '';
+  if (conversation.draftText) return fallback;
+  const last = conversation.lastMessage;
+  if (!last || last.isRevoked || last.type !== TUIChatEngine.TYPES.MSG_CUSTOM) return fallback;
+  let data: any;
+  try {
+    data = typeof last.payload?.data === 'string' ? JSON.parse(last.payload.data) : last.payload?.data;
+  } catch (e) {
+    return fallback;
+  }
+  if (data?.businessID !== CHAT_MSG_CUSTOM_TYPE.GIFT) return fallback;
+  const qty = Number(data.quantity) > 0 ? Number(data.quantity) : 1;
+  const name = data.giftName || '礼物';
+  const text = qty > 1 ? `[礼物] 送出了${qty}个${name}` : `[礼物] ${name}`;
+  // SDK 会在摘要前拼未读条数前缀（如「[3条]」），接管正文时要原样带回来，
+  // 否则有未读礼物时前缀会消失。直接复用 SDK 已算好的前缀，不自己复刻它的判定条件。
+  const unread = /^\[\d+\+?条\]/.exec(fallback);
+  return unread ? unread[0] + text : text;
 };
 
 const showConversationActionMenu = (

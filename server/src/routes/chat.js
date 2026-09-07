@@ -266,7 +266,11 @@ router.get('/sessions', auth, async (req, res, next) => {
         if (m.type === 'gift') {
           try {
             const gc = JSON.parse(m.content || '{}')
-            preview = `[礼物] ${gc.giftName || '礼物'}`
+            const qty = Number(gc.quantity) > 0 ? Number(gc.quantity) : 1
+            // 文案必须与 TUIKit 会话列表的 lastMessageSummary 一致，两条通道不能各说一套
+            preview = qty > 1
+              ? `[礼物] 送出了${qty}个${gc.giftName || '礼物'}`
+              : `[礼物] ${gc.giftName || '礼物'}`
           } catch (_) { preview = '[礼物]' }
         }
         sessionMap.set(sid, {

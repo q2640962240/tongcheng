@@ -84,15 +84,26 @@ function avatarOf(s) {
   return resolveUrl(s.otherUser && s.otherUser.avatar) || '/static/logo.png'
 }
 
+// 文案必须与 TUIKit 会话列表的 lastMessageSummary、服务端 chat.js 的会话摘要三处一致
+function giftPreview(gc) {
+  const qty = Number(gc && gc.quantity) > 0 ? Number(gc.quantity) : 1
+  const name = (gc && gc.giftName) || '礼物'
+  return qty > 1 ? `[礼物] 送出了${qty}个${name}` : `[礼物] ${name}`
+}
+
 function lastText(s) {
   if (s.lastMessageType === 'image') return '[图片]'
   if (s.lastMessageType === 'voice') return '[语音]'
   if (s.lastMessageType === 'video') return '[视频]'
   if (s.lastMessageType === 'gift') {
+    // lastMessage 可能是原始 JSON（实时消息），也可能是上游已经格式化好的「[礼物] XX」
+    // （服务端 /chat/sessions 与下面的 socket 分支都是后者）。后者 JSON.parse 必失败，
+    // 不能退化成丢掉礼物名的「[礼物]」，要原样透传。
     try {
-      const gc = JSON.parse(s.lastMessage || '{}')
-      return `[礼物] ${gc.giftName || '礼物'}`
-    } catch (_) { return '[礼物]' }
+      return giftPreview(JSON.parse(s.lastMessage || '{}'))
+    } catch (_) {
+      return String(s.lastMessage || '') || '[礼物]'
+    }
   }
   const t = String(s.lastMessage || '')
   return t.length > 30 ? t.slice(0, 30) + '…' : t
@@ -146,8 +157,7 @@ function setupSocket() {
     else if (msg.type === 'video') preview = '[视频]'
     else if (msg.type === 'gift') {
       try {
-        const gc = JSON.parse(msg.content || '{}')
-        preview = `[礼物] ${gc.giftName || '礼物'}`
+        preview = giftPreview(JSON.parse(msg.content || '{}'))
       } catch (_) { preview = '[礼物]' }
     }
     if (idx >= 0) {
