@@ -8,6 +8,10 @@
 --
 -- 回滚：ALTER TABLE gifts DROP INDEX uk_gifts_code;
 
+-- 本脚本的断言字面量都是 ASCII（code IS NULL / GROUP BY code），不受字符集影响；
+-- 但断言会 SELECT 出中文 name，不设字符集会显示成 `??`、没法人工核对。
+SET NAMES utf8mb4;
+
 -- 前置断言，期望 0 行：在售礼物不能有 code 为 NULL 的
 SELECT id, name FROM gifts WHERE active = 1 AND code IS NULL;
 

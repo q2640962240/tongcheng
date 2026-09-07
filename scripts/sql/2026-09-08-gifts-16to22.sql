@@ -17,6 +17,15 @@
 -- 幂等性：code 回填带 `code IS NULL` 守卫；sort 更新按 code 定位；INSERT 用 NOT EXISTS 判重。
 -- 重跑本脚本不会产生重复行。
 
+-- ⚠️ 必须有这一行，否则整个脚本会静默做错事。
+-- 容器内 mysql CLI 的 character_set_client 默认不是 utf8mb4（从 OS locale 推导），
+-- 文件里的 UTF-8 中文字节会被当成 latin1 解释，于是所有中文字面量都匹配不上：
+--   实测 `SELECT COUNT(*) FROM gifts WHERE name='点赞' AND active=1` → 不加时 0 行，加了 1 行。
+-- 后果链：步骤 1 回填 code 命中 0 行 → 步骤 2 按 code 重排 sort 也命中 0 行 →
+-- 步骤 3 的 INSERT 却照样执行，插入 6 行**名字是乱码**的新礼物。
+-- 加了 SET NAMES 就不依赖调用方记得传 --default-character-set=utf8mb4。
+SET NAMES utf8mb4;
+
 START TRANSACTION;
 
 -- ========== 步骤 1：给 16 行在售礼物回填 code（按 name 精确匹配） ==========
@@ -36,6 +45,22 @@ UPDATE gifts SET code = 'dushou',        updated_at = NOW() WHERE name = '独角
 UPDATE gifts SET code = 'paoche',        updated_at = NOW() WHERE name = '跑车'       AND active = 1 AND code IS NULL;
 UPDATE gifts SET code = 'xuanzhuanmuma', updated_at = NOW() WHERE name = '旋转木马'   AND active = 1 AND code IS NULL;
 UPDATE gifts SET code = 'liuxingyu',     updated_at = NOW() WHERE name = '流星雨'     AND active = 1 AND code IS NULL;
+
+-- ========== 闸门 A：步骤 1 必须命中 16 行，否则中止 ==========
+-- 手法：断言不成立时，这条 INSERT 会往 `name`（生产 schema 里是 NOT NULL）写 NULL
+-- → ERROR 1048 Column 'name' cannot be null → mysql CLI 批处理模式遇错即停、退出码 1
+-- → 连接关闭 → **未 COMMIT 的事务自动回滚**，生产库回到执行前状态。
+-- 断言成立时 WHERE 为假、SELECT 出 0 行，什么都不插（也不触发任何约束检查）。
+-- ⚠️ 别改回「插一个已存在的 id 撞主键」那种写法：它依赖生产表恰好有那一行。第一版就
+--    这么写，在临时库（没有 id=1）里闸门直接插入成功、根本没中止，是脆弱设计。
+-- 已在 baiye_gate_test 临时库用**生产同款 schema** 实测四项行为（2026-09-08）：
+--    断言成立 → 静默通过不插行；断言不成立 → ERROR 1048 + CLI 退出码 1 + 后续语句不执行；
+--    事务内先插的脏行在新连接里查不到（回滚生效）。
+-- 这一闸门专门拦上面 SET NAMES 那个坑：字符集不对时步骤 1 命中 0 行，而步骤 3 仍会
+-- 插入 6 行乱码名字的新礼物 —— 有了它，那种情况会在步骤 2 之前就中止并回滚。
+INSERT INTO gifts (name, price, created_at, updated_at)
+SELECT NULL, NULL, NOW(), NOW() FROM DUAL
+WHERE (SELECT COUNT(*) FROM gifts WHERE active = 1 AND code IS NOT NULL) <> 16;
 
 -- ========== 步骤 2：重排 16 行在售礼物的 sort（只动 sort，为新礼物腾出档位） ==========
 -- 旧 sort 1..16 → 新 sort（16 个既有价格一分未动）
@@ -68,6 +93,16 @@ FROM (
   UNION ALL SELECT '缘定今生', '/static/gifts/yuanding.png',     88888, 22, 3, '/static/svga/yuanding.svga',     'yuanding'
 ) AS s
 WHERE NOT EXISTS (SELECT 1 FROM gifts g WHERE g.code = s.code);
+
+-- ========== 闸门 B：三步执行完后的最终状态必须完全符合预期，否则中止 ==========
+-- 与闸门 A 同一手法（已在临时库实测）。任一条件不成立 → ERROR 1048 → CLI 中止
+-- → 下面的 COMMIT **永远执行不到** → 事务回滚，生产库不受影响。
+-- 校验：在售 22 行 / distinct code 22 个 / 在售行 code 无 NULL。
+INSERT INTO gifts (name, price, created_at, updated_at)
+SELECT NULL, NULL, NOW(), NOW() FROM DUAL
+WHERE (SELECT COUNT(*) FROM gifts WHERE active = 1) <> 22
+   OR (SELECT COUNT(DISTINCT code) FROM gifts) <> 22
+   OR (SELECT COUNT(*) FROM gifts WHERE active = 1 AND code IS NULL) <> 0;
 
 COMMIT;
 
