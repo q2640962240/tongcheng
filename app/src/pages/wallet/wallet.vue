@@ -73,7 +73,12 @@ import { onShow } from '@dcloudio/uni-app'
 import { useWalletStore } from '../../store/wallet'
 import { walletApi } from '../../api'
 import { guard, unwrapPage, safeMap, getPath, toStr, toNum, formatTime } from '../../utils/fallback'
-import { diamondRechargeEnabled } from '../../config/features'
+import { diamondRechargeEnabled, walletEnabled } from '../../config/features'
+
+// App Store 合规：全平台屏蔽钱包页面，直接访问时跳回首页
+if (!walletEnabled) {
+  uni.switchTab({ url: '/pages/home/home' })
+}
 
 const walletStore = useWalletStore()
 const wallet = computed(() => ({

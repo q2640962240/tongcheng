@@ -68,28 +68,18 @@
         </view>
       </view>
 
-      <!-- 4. 简化钱包模块 -->
-      <view class="wallet-card" v-if="isLoggedIn">
+      <!-- 4. 钱包模块（全平台屏蔽） -->
+      <view class="wallet-card" v-if="isLoggedIn && walletEnabled">
         <view class="wallet-glow"></view>
         <view class="wallet-head">
           <text class="wallet-title">我的钱包</text>
         </view>
         <view class="wallet-row">
           <view class="wallet-item">
-            <text class="wallet-num">{{ safeDiamond }}</text>
-            <text class="wallet-label">💎 钻石</text>
-            <view class="wallet-action recharge-btn" v-if="diamondRechargeEnabled" @tap="onRecharge">充值</view>
-          </view>
-          <view class="wallet-divider"></view>
-          <view class="wallet-item">
             <text class="wallet-num income">{{ incomeYuan }}</text>
             <text class="wallet-label">¥ 服务收入</text>
             <view class="wallet-action withdraw-btn" @tap="onIncome">提现</view>
           </view>
-        </view>
-        <view class="wallet-detail-link" @tap="onNav('/pages/wallet/wallet')">
-          <text class="detail-link-text">我的钱包</text>
-          <text class="detail-link-arrow">→</text>
         </view>
         <view class="charm-row" v-if="charmValue > 0">
           <text class="charm-label">🌟 魅力值</text>
@@ -154,7 +144,7 @@ import {
   requireLogin, requireElite, avatarUrl
 } from '../../utils/fallback'
 import DailyTaskPanel from '../../components/DailyTaskPanel.vue'
-import { giftEnabled, diamondRechargeEnabled } from '../../config/features'
+import { giftEnabled, diamondRechargeEnabled, walletEnabled } from '../../config/features'
 
 const userStore = useUserStore()
 const walletStore = useWalletStore()
@@ -176,8 +166,6 @@ const safeNickname = computed(() => {
 const safeIsElite = computed(() => toBool(userStore.isElite, false))
 
 // ---- 字段收敛：wallet ----
-const safeDiamond = computed(() => toNum(walletStore.diamond, 0))
-
 const incomeYuan = computed(() => {
   const fen = toNum(walletStore.giftIncome, 0)
   const n = Number(fen)

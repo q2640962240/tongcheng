@@ -1,22 +1,23 @@
 /**
  * 特征开关配置
  *
- * 用于 App Store 上架合规：iOS 端屏蔽礼物板块、隐藏钻石充值、精英付费走 Apple IAP。
- * 所有开关基于 uni-app 条件编译，非 iOS 端功能保持原样。
+ * App Store 上架合规：全平台屏蔽礼物板块、钻石充值、钱包页面。
+ * 精英付费在 iOS 端走 Apple IAP。
  *
  * 使用方式：
- *   import { giftEnabled, diamondRechargeEnabled, appleIAPEnabled } from '@/config/features'
+ *   import { giftEnabled, diamondRechargeEnabled, walletEnabled, appleIAPEnabled } from '@/config/features'
  */
 
-// #ifdef APP-IOS
+// 全平台屏蔽：礼物、钻石充值、钱包页面
 const giftEnabled = false
 const diamondRechargeEnabled = false
+const walletEnabled = false
+
+// Apple IAP 仅 iOS 端启用
+// #ifdef APP-IOS
 const appleIAPEnabled = true
 // #endif
-
 // #ifndef APP-IOS
-const giftEnabled = true
-const diamondRechargeEnabled = true
 const appleIAPEnabled = false
 // #endif
 
@@ -30,6 +31,7 @@ const APPLE_VERIFY_SANDBOX_URL = 'https://sandbox.itunes.apple.com/verifyReceipt
 export default {
   giftEnabled,
   diamondRechargeEnabled,
+  walletEnabled,
   appleIAPEnabled,
   IAP_PRODUCT_ELITE,
   APPLE_VERIFY_URL,
@@ -39,6 +41,7 @@ export default {
 export {
   giftEnabled,
   diamondRechargeEnabled,
+  walletEnabled,
   appleIAPEnabled,
   IAP_PRODUCT_ELITE,
   APPLE_VERIFY_URL,
