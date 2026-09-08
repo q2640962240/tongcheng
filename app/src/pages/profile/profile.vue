@@ -37,7 +37,7 @@
           <text class="social-label">粉丝</text>
         </view>
         <view class="social-divider"></view>
-        <view class="social-item" @tap="onNav('/pages/discover/discover?tab=posts')">
+        <view class="social-item" @tap="goMyPosts">
           <text class="social-num">{{ socialStats.postsCount }}</text>
           <text class="social-label">动态</text>
         </view>
@@ -250,6 +250,7 @@ const onNav = (url) => {
   if (TAB_PAGES.includes(path)) return uni.switchTab({ url: path })
   uni.navigateTo({ url })
 }
+const goMyPosts = () => uni.navigateTo({ url: '/pages/my-posts/my-posts' })
 
 const onNavWithLogin = (url) => {
   if (!requireLogin()) return
