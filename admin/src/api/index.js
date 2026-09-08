@@ -69,6 +69,7 @@ export const postsApi = {
 // ==================== 组局管理 (白夜 v2) ====================
 export const groupsApi = {
   list: (params) => http.get('/admin/groups', { params }),
+  update: (id, data) => http.put(`/admin/groups/${id}`, data),
   del: (id) => http.delete(`/admin/groups/${id}`)
 }
 

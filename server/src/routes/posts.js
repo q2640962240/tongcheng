@@ -111,7 +111,9 @@ router.post('/', auth, sensitiveFilter(['text', 'content', 'tags', 'remark']), a
       || (location && (location.city || location.name))
       || ''
     const category = body.category || 'dynamic'
-    const tags = Array.isArray(body.tags) ? body.tags : []
+    // tags 白名单清洗：最多 5 个、每项最长 20 字符、非字符串强转字符串、过滤空串
+    const tagsRaw = Array.isArray(body.tags) ? body.tags : []
+    const tags = tagsRaw.slice(0, 5).map(t => String(t).slice(0, 20)).filter(t => t.length > 0)
     const text = String(textRaw || '').trim()
     if (text.length === 0) return fail(res, '动态内容不能为空')
     if (text.length > 500) return fail(res, '动态字数超过 500 字上限')

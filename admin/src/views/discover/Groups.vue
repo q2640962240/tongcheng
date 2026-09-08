@@ -97,30 +97,20 @@ const onSearch = () => { page.value = 1; load() }
 
 const onClose = async (row) => {
   try {
-    await ElMessageBox.confirm('确认关闭该组局招募？', '操作确认', { type: 'warning' })
-    await groupsApi.del(row.id)
+    await ElMessageBox.confirm('确认关闭该组局招募？关闭后用户将无法报名。', '操作确认', { type: 'warning' })
+    await groupsApi.update(row.id, { status: 'closed' })
     ElMessage.success('已关闭'); load()
   } catch (e) { if (e !== 'cancel') ElMessage.error('失败: ' + (e.message || '')) }
 }
 const onReopen = async (row) => {
   try {
-    // 复用 /groups/:id 更新接口，经管理员代理传递 status
-    const { default: axios } = await import('axios')
-    const http = axios.create({ baseURL: '/api', timeout: 15000 })
-    const token = localStorage.getItem('admin_token') || ''
-    http.interceptors.request.use(cfg => {
-      cfg.headers = cfg.headers || {}
-      if (token) cfg.headers['x-admin-token'] = token
-      return cfg
-    })
-    const { data: payload } = await http.put(`/admin/groups/${row.id}`, { status: 'open' })
-    if (payload.code === 0) { ElMessage.success('已开启'); load() }
-    else ElMessage.error(payload.message || '失败')
+    await groupsApi.update(row.id, { status: 'open' })
+    ElMessage.success('已开启'); load()
   } catch (e) { ElMessage.error('失败: ' + (e.message || '')) }
 }
 const onRemove = async (row) => {
   try {
-    await ElMessageBox.confirm('确认删除该组局？删除后不可恢复', '删除确认', { type: 'error' })
+    await ElMessageBox.confirm('将彻底删除该组局及其报名记录，不可恢复。确认删除？', '删除确认', { type: 'error' })
     await groupsApi.del(row.id)
     ElMessage.success('已删除'); load()
   } catch (e) { if (e !== 'cancel') ElMessage.error('删除失败: ' + (e.message || '')) }

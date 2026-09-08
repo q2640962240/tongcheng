@@ -112,8 +112,9 @@
           >
             <view class="post-header">
               <text class="post-time">{{ formatPostTime(post.createdAt) }}</text>
+              <text v-if="isSelf" class="post-more" @tap.stop="onPostMore(post)">⋯</text>
             </view>
-            <text class="post-content">{{ truncateText(post.content) }}</text>
+            <text class="post-content">{{ truncateText(post.text || post.content) }}</text>
             <view v-if="post.images && post.images.length" class="post-images">
               <image
                 v-for="(img, i) in post.images.slice(0, 3)"
@@ -299,10 +300,37 @@ const onGoFollow = (type) => {
 }
 
 const onPostTap = (post) => {
-  const text = toStr(post.content, '')
-  if (text) {
-    uni.showToast({ title: text.length > 40 ? text.slice(0, 40) + '…' : text, icon: 'none', duration: 2000 })
-  }
+  const pid = toStr(post.id, '')
+  if (!pid) return
+  uni.navigateTo({ url: `/pages/post/detail?id=${pid}` })
+}
+
+const onPostMore = (post) => {
+  const pid = toStr(post.id, '')
+  if (!pid) return
+  uni.showActionSheet({
+    itemList: ['删除动态'],
+    itemColor: '#ef4444',
+    success: (res) => {
+      if (res.tapIndex === 0) {
+        uni.showModal({
+          title: '删除动态',
+          content: '确认删除这条动态？删除后不可恢复。',
+          confirmColor: '#ef4444',
+          success: async (r) => {
+            if (!r.confirm) return
+            try {
+              await postApi.remove(pid)
+              posts.value = posts.value.filter(p => String(p.id) !== String(pid))
+              uni.showToast({ title: '已删除', icon: 'success' })
+            } catch (e) {
+              uni.showToast({ title: '删除失败', icon: 'none' })
+            }
+          }
+        })
+      }
+    }
+  })
 }
 
 const formatNum = (n) => {
@@ -536,6 +564,8 @@ onMounted(() => {
   margin-bottom: 12rpx;
 }
 .post-time { font-size: 22rpx; color: $by-text-3; }
+.post-more { font-size: 36rpx; color: $by-text-3; padding: 0 8rpx; line-height: 1; }
+.post-more:active { opacity: 0.5; }
 .post-content {
   font-size: 28rpx; color: $by-text-1; line-height: 1.7;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;

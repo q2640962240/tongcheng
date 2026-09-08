@@ -70,8 +70,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { userApi } from '@/api'
+import { toStr, toNum, toList, toBool, guard, unwrap } from '@/utils/fallback'
 
 // ===== 状态 =====
 const currentTab = ref('following')
@@ -82,6 +84,8 @@ const noMore = ref(false)
 const page = ref(1)
 const pageSize = 20
 const currentUserId = ref(null)
+const followingLoaded = ref(false)
+const followersLoaded = ref(false)
 
 // 当前显示列表
 const userList = computed(() => {
@@ -89,27 +93,30 @@ const userList = computed(() => {
 })
 
 // ===== 生命周期 =====
-onMounted(async () => {
-  // 读取页面参数
-  const pages = getCurrentPages()
-  const currentPage = pages[pages.length - 1]
-  const query = currentPage?.$page?.options || currentPage?.options || {}
+onLoad((options) => {
+  const query = options || {}
   if (query.tab === 'followers') {
     currentTab.value = 'followers'
   }
   if (query.userId) {
-    currentUserId.value = query.userId
+    currentUserId.value = toStr(query.userId, '')
   }
+})
 
-  try {
-    if (!currentUserId.value) {
-      const profile = await userApi.profile()
-      currentUserId.value = profile.id || profile.userId
+onShow(async () => {
+  if (!currentUserId.value) {
+    try {
+      const pr = await guard(userApi.profile().then(r => unwrap(r, null)), null)
+      if (pr) currentUserId.value = toStr(pr.id || pr.userId, '')
+    } catch (e) {
+      uni.showToast({ title: '请先登录', icon: 'none' })
+      return
     }
-    fetchList()
-  } catch (e) {
-    console.error('获取用户信息失败', e)
-    uni.showToast({ title: '请先登录', icon: 'none' })
+  }
+  if (currentUserId.value && !followingLoaded.value && currentTab.value === 'following') {
+    await fetchList()
+  } else if (currentUserId.value && !followersLoaded.value && currentTab.value === 'followers') {
+    await fetchList()
   }
 })
 
@@ -121,11 +128,10 @@ function goBack() {
 async function switchTab(tab) {
   if (currentTab.value === tab) return
   currentTab.value = tab
-  page.value = 1
-  noMore.value = false
-  // 如果已有缓存数据则不重新请求
-  const list = tab === 'following' ? followingList.value : followersList.value
-  if (list.length === 0) {
+  const loaded = tab === 'following' ? followingLoaded.value : followersLoaded.value
+  if (!loaded) {
+    page.value = 1
+    noMore.value = false
     await fetchList()
   }
 }
@@ -136,20 +142,25 @@ async function fetchList() {
   noMore.value = false
   try {
     const fn = currentTab.value === 'following' ? userApi.following : userApi.followers
-    const res = await fn(currentUserId.value, { page: page.value, pageSize })
-    const items = Array.isArray(res) ? res : (res.list || res.rows || res.data || [])
+    const res = await guard(fn(currentUserId.value, { page: page.value, pageSize }).then(r => unwrap(r, null)), null)
+    if (!res) return
+    const items = toList(res.list || res.rows || res.data)
+    const total = toNum(res.total, items.length)
     const mapped = items.map(u => ({
       ...u,
-      isFollowed: !!u.isFollowed
+      isFollowed: toBool(u.isFollowed, false),
+      mutual: toBool(u.mutual, false)
     }))
 
     if (currentTab.value === 'following') {
       followingList.value = page.value === 1 ? mapped : [...followingList.value, ...mapped]
+      followingLoaded.value = true
     } else {
       followersList.value = page.value === 1 ? mapped : [...followersList.value, ...mapped]
+      followersLoaded.value = true
     }
 
-    if (items.length < pageSize) {
+    if (mapped.length < pageSize || followingList.value.length + followersList.value.length >= total) {
       noMore.value = true
     }
   } catch (e) {
@@ -171,7 +182,7 @@ async function toggleFollow(user) {
     if (user.isFollowed) {
       await userApi.unfollow(user.id)
       user.isFollowed = false
-      // 取消关注后从关注列表移除（仅在关注 tab 下）
+      user.mutual = false
       if (currentTab.value === 'following') {
         followingList.value = followingList.value.filter(u => u.id !== user.id)
       }
@@ -179,6 +190,8 @@ async function toggleFollow(user) {
     } else {
       await userApi.follow(user.id)
       user.isFollowed = true
+      // 如果对方也关注了我，则互关
+      user.mutual = true
       uni.showToast({ title: '关注成功', icon: 'none' })
     }
   } catch (e) {

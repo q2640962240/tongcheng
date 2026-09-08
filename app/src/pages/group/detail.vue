@@ -190,22 +190,24 @@ onMounted(async () => {
       status: g.status || 'open',
       hot: !!g.hot,
     });
-    const jn = await groupApi.joins(gid).catch(() => ({ data: [] }));
-    if (jn && Array.isArray(jn.data)) {
-      joins.value = jn.data.map((u, i) => {
-        const nickname = u.nickname || u.name || u.userName || ('用户' + (i + 1));
-        return {
-          id: u.id || u.userId || ('j' + i),
-          n: nickname,
-          color: COLORS[i % COLORS.length],
-          status: u.status || 'pending',
-        };
-      });
-      group.joinCount = joins.value.length || group.joinCount;
-      const myUid = (userStore.userInfo && userStore.userInfo.id) || userStore.userId;
-      if (myUid && joins.value.some(x => String(x.id) === String(myUid))) {
-        joined.value = true;
-      }
+    // A4: 从 detail 返回的 g.joins 读取，不再单独调 groupApi.joins()
+    const joinArr = Array.isArray(g.joins) ? g.joins : [];
+    joins.value = joinArr.map((j, i) => {
+      const u = j.user || {};
+      const nickname = u.nickname || u.name || ('用户' + (i + 1));
+      return {
+        id: u.id || j.userId || ('j' + i),
+        n: nickname,
+        avatar: u.avatar || '',
+        color: COLORS[i % COLORS.length],
+        status: j.status || 'pending',
+      };
+    });
+    group.joinCount = joinArr.length || group.joinCount;
+    const myUid = (userStore.userInfo && userStore.userInfo.id) || userStore.userId;
+    // x.id 是映射时存的 u.id || j.userId（用户 id），直接比 myUid
+    if (myUid && joinArr.some(x => String(x.id) === String(myUid) && (x.status === 'approved' || x.status === 'pending'))) {
+      joined.value = true;
     }
   } catch (e) {
     console.warn('[groupDetail] load fail', e);

@@ -56,6 +56,10 @@
             <text class="a-icon">↗️</text>
             <text class="a-text">分享</text>
           </view>
+          <view v-if="canDeletePost" class="action" @tap="onDeletePost">
+            <text class="a-icon">🗑</text>
+            <text class="a-text">删除</text>
+          </view>
         </view>
       </view>
 
@@ -74,6 +78,11 @@
               <text class="c-name">{{ c.user.nickname }}</text>
               <view v-if="c.user.isElite" class="tag tag-yellow tag-sm">精英</view>
               <text class="c-time">{{ formatTime(c.createdAt) }}</text>
+              <text
+                v-if="canDeleteComment(c)"
+                class="c-del"
+                @tap.stop="onDeleteComment(c)"
+              >删除</text>
             </view>
             <text class="c-text">{{ c.text }}</text>
           </view>
@@ -108,14 +117,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, nextTick } from 'vue'
+import { ref, reactive, nextTick, computed } from 'vue'
 import { onLoad, onReachBottom } from '@dcloudio/uni-app'
 import { postApi } from '@/api/index.js'
+import { useUserStore } from '@/store/user.js'
 import {
   toList, toStr, toNum, toObj, toBool, getPath, unwrap, unwrapPage,
   guard, truncate, formatTime as ft, avatarUrl, coverUrl, pickCity,
   requireLogin, safeMap
 } from '@/utils/fallback'
+
+const userStore = useUserStore()
+const myUserId = computed(() => toStr(userStore.userId, ''))
 
 const PAGE_SIZE = 20
 
@@ -160,6 +173,7 @@ const normalizeComment = (c) => {
     id,
     text: toStr(getPath(o, 'text'), ''),
     createdAt: getPath(o, 'createdAt'),
+    userId: toStr(getPath(o, 'userId'), ''),
     user: {
       id: toStr(getPath(u, 'id'), ''),
       nickname: toStr(getPath(u, 'nickname'), '匿名用户'),
@@ -293,6 +307,56 @@ const onShare = () => {
   })
 }
 
+// A13/A14: 删除评论 — 评论作者或帖主可删（Discourse 语义，服务端已校验）
+const canDeleteComment = (c) => {
+  if (!myUserId.value) return false
+  // 评论作者或帖主
+  return String(c.userId) === String(myUserId.value) || String(post.user.id) === String(myUserId.value)
+}
+const onDeleteComment = (c) => {
+  uni.showModal({
+    title: '删除评论',
+    content: '确认删除这条评论？',
+    confirmColor: '#D4AF37',
+    success: async (r) => {
+      if (!r.confirm) return
+      try {
+        await postApi.removeComment(postId.value, c.id)
+        comments.value = comments.value.filter(x => x.id !== c.id)
+        post.commentCount = Math.max(0, toNum(post.commentCount, 0) - 1)
+        uni.showToast({ title: '已删除', icon: 'none' })
+      } catch (e) {
+        const msg = (e && e.data && e.data.message) || (e && e.message) || '删除失败'
+        uni.showToast({ title: msg, icon: 'none' })
+      }
+    }
+  })
+}
+
+// A14: 删除自己的动态
+const canDeletePost = computed(() => {
+  if (!myUserId.value || !post.user.id) return false
+  return String(post.user.id) === String(myUserId.value)
+})
+const onDeletePost = () => {
+  uni.showModal({
+    title: '删除动态',
+    content: '确认删除这条动态？删除后不可恢复。',
+    confirmColor: '#ef4444',
+    success: async (r) => {
+      if (!r.confirm) return
+      try {
+        await postApi.remove(postId.value)
+        uni.showToast({ title: '已删除', icon: 'success' })
+        setTimeout(() => uni.navigateBack(), 800)
+      } catch (e) {
+        const msg = (e && e.data && e.data.message) || (e && e.message) || '删除失败'
+        uni.showToast({ title: msg, icon: 'none' })
+      }
+    }
+  })
+}
+
 onLoad((opt) => {
   postId.value = toStr(getPath(toObj(opt, {}), 'id'), '')
   if (!postId.value) { loadFailed.value = true; return }
@@ -355,6 +419,8 @@ onReachBottom(() => {
 .c-top { display: flex; align-items: center; gap: 10rpx; flex-wrap: wrap; }
 .c-name { font-size: 24rpx; color: $by-text-2; font-weight: 600; }
 .c-time { font-size: 20rpx; color: $by-text-3; }
+.c-del { font-size: 20rpx; color: $by-danger; margin-left: auto; padding: 4rpx 12rpx; border-radius: 8rpx; }
+.c-del:active { opacity: 0.6; }
 .c-text { font-size: 28rpx; color: $by-text-1; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 
 .bottom-space { height: 160rpx; }

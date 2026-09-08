@@ -48,16 +48,17 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { postApi } from '@/api/index.js';
+import { postApi, uploadApi } from '@/api/index.js';
 import { useUserStore } from '@/store/user.js';
 const userStore = useUserStore();
 
 const text = ref('');
 const images = ref([]);
+const submitting = ref(false);
 const cityList = ['深圳', '北京', '上海', '广州', '成都', '杭州', '武汉', '重庆'];
 const city = ref('深圳');
 
-const canSubmit = computed(() => (text.value.trim().length > 0 || images.value.length > 0));
+const canSubmit = computed(() => (text.value.trim().length > 0 || images.value.length > 0) && !submitting.value);
 
 function onCity(e) { city.value = cityList[e.detail.value]; }
 function chooseImage() {
@@ -68,16 +69,28 @@ function chooseImage() {
 }
 function removeImage(i) { images.value.splice(i, 1); }
 async function onSubmit() {
+  if (submitting.value) return;
   if (!userStore.isLoggedIn) {
     uni.showToast({ title: '请先登录', icon: 'none' });
     setTimeout(() => uni.navigateTo({ url: '/pages/login/login' }), 600);
     return;
   }
+  submitting.value = true;
   uni.showLoading({ title: '发布中' });
   try {
+    // A1: 先上传图片，拿到 URL 列表
+    let uploadedUrls = [];
+    if (images.value.length > 0) {
+      const uploadRes = await uploadApi.files(images.value);
+      const arr = Array.isArray(uploadRes) ? uploadRes : (uploadRes && uploadRes.data ? uploadRes.data : []);
+      uploadedUrls = arr.map(f => (typeof f === 'string' ? f : (f && f.url) || ''));
+      if (uploadedUrls.some(u => !u)) {
+        throw new Error('部分图片上传失败');
+      }
+    }
     await postApi.create({
       text: text.value.trim(),
-      images: images.value,
+      images: uploadedUrls,
       location: { city: city.value },
     });
     uni.hideLoading();
@@ -87,6 +100,8 @@ async function onSubmit() {
     uni.hideLoading();
     const msg = (e && e.data && e.data.message) || (e && e.message) || '发布失败';
     uni.showToast({ title: msg.length > 12 ? msg.slice(0, 12) + '...' : msg, icon: 'none' });
+  } finally {
+    submitting.value = false;
   }
 }
 </script>

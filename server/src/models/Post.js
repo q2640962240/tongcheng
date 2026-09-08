@@ -56,6 +56,11 @@ const Post = sequelize.define('Post', {
   category: {
     type: DataTypes.STRING(32),
     defaultValue: 'dynamic'
+  },
+  tags: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: null
   }
 }, {
   tableName: 'posts',

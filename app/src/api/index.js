@@ -31,8 +31,8 @@ export const userApi = {
   publicProfile: (id) => get(`/user/${id}/public-profile`),
   follow: (id) => post(`/user/${id}/follow`),
   unfollow: (id) => del(`/user/${id}/follow`),
-  followers: (id, params) => get(`/user/${id}/followers`, { params }),
-  following: (id, params) => get(`/user/${id}/following`, { params }),
+  followers: (id, params) => get(`/user/${id}/followers`, params),
+  following: (id, params) => get(`/user/${id}/following`, params),
   sendGreeting: (id, data) => post(`/user/${id}/greet`, data),
 }
 
@@ -129,6 +129,7 @@ export const postApi = {
   like: (id) => post(`/posts/${id}/like`),
   commentList: (id, params) => get(`/posts/${id}/comments`, params),
   comment: (id, data) => post(`/posts/${id}/comments`, data),
+  removeComment: (postId, commentId) => del(`/posts/${postId}/comments/${commentId}`),
 }
 
 // ==================== 组局 (白夜 v2 新增) ====================
