@@ -81,9 +81,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.page-card { background: #fff; border-radius: 8px; padding: 20px; }
-.card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+.page-card { background: transparent; border-radius: 8px; padding: 20px; }
+.card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--by-text-1); }
 .stats-bar { display: flex; gap: 12px; margin-bottom: 16px; }
 .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; }
-.muted { color: #999; font-size: 12px; }
+.muted { color: var(--by-text-3); font-size: 12px; }
 </style>

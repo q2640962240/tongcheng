@@ -74,8 +74,8 @@ onMounted(loadData)
 
 <style lang="scss" scoped>
 .stat { text-align: center; }
-.stat-label { font-size: 14px; color: #737373; margin-bottom: 8px; }
-.stat-value { font-size: 32px; font-weight: 700; color: #a855f7; }
-.card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+.stat-label { font-size: 14px; color: var(--by-text-3); margin-bottom: 8px; }
+.stat-value { font-size: 32px; font-weight: 700; color: #B57BFF; }
+.card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--by-text-1); }
 .user-cell { display: flex; align-items: center; gap: 8px; }
 </style>

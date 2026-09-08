@@ -182,7 +182,7 @@ const onBlur = () => {
     display: flex;
     flex-direction: row;
     margin: 10px;
-    background: #FEFEFE;
+    background: #242E4C;
     justify-content: center;
     align-items: center;
     height: 28px;
@@ -192,8 +192,9 @@ const onBlur = () => {
       flex: 1;
       background: transparent;
       border: none;
-      caret-color: #007aff;
+      caret-color: #D4AF37;
       font-size: 14px;
+      color: #F5F7FF;
 
       &:focus {
         border: none;
@@ -201,7 +202,7 @@ const onBlur = () => {
       }
 
       &::placeholder {
-        color: #666;
+        color: #9BA3C4;
         font-size: 12px;
       }
     }
@@ -223,7 +224,7 @@ const onBlur = () => {
     align-items: center;
     font-family: PingFang SC;
     font-weight: 400;
-    color: #BBBBBB;
+    color: #9BA3C4;
   }
 }
 

@@ -146,7 +146,8 @@ onMounted(fetchDashboard)
 <style lang="scss" scoped>
 .stat-row { margin-bottom: 16px; }
 .stat-card {
-  background: #fff;
+  background: var(--by-surface);
+  border: 1px solid var(--by-border);
   border-radius: 8px;
   padding: 24px;
   display: flex;
@@ -170,20 +171,20 @@ onMounted(fetchDashboard)
   border: 1px solid rgba(212,175,55,.15);
   box-shadow: 0 4px 20px rgba(11,15,26,.05);
 }
-.stat-label { font-size: 14px; color: #737373; }
-.card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+.stat-label { font-size: 14px; color: var(--by-text-3); }
+.card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--by-text-1); }
 .todo-list { display: flex; flex-direction: column; gap: 12px; }
 .todo-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 0;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--by-border);
 }
-.todo-label { font-size: 14px; }
+.todo-label { font-size: 14px; color: var(--by-text-1); }
 .income-info { display: flex; gap: 32px; }
 .income-item { flex: 1; }
-.income-label { font-size: 14px; color: #737373; margin-bottom: 8px; }
-.income-value { font-size: 28px; font-weight: 700; color: #ef4444; }
+.income-label { font-size: 14px; color: var(--by-text-3); margin-bottom: 8px; }
+.income-value { font-size: 28px; font-weight: 700; color: var(--by-error); }
 .gift-stat { border: 1px solid rgba(236,72,153,.12); }
 </style>

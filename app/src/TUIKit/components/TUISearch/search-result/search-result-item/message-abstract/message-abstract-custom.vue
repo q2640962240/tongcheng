@@ -158,12 +158,13 @@ const defaultMessageContent = ref<string>(props?.messageContent?.custom as strin
   .service {
     .service-header {
       font-size: 14px;
-      color: #000;
+      color: #F5F7FF;
     }
 
     .service-list {
       .service-list-item {
         font-size: 14px;
+        color: #F5F7FF;
       }
     }
   }
@@ -188,7 +189,7 @@ const defaultMessageContent = ref<string>(props?.messageContent?.custom as strin
 
       .order-main-title {
         font-size: 14px;
-        color: #000;
+        color: #F5F7FF;
       }
 
       .order-main-description {
@@ -196,7 +197,7 @@ const defaultMessageContent = ref<string>(props?.messageContent?.custom as strin
         width: 145px;
         line-height: 17px;
         font-size: 14px;
-        color: #999;
+        color: #9BA3C4;
         letter-spacing: 0;
         margin-bottom: 6px;
         word-break: break-word;
@@ -205,7 +206,7 @@ const defaultMessageContent = ref<string>(props?.messageContent?.custom as strin
       .order-main-price {
         font-family: PingFangSC-Regular, sans-serif;
         line-height: 25px;
-        color: #ff7201;
+        color: #F5D583;
       }
     }
 
@@ -217,20 +218,20 @@ const defaultMessageContent = ref<string>(props?.messageContent?.custom as strin
 
   .link {
     font-size: 14px;
-    color: #679ce1;
+    color: #4FB8FF;
   }
 
   .description {
     font-size: 14px;
-    color: #000;
+    color: #F5F7FF;
 
     .highlight {
-      background-color: #007aff33;
+      background-color: rgba(212, 175, 55, 0.33);
     }
 
     .normal {
       font-size: 14px;
-      color: #000;
+      color: #F5F7FF;
     }
   }
 }

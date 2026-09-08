@@ -1,3 +1,4 @@
+/* 白夜暗色主题适配 — 浅色 #fff/#666/#007aff 替换为白夜色板 */
 .container-bottom {
   margin: 0 10px;
   position: relative;
@@ -16,11 +17,11 @@
     width: fit-content;
     height: 453px;
     border-radius: 4px;
-    background-color: #fff;
+    background-color: #1A2238;
     z-index: 1000;
     display: flex;
     flex-direction: column;
-    box-shadow: rgba(0,0,0,0.16) 0 3px 6px, rgba(0,0,0,0.23) 0 3px 6px;
+    box-shadow: rgba(0, 0, 0, 0.45) 0 3px 6px, rgba(0, 0, 0, 0.55) 0 3px 6px;
     left: 0;
     top: -5px;
   }
@@ -46,6 +47,7 @@
       font-weight: 500;
       line-height: 19.6px;
       font-family: "PingFang SC", sans-serif;
+      color: #F5F7FF;
     }
 
     &-close {
@@ -58,19 +60,19 @@
     display: flex;
     flex-direction: row;
     box-sizing: border-box;
-    border-bottom: 1px solid rgba(0,0,0,0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 
     &-item {
       padding: 10px 0;
       margin: 0 10px;
       font-size: 14px;
-      color: #666;
+      color: #9BA3C4;
       user-select: none;
       cursor: pointer;
 
       &-selected {
-        color: #007aff;
-        border-bottom: 2px solid #007aff;
+        color: #D4AF37;
+        border-bottom: 2px solid #D4AF37;
       }
     }
   }
@@ -88,7 +90,7 @@
       margin: 5px;
       border-radius: 5px;
       font-size: 12px;
-      color: #666;
+      color: #9BA3C4;
       user-select: none;
       cursor: pointer;
       display: flex;
@@ -107,7 +109,7 @@
       }
 
       &-selected {
-        background-color: rgba(0,122,255,0.2);
+        background-color: rgba(212, 175, 55, 0.22);
       }
     }
   }

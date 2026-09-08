@@ -296,13 +296,13 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .stat { text-align: center; }
-.stat-label { font-size: 14px; color: #737373; margin-bottom: 8px; }
-.stat-value { font-size: 32px; font-weight: 700; color: #ef4444; }
+.stat-label { font-size: 14px; color: var(--by-text-3); margin-bottom: 8px; }
+.stat-value { font-size: 32px; font-weight: 700; color: var(--by-error); }
 .filter-bar { display: flex; gap: 12px; margin-bottom: 12px; }
-.muted { color: #737373; font-size: 12px; }
-.amount-warn { color: #ef4444; font-weight: 600; }
+.muted { color: var(--by-text-3); font-size: 12px; }
+.amount-warn { color: var(--by-error); font-weight: 600; }
 .tab-badge { margin-left: 6px; }
 .audit-body { padding: 0 4px; }
 .audit-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
-.audit-label { width: 80px; color: #737373; font-size: 14px; flex-shrink: 0; }
+.audit-label { width: 80px; color: var(--by-text-3); font-size: 14px; flex-shrink: 0; }
 </style>

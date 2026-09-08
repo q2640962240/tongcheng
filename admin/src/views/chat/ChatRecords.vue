@@ -198,7 +198,7 @@ onMounted(loadSessions)
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 16px;
 }
-.page-head h3 { margin: 0; font-size: 18px; }
+.page-head h3 { margin: 0; font-size: 18px; color: var(--by-text-1); }
 .head-actions { display: flex; gap: 10px; }
 
 .records-body {
@@ -207,58 +207,58 @@ onMounted(loadSessions)
 }
 .session-pane {
   width: 340px; flex-shrink: 0;
-  background: #fff; border-radius: 8px;
+  background: var(--by-surface); border: 1px solid var(--by-border); border-radius: 8px;
   overflow-y: auto; padding: 8px;
 }
 .message-pane {
-  flex: 1; background: #fff; border-radius: 8px;
+  flex: 1; background: var(--by-surface); border: 1px solid var(--by-border); border-radius: 8px;
   display: flex; flex-direction: column; overflow: hidden;
 }
-.pane-tip { color: #999; padding: 24px; text-align: center; }
+.pane-tip { color: var(--by-text-3); padding: 24px; text-align: center; }
 .pane-tip.center { margin: auto; }
 
 .session-item {
   display: flex; gap: 10px; padding: 10px;
   border-radius: 8px; cursor: pointer;
 }
-.session-item:hover { background: #f5f6fa; }
-.session-item.active { background: #eef1ff; }
+.session-item:hover { background: rgba(255, 255, 255, 0.04); }
+.session-item.active { background: rgba(212, 175, 55, 0.12); }
 .session-avatars { display: flex; flex-direction: column; gap: 2px; }
 .session-info { flex: 1; min-width: 0; }
-.session-names { font-size: 13px; font-weight: 600; color: #303133; }
+.session-names { font-size: 13px; font-weight: 600; color: var(--by-text-1); }
 .session-last {
-  font-size: 12px; color: #909399; margin-top: 4px;
+  font-size: 12px; color: var(--by-text-3); margin-top: 4px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .session-meta { text-align: right; flex-shrink: 0; }
-.session-count { font-size: 12px; color: #606266; }
-.session-time { font-size: 11px; color: #c0c4cc; margin-top: 4px; }
+.session-count { font-size: 12px; color: var(--by-text-2); }
+.session-time { font-size: 11px; color: var(--by-text-3); margin-top: 4px; }
 
 .message-head {
-  padding: 12px 16px; border-bottom: 1px solid #ebeef5;
+  padding: 12px 16px; border-bottom: 1px solid var(--by-border);
   display: flex; align-items: center; justify-content: space-between;
-  font-weight: 600; font-size: 14px;
+  font-weight: 600; font-size: 14px; color: var(--by-text-1);
 }
-.message-total { font-weight: 400; font-size: 12px; color: #909399; }
+.message-total { font-weight: 400; font-size: 12px; color: var(--by-text-3); }
 .message-scroll {
   flex: 1; overflow-y: auto; padding: 16px;
-  background: #f5f6fa;
+  background: var(--by-bg-soft);
 }
 .load-more {
-  text-align: center; color: #409eff; font-size: 12px;
+  text-align: center; color: var(--by-gold-soft); font-size: 12px;
   cursor: pointer; padding: 6px 0;
 }
 .msg-row { display: flex; gap: 8px; margin-bottom: 14px; }
 .msg-row.right { flex-direction: row-reverse; }
 .msg-main { max-width: 70%; }
 .msg-row.right .msg-main { display: flex; flex-direction: column; align-items: flex-end; }
-.msg-meta { font-size: 11px; color: #909399; margin-bottom: 3px; }
+.msg-meta { font-size: 11px; color: var(--by-text-3); margin-bottom: 3px; }
 .msg-name { margin-right: 6px; }
 .msg-bubble {
-  background: #fff; border-radius: 8px; padding: 8px 12px;
-  font-size: 13px; color: #303133; word-break: break-all;
+  background: var(--by-surface-2); border-radius: 8px; padding: 8px 12px;
+  font-size: 13px; color: var(--by-text-1); word-break: break-all;
   display: inline-block;
 }
-.msg-row.right .msg-bubble { background: #d9e5ff; }
+.msg-row.right .msg-bubble { background: rgba(212, 175, 55, 0.18); color: var(--by-text-1); }
 .msg-img { max-width: 180px; max-height: 180px; border-radius: 6px; display: block; }
 </style>

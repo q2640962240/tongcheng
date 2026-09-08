@@ -36,7 +36,7 @@ const videoUrl = computed<string>(() => {
   width: 100px;
   height: 100px;
   overflow: hidden;
-  background-color: #fff;
+  background-color: #242E4C;
 
   &-box {
     max-width: 100px;
@@ -44,7 +44,7 @@ const videoUrl = computed<string>(() => {
     width: 100px;
     height: 100px;
     overflow: hidden;
-    background-color: #fff;
+    background-color: #242E4C;
     position: relative;
 
     .video-snapshot {

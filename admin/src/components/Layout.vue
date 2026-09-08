@@ -338,24 +338,24 @@ const onLogout = () => {
 :deep(.el-sub-menu .el-menu-item) { margin-left: 0; padding-left: 52px !important; }
 
 .header {
-  background: #fff;
+  background: linear-gradient(180deg, #1A2238 0%, #141A2D 100%);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #ececf3;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  border-bottom: 1px solid var(--by-border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 .header-left {
   display: flex;
   align-items: center;
   gap: 16px;
 }
-.collapse-btn { font-size: 20px; cursor: pointer; color: #0e1020; }
+.collapse-btn { font-size: 20px; cursor: pointer; color: var(--by-text-1); }
 .page-title {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: #0e1020;
+  color: var(--by-text-1);
 }
 .header-right { display: flex; align-items: center; }
 .admin-info {
@@ -366,16 +366,16 @@ const onLogout = () => {
   padding: 4px 10px;
   border-radius: 999px;
   transition: background 0.2s;
-  &:hover { background: #f5f5f5; }
+  &:hover { background: rgba(255, 255, 255, 0.06); }
 }
 .admin-avatar {
   background: linear-gradient(135deg, #d4af37 0%, #7b61ff 100%) !important;
   color: #fff !important;
   font-weight: 700;
 }
-.admin-name { font-size: 14px; color: #0e1020; font-weight: 600; }
+.admin-name { font-size: 14px; color: var(--by-text-1); font-weight: 600; }
 .main {
-  background: #f5f6fa;
+  background: transparent;
   padding: 24px;
   overflow-y: auto;
 }

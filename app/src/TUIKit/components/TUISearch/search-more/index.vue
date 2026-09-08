@@ -124,13 +124,13 @@ watch(
     right: 6px;
     top: 20px;
     z-index: 1000;
-    background: #fff;
+    background: #1A2238;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: flex-start;
     padding: 0;
-    box-shadow: rgba(0,0,0,0.16) 0 3px 6px, rgba(0,0,0,0.23) 0 3px 6px;
+    box-shadow: rgba(0,0,0,0.45) 0 3px 6px, rgba(0,0,0,0.55) 0 3px 6px;
 
     .list-item {
       display: flex;
@@ -139,6 +139,7 @@ watch(
       align-items: center;
       height: 40px;
       padding: 0 10px;
+      color: #F5F7FF;
 
       &-icon {
         margin-right: 2px;
@@ -148,6 +149,7 @@ watch(
         font-size: 14px;
         text-wrap: nowrap;
         word-break: keep-all;
+        color: #F5F7FF;
       }
     }
   }

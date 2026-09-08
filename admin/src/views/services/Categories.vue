@@ -356,18 +356,18 @@ onMounted(loadData)
 <style lang="scss" scoped>
 .filter-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .page-title { display: flex; align-items: center; gap: 10px; }
-.t1 { font-size: 16px; font-weight: 700; color: #0e1020; }
-.sub { font-size: 12px; color: #7b7e93; }
+.t1 { font-size: 16px; font-weight: 700; color: var(--by-text-1); }
+.sub { font-size: 12px; color: var(--by-text-3); }
 .name-cell { display: flex; align-items: center; }
-.name-cell .name { font-weight: 600; color: #0e1020; }
+.name-cell .name { font-weight: 600; color: var(--by-text-1); }
 .name-cell .key-tag {
   margin-left: 8px;
   font-size: 11px;
-  color: #7b7e93;
-  background: #f1f3fb;
+  color: var(--by-text-3);
+  background: rgba(255, 255, 255, 0.06);
   padding: 2px 6px;
   border-radius: 4px;
 }
-.unit { color: #7b7e93; font-size: 12px; }
-.muted { color: #b5b9c9; }
+.unit { color: var(--by-text-3); font-size: 12px; }
+.muted { color: var(--by-text-3); }
 </style>

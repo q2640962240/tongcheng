@@ -138,7 +138,7 @@
                 <el-tag :type="detail.status === 1 ? 'success' : 'danger'" size="small">
                   {{ detail.status === 1 ? '正常' : '禁用' }}
                 </el-tag>
-                <span v-if="detail.status !== 1 && detail.meta?.banReason" style="margin-left: 8px; color: #f56c6c; font-size: 13px;">
+                <span v-if="detail.status !== 1 && detail.meta?.banReason" style="margin-left: 8px; color: var(--by-error); font-size: 13px;">
                   原因：{{ detail.meta.banReason }}
                 </span>
               </el-descriptions-item>
@@ -276,7 +276,7 @@
               </el-table-column>
               <el-table-column label="变动" width="120">
                 <template #default="{ row }">
-                  <span :style="{ color: row.amount > 0 ? '#67c23a' : '#f56c6c' }">
+                  <span :style="{ color: row.amount > 0 ? 'var(--by-success)' : 'var(--by-error)' }">
                     {{ row.amount > 0 ? '+' : '' }}{{ row.amount }}
                   </span>
                 </template>
@@ -350,7 +350,7 @@
         </el-form-item>
         <el-form-item label="手机号" prop="phone">
           <el-input v-model="form.phone" maxlength="11" :placeholder="form.userType === 'ai' ? '可留空（自动生成）' : '真人手机号 11 位'" />
-          <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+          <div style="font-size: 12px; color: var(--by-text-3); margin-top: 4px;">
             真人用户必填；AI 用户不填时系统将自动生成唯一占位手机号
           </div>
         </el-form-item>
@@ -384,7 +384,7 @@
               <el-button @click="showPwd = !showPwd">{{ showPwd ? '隐藏' : '显示' }}</el-button>
             </template>
           </el-input>
-          <div style="font-size: 12px; color: #909399; margin-top: 4px;">
+          <div style="font-size: 12px; color: var(--by-text-3); margin-top: 4px;">
             为 AI 用户设置密码后，管理员可在用户端以「手机号 + 密码」登录该账号，用于测试或运营模拟
           </div>
         </el-form-item>
@@ -430,7 +430,7 @@
               :min="0" :max="2" :step="0.1"
               style="width: 360px;"
             />
-            <span style="margin-left: 16px; color: #606266;">{{ form.aiConfig.temperature }}</span>
+            <span style="margin-left: 16px; color: var(--by-text-2);">{{ form.aiConfig.temperature }}</span>
           </el-form-item>
           <el-form-item label="System Prompt">
             <el-input
@@ -768,9 +768,9 @@ const submitForm = async () => {
 .section-title {
   font-size: 15px;
   font-weight: 700;
-  color: #0e1020;
+  color: var(--by-text-1);
   padding-left: 10px;
-  border-left: 3px solid #d4af37;
+  border-left: 3px solid var(--by-gold);
   margin-bottom: 12px;
 }
 .wallet-grid {
@@ -779,8 +779,8 @@ const submitForm = async () => {
   gap: 12px;
 }
 .w-card {
-  background: linear-gradient(135deg, #f6f8ff 0%, #fffaf0 100%);
-  border: 1px solid #ececf3;
+  background: linear-gradient(135deg, var(--by-surface) 0%, var(--by-surface-2) 100%);
+  border: 1px solid var(--by-border);
   border-radius: 12px;
   padding: 16px 12px;
   text-align: center;
@@ -788,17 +788,17 @@ const submitForm = async () => {
 .w-num {
   font-size: 20px;
   font-weight: 800;
-  color: #d4af37;
+  color: var(--by-gold-soft);
   letter-spacing: 0.5px;
 }
 .w-label {
   margin-top: 4px;
   font-size: 12px;
-  color: #7b7e93;
+  color: var(--by-text-3);
 }
 .stat-card {
-  background: #fafbff;
-  border: 1px solid #ececf3;
+  background: var(--by-surface);
+  border: 1px solid var(--by-border);
   border-radius: 12px;
   padding: 20px 12px;
   text-align: center;
@@ -806,11 +806,11 @@ const submitForm = async () => {
 .stat-num {
   font-size: 22px;
   font-weight: 800;
-  color: #0e1020;
+  color: var(--by-text-1);
 }
 .stat-label {
   margin-top: 6px;
   font-size: 13px;
-  color: #7b7e93;
+  color: var(--by-text-3);
 }
 </style>

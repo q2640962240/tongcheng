@@ -314,11 +314,11 @@ onMounted(() => store.loadModules())
 .settings { padding: 16px 24px 32px; }
 
 .page-card {
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  background: linear-gradient(180deg, rgba(26,34,56,.96) 0%, rgba(20,26,45,.96) 100%);
+  border: 1px solid var(--by-border, rgba(255,255,255,.08));
   border-radius: 12px;
   padding: 24px 28px 28px;
-  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 16px 40px -18px rgba(0,0,0,.6);
 }
 
 .header-row {
@@ -330,18 +330,18 @@ onMounted(() => store.loadModules())
 }
 .card-title {
   display: flex; align-items: center; gap: 10px;
-  font-size: 20px; font-weight: 700; color: #0B0F1A;
+  font-size: 20px; font-weight: 700; color: #F5F7FF;
   letter-spacing: 0.5px;
 }
 .card-desc {
-  font-size: 13px; color: #475569; margin-top: 8px; line-height: 1.8;
-  background: #FFF7ED;
+  font-size: 13px; color: #D0D6EE; margin-top: 8px; line-height: 1.8;
+  background: rgba(212, 175, 55, 0.08);
   padding: 8px 12px;
   border-radius: 8px;
   border-left: 3px solid #D4AF37;
   max-width: 720px;
 }
-.card-desc strong { color: #D4AF37; }
+.card-desc strong { color: #F5D583; }
 
 /* ---- 6 模块入口状态卡片 ---- */
 .module-cards {
@@ -354,19 +354,19 @@ onMounted(() => store.loadModules())
   display: flex; align-items: center; gap: 12px;
   padding: 14px 16px;
   border-radius: 10px;
-  border: 1px solid #E5E7EB;
+  border: 1px solid var(--by-border, rgba(255,255,255,.08));
   border-left: 5px solid #64748B;
-  background: #F8FAFC;
+  background: rgba(26, 34, 56, 0.6);
   cursor: pointer;
   transition: all .15s ease;
 }
-.mod-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(11, 15, 26, .08); }
+.mod-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.25); }
 .mod-card.active {
-  background: #FFFFFF;
+  background: rgba(36, 46, 76, 0.85);
   border-color: #D4AF37;
   border-width: 1px;
   border-left-width: 5px;
-  box-shadow: 0 4px 16px rgba(212, 175, 55, .18);
+  box-shadow: 0 4px 16px rgba(212, 175, 55, .22);
 }
 .mod-icon {
   width: 42px; height: 42px; border-radius: 10px;
@@ -374,7 +374,7 @@ onMounted(() => store.loadModules())
   flex-shrink: 0;
 }
 .mod-body { flex: 1; min-width: 0; }
-.mod-title { font-size: 15px; font-weight: 700; color: #0F172A; margin-bottom: 4px; }
+.mod-title { font-size: 15px; font-weight: 700; color: #F5F7FF; margin-bottom: 4px; }
 .mod-status { font-size: 11px; font-weight: 600; }
 .mod-count {
   font-weight: 800;
@@ -386,7 +386,7 @@ onMounted(() => store.loadModules())
 .config-tabs :deep(.el-tabs__item) {
   font-size: 15px;
   font-weight: 600;
-  color: #475569;
+  color: #9BA3C4;
   padding-left: 18px;
   padding-right: 18px;
 }
@@ -406,8 +406,8 @@ onMounted(() => store.loadModules())
   border-radius: 8px;
   margin-bottom: 20px;
   font-size: 13px;
-  color: #334155;
-  background: #FFFBEB;
+  color: #D0D6EE;
+  background: rgba(212, 175, 55, 0.06);
   line-height: 1.6;
 }
 .intro-left { display: flex; align-items: center; gap: 8px; max-width: 80%; }
@@ -418,7 +418,7 @@ onMounted(() => store.loadModules())
   display: flex;
   align-items: flex-start;
   padding: 18px 0;
-  border-bottom: 1px dashed #E2E8F0;
+  border-bottom: 1px dashed rgba(255,255,255,.08);
   margin-bottom: 0 !important;
 }
 .config-row:last-of-type { border-bottom: none; }
@@ -427,7 +427,7 @@ onMounted(() => store.loadModules())
   line-height: 1.2;
   font-weight: 800 !important;
   font-size: 15px !important;
-  color: #0B0F1A !important;
+  color: #F5F7FF !important;
   text-align: right !important;
 }
 .config-row :deep(.el-form-item__content) {
@@ -456,7 +456,7 @@ onMounted(() => store.loadModules())
 .label-text {
   font-size: 15px;
   font-weight: 800;
-  color: #0B0F1A;
+  color: #F5F7FF;
   letter-spacing: 0.3px;
   line-height: 1.4;
 }
@@ -473,9 +473,9 @@ onMounted(() => store.loadModules())
   padding: 1px 7px;
   font-size: 11px;
   font-weight: 600;
-  color: #64748B;
-  background: #F1F5F9;
-  border: 1px solid #E2E8F0;
+  color: #9BA3C4;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.10);
   border-radius: 999px;
   line-height: 1.4;
   margin-left: 4px;
@@ -491,28 +491,29 @@ onMounted(() => store.loadModules())
   display: inline-block;
 }
 .key-name code {
-  background: #0F172A;
-  color: #FDE68A;
+  background: #0B0F1A;
+  color: #F5D583;
   padding: 3px 9px;
   border-radius: 5px;
   font-size: 12px;
   font-family: 'SF Mono', Consolas, Menlo, monospace;
   letter-spacing: 0.2px;
-  box-shadow: 0 2px 6px rgba(15,23,42,.2);
+  border: 1px solid rgba(212,175,55,.22);
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
 }
 
 .val-col { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 .secret-input :deep(.el-input__wrapper) {
-  background: #FFFBEB;
-  box-shadow: 0 0 0 1px #FDE68A inset;
+  background: rgba(212, 175, 55, 0.08) !important;
+  box-shadow: 0 0 0 1px rgba(212,175,55,.35) inset !important;
 }
 .field-desc {
   font-size: 12px;
-  color: #475569;
+  color: #D0D6EE;
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #F5F3FF;
+  background: rgba(123, 97, 255, 0.10);
   padding: 6px 10px;
   border-radius: 6px;
   width: fit-content;
@@ -527,7 +528,7 @@ onMounted(() => store.loadModules())
 .actions {
   margin-top: 22px;
   padding-top: 16px;
-  border-top: 2px solid #E2E8F0;
+  border-top: 2px solid rgba(255,255,255,.08);
   display: flex;
   gap: 12px;
   align-items: center;

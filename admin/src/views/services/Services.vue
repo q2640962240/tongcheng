@@ -161,7 +161,7 @@
         </el-form-item>
         <el-form-item label="价格" prop="price">
           <el-input-number v-model="createForm.price" :min="0" :step="10" style="width: 180px" />
-          <span style="margin-left: 12px; color: #909399;">单位：</span>
+          <span style="margin-left: 12px; color: var(--by-text-3);">单位：</span>
           <el-select v-model="createForm.priceUnit" style="width: 140px">
             <el-option label="次" value="次" />
             <el-option label="局" value="局" />
@@ -184,7 +184,7 @@
         </el-form-item>
         <el-form-item label="排序权重" prop="sort">
           <el-input-number v-model="createForm.sort" :min="0" :step="1" />
-          <span style="margin-left: 12px; color: #909399;">数值越大越靠前</span>
+          <span style="margin-left: 12px; color: var(--by-text-3);">数值越大越靠前</span>
         </el-form-item>
         <el-form-item label="初始状态" prop="status">
           <el-select v-model="createForm.status" style="width: 200px">
@@ -450,6 +450,6 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .filter-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.price { color: #d4af37; font-weight: 700; font-size: 14px; }
-.price-unit { color: #7b7e93; font-size: 12px; margin-left: 2px; }
+.price { color: var(--by-gold-soft); font-weight: 700; font-size: 14px; }
+.price-unit { color: var(--by-text-3); font-size: 12px; margin-left: 2px; }
 </style>

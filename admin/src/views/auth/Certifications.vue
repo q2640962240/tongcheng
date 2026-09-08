@@ -186,17 +186,17 @@ onMounted(load)
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 4px;
 }
-.title { font-size: 20px; font-weight: 700; color: #0e1020; margin: 0; }
+.title { font-size: 20px; font-weight: 700; color: var(--by-text-1); margin: 0; }
 .toolbar { display: flex; gap: 10px; align-items: center; }
 .card { border: none; border-radius: 12px; }
 .pager { margin-top: 20px; display: flex; justify-content: flex-end; }
 .u-box { display: flex; align-items: center; gap: 10px; }
 .u-av { background: linear-gradient(135deg, #d4af37, #7b61ff); color: #fff; }
 .u-info { display: flex; flex-direction: column; gap: 2px; }
-.u-name { font-weight: 600; color: #0e1020; }
-.u-sub { font-size: 12px; color: #8a8fa3; display: flex; gap: 10px; }
-.u-phone { color: #555; }
-.cell-line { color: #0e1020; font-size: 13px; }
-.cell-line.dim { color: #8a8fa3; }
-.cell-thumb { width: 48px; height: 48px; border-radius: 8px; margin-top: 6px; border: 1px solid #eee; }
+.u-name { font-weight: 600; color: var(--by-text-1); }
+.u-sub { font-size: 12px; color: var(--by-text-3); display: flex; gap: 10px; }
+.u-phone { color: var(--by-text-2); }
+.cell-line { color: var(--by-text-1); font-size: 13px; }
+.cell-line.dim { color: var(--by-text-3); }
+.cell-thumb { width: 48px; height: 48px; border-radius: 8px; margin-top: 6px; border: 1px solid var(--by-border); }
 </style>

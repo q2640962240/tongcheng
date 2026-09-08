@@ -122,10 +122,10 @@ onMounted(load)
 <style scoped>
 .page { padding: 16px; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.title { margin: 0; font-size: 20px; }
+.title { margin: 0; font-size: 20px; color: var(--by-text-1); }
 .toolbar { display: flex; gap: 8px; align-items: center; }
-.card { background: #fff; }
+.card { background: transparent; border: 1px solid var(--by-border); }
 .pagination { margin-top: 16px; display: flex; justify-content: flex-end; }
-.u-name { font-weight: 600; }
-.u-sub { font-size: 12px; color: #909399; }
+.u-name { font-weight: 600; color: var(--by-text-1); }
+.u-sub { font-size: 12px; color: var(--by-text-3); }
 </style>

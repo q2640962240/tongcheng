@@ -1,5 +1,6 @@
+/* 白夜暗色主题适配 — 替换原浅色 #EBF0F6 / #fff */
 .tui-search {
-  background: #EBF0F6;
+  background: #0B0F1A;
 
   &-main-global {
     width: 100%;
@@ -9,8 +10,8 @@
   &-main-conversation {
     width: 100%;
     height: 100%;
-    background: #fff;
-    box-shadow: 0 1px 10px 0 rgba(2,16,43,0.15);
+    background: #1A2238;
+    box-shadow: 0 1px 10px 0 rgba(0, 0, 0, 0.45);
   }
 
   .tui-search-global {

@@ -40,22 +40,22 @@ const contentText = ref<Array<{ text: string; isHighlight: boolean }>>(props.con
   justify-content: flex-start;
 
   &-font {
-    color: #999;
+    color: #9BA3C4;
 
     .highlight {
-      color: #007aff;
+      color: #D4AF37;
     }
 
     .normal {
-      color: #999;
+      color: #9BA3C4;
     }
   }
 
   &-background {
-    color: #1f2329;
+    color: #F5F7FF;
 
     .highlight {
-      background-color: #007aff33;
+      background-color: rgba(212, 175, 55, 0.33);
     }
 
     .normal {

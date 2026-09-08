@@ -192,12 +192,12 @@ onMounted(loadData)
 <style lang="scss" scoped>
 .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
 .filter-bar { display: flex; gap: 12px; }
-.muted { color: #737373; font-size: 12px; }
+.muted { color: var(--by-text-3); font-size: 12px; }
 .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.reward { color: #ef4444; font-size: 12px; }
+.reward { color: var(--by-error); font-size: 12px; }
 .dialog-body { padding: 0 4px; }
 .meta-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
-.meta-label { width: 80px; color: #737373; font-size: 14px; flex-shrink: 0; }
-.meta-content { flex: 1; padding: 8px 12px; background: #f5f5f5; border-radius: 6px; font-size: 14px; color: #171717; line-height: 1.6; word-break: break-all; }
+.meta-label { width: 80px; color: var(--by-text-3); font-size: 14px; flex-shrink: 0; }
+.meta-content { flex: 1; padding: 8px 12px; background: var(--by-surface-2); border-radius: 6px; font-size: 14px; color: var(--by-text-1); line-height: 1.6; word-break: break-all; }
 .handle-form { margin-top: 20px; }
 </style>

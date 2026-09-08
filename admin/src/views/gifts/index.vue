@@ -350,14 +350,14 @@ watch(activeTab, (val) => loadByTab(val))
 <style scoped>
 .page { padding: 16px; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.title { margin: 0; font-size: 20px; }
+.title { margin: 0; font-size: 20px; color: var(--by-text-1); }
 .gift_tabs { background: transparent; border: none; }
 .gift_tabs :deep(.el-tabs__content) { padding: 16px 0 0; }
 .tab-toolbar { margin-bottom: 12px; display: flex; gap: 12px; align-items: center; }
-.card { background: #fff; }
-.diamond-text { color: #d4af37; font-weight: 600; }
+.card { background: transparent; border: 1px solid var(--by-border); }
+.diamond-text { color: var(--by-gold-soft); font-weight: 600; }
 .user-cell { display: flex; align-items: center; gap: 8px; }
-.text-muted { color: #999; font-size: 13px; }
+.text-muted { color: var(--by-text-3); font-size: 13px; }
 .config-card { max-width: 600px; }
-.config-hint { margin-left: 12px; color: #666; font-size: 13px; }
+.config-hint { margin-left: 12px; color: var(--by-text-3); font-size: 13px; }
 </style>

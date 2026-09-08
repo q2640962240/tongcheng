@@ -93,6 +93,6 @@ onMounted(loadHistory)
 <style scoped>
 .page { padding: 16px; }
 .page-header { margin-bottom: 16px; }
-.title { margin: 0; font-size: 20px; }
-.card { background: #fff; }
+.title { margin: 0; font-size: 20px; color: var(--by-text-1); }
+.card { background: transparent; border: 1px solid var(--by-border); }
 </style>

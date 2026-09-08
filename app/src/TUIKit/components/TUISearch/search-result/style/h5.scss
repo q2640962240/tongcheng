@@ -1,12 +1,13 @@
+/* 白夜暗色主题适配 — H5 搜索结果主背景与卡片色 */
 .tui-search-result-h5 {
-  background-color: #f4f4f4;
+  background-color: #0B0F1A;
 
   .tui-search-result-main {
-    background-color: #f4f4f4;
+    background-color: #0B0F1A;
 
     .tui-search-result-list {
       .tui-search-result-list-item {
-        background-color: #fff;
+        background-color: #1A2238;
         padding: 0 10px 10px;
         border-radius: 5px;
         margin-bottom: 10px;
@@ -15,7 +16,7 @@
   }
 
   .tui-search-result-detail {
-    background-color: #f4f4f4;
+    background-color: #0B0F1A;
     border: none;
 
     .list-item {
@@ -25,6 +26,7 @@
 
     .list-group-date {
       padding: 10px;
+      color: #B7BFDA;
     }
 
     .list-group-image {
@@ -37,9 +39,9 @@
 
     .list-group-file {
       .list-group-item {
-        background-color: #fff;
+        background-color: #1A2238;
         padding: 0 10px;
-        border-bottom: 1px solid #f4f4f4;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 
         .search-result-list-item-h5 {
           padding: 0 0 10px;
@@ -60,8 +62,9 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  color: #9BA3C4;
 
   &-h5 {
-    background-color: #f4f4f4;
+    background-color: #0B0F1A;
   }
 }

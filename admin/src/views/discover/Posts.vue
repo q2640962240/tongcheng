@@ -124,14 +124,14 @@ onMounted(load)
 <style scoped>
 .page { padding: 16px; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.title { margin: 0; font-size: 20px; }
+.title { margin: 0; font-size: 20px; color: var(--by-text-1); }
 .toolbar { display: flex; gap: 8px; align-items: center; }
-.card { background: #fff; }
+.card { background: transparent; border: 1px solid var(--by-border); }
 .pagination { margin-top: 16px; display: flex; justify-content: flex-end; }
-.u-name { font-weight: 600; }
-.u-sub { font-size: 12px; color: #909399; }
+.u-name { font-weight: 600; color: var(--by-text-1); }
+.u-sub { font-size: 12px; color: var(--by-text-3); }
 .post-preview { line-height: 1.5; }
-.post-text { color: #303133; }
+.post-text { color: var(--by-text-2); }
 .post-imgs { margin-top: 4px; }
-.pill { display: inline-block; padding: 2px 8px; background: #ecf5ff; color: #409eff; border-radius: 10px; font-size: 12px; }
+.pill { display: inline-block; padding: 2px 8px; background: rgba(79,184,255,0.18); color: #7DD3FC; border-radius: 10px; font-size: 12px; }
 </style>

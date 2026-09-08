@@ -74,14 +74,18 @@ const onLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #ffd60a 0%, #ffcc00 50%, #171717 100%);
+  background:
+    radial-gradient(900px 500px at 20% 10%, rgba(212,175,55,.20), transparent 55%),
+    radial-gradient(800px 500px at 90% 90%, rgba(123,97,255,.22), transparent 60%),
+    #0B0F1A;
 }
 .login-box {
   width: 400px;
-  background: #fff;
+  background: linear-gradient(180deg, rgba(26,34,56,.96) 0%, rgba(20,26,45,.96) 100%);
+  border: 1px solid var(--by-border-2, rgba(255,255,255,.16));
   border-radius: 16px;
   padding: 48px 40px;
-  box-shadow: 0 24px 60px -20px rgba(0,0,0,0.3);
+  box-shadow: 0 24px 60px -20px rgba(0,0,0,.6);
 }
 .brand {
   text-align: center;
@@ -91,24 +95,31 @@ const onLogin = async () => {
   width: 64px;
   height: 64px;
   border-radius: 16px;
-  background: #ffd60a;
-  color: #171717;
+  background: linear-gradient(135deg, #F7E7B2 0%, #D4AF37 55%, #B8941F 100%);
+  color: #0B0F1A;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 32px;
   font-weight: 700;
   margin-bottom: 16px;
+  box-shadow: 0 8px 24px rgba(212,175,55,.30);
 }
-h1 { font-size: 24px; margin: 0; }
+h1 {
+  font-size: 24px;
+  margin: 0;
+  color: #F5F7FF;
+  letter-spacing: 0.02em;
+}
 .form { margin-top: 24px; }
 .btn-login {
   width: 100%;
-  background: #ffd60a;
-  border-color: #ffd60a;
-  color: #171717;
+  background: linear-gradient(135deg, #F7E7B2 0%, #D4AF37 55%, #B8941F 100%);
+  border: none;
+  color: #0B0F1A;
   font-weight: 700;
   font-size: 16px;
-  &:hover { background: #ffcc00; border-color: #ffcc00; }
+  box-shadow: 0 6px 20px rgba(212,175,55,.25);
+  &:hover { filter: brightness(1.05); }
 }
 </style>

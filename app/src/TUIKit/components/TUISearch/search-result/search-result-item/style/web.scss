@@ -1,6 +1,7 @@
+/* 白夜暗色主题适配 — 搜索结果项文字/背景对比度修复 */
 .search-result-list-item {
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(0,0,0,0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
 
   &-image {
@@ -11,7 +12,7 @@
     max-height: 100px;
     overflow: hidden;
     box-sizing: content-box;
-    border: 1px solid #f1f1f1;
+    border: 1px solid rgba(255, 255, 255, 0.16);
     padding: 0;
     margin: 5px;
   }
@@ -47,21 +48,21 @@
       }
 
       &-name {
-        color: #333;
+        color: #F5F7FF;
         font-size: 14px;
         height: 20px;
       }
 
       &-content {
-        color: #999;
+        color: #9BA3C4;
         font-size: 12px;
 
         .highlight {
-          color: #007aff;
+          color: #D4AF37;
         }
 
         .normal {
-          color: #999;
+          color: #9BA3C4;
         }
       }
     }
@@ -72,7 +73,7 @@
       &-time {
         font-weight: 400;
         font-size: 12px;
-        color: #999;
+        color: #9BA3C4;
         letter-spacing: 0;
         white-space: nowrap;
       }
@@ -105,7 +106,7 @@
         padding-bottom: 4px;
         font-weight: 400;
         font-size: 12px;
-        color: #999;
+        color: #9BA3C4;
         letter-spacing: 0;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -119,20 +120,20 @@
         padding: 12px;
         font-weight: 400;
         font-size: 14px;
-        color: #000;
+        color: #F5F7FF;
         letter-spacing: 0;
         word-wrap: break-word;
         word-break: break-all;
         overflow: hidden;
-        background: #eff0f1;
+        background: #242E4C;
         border-radius: 0 10px 10px;
 
         .highlight {
-          background-color: #007aff33;
+          background-color: rgba(212, 175, 55, 0.33);
         }
 
         .normal {
-          color: #1f2329;
+          color: #F5F7FF;
         }
       }
     }
@@ -145,7 +146,7 @@
       &-time {
         font-weight: 400;
         font-size: 12px;
-        color: #999;
+        color: #9BA3C4;
         letter-spacing: 0;
         white-space: nowrap;
       }
@@ -154,7 +155,7 @@
         cursor: pointer;
         font-weight: 400;
         font-size: 12px;
-        color: #007aff;
+        color: #D4AF37;
         letter-spacing: 0;
         white-space: nowrap;
       }
@@ -189,7 +190,7 @@
       &-name,
       &-time,
       &-to {
-        color: #666;
+        color: #9BA3C4;
         font-size: 14px;
         height: 24px;
         overflow: hidden;
@@ -200,7 +201,7 @@
       &-to {
         cursor: pointer;
         font-weight: 400;
-        color: #007aff;
+        color: #D4AF37;
         letter-spacing: 0;
         white-space: nowrap;
         padding-right: 3px;
@@ -209,7 +210,8 @@
 
     &-main-content {
       padding: 10px;
-      background-color: #f1f1f1;
+      background-color: #242E4C;
+      color: #F5F7FF;
     }
   }
 
@@ -234,7 +236,7 @@
         bottom: 0;
         width: 100%;
         height: 40%;
-        background-color: rgba(0,0,0,0.3);
+        background-color: rgba(0, 0, 0, 0.5);
 
         .image-container-hover-text {
           width: 100%;
@@ -254,9 +256,9 @@
 
 .hover-info {
   border-radius: 5px;
-  background-color: #f5f5f5;
+  background-color: #242E4C;
 }
 
 .hover-bubble {
-  background-color: #f5f5f5;
+  background-color: #242E4C;
 }

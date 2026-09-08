@@ -19,7 +19,7 @@ import { isPC } from '../../../../utils/env';
   align-items: center;
 
   &-h5 {
-    background-color: #f4f4f4;
+    background-color: #0B0F1A;
   }
 }
 </style>

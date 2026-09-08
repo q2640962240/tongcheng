@@ -28,7 +28,7 @@ import SearchDefaultIcon from '../../../../assets/icon/search-default.svg';
   align-items: center;
 
   &-h5 {
-    background-color: #f4f4f4;
+    background-color: #0B0F1A;
   }
 
   &-main {
@@ -43,7 +43,7 @@ import SearchDefaultIcon from '../../../../assets/icon/search-default.svg';
       font-size: 14px;
       font-weight: 400;
       line-height: 20px;
-      color: #666;
+      color: #9BA3C4;
     }
   }
 }

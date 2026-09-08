@@ -103,7 +103,7 @@ const handleFileIconForShow = (type: string) => {
 
     &-name {
       width: 100%;
-      color: #000;
+      color: #F5F7FF;
       font-size: 14px;
       height: 20px;
       overflow: hidden;
@@ -111,11 +111,11 @@ const handleFileIconForShow = (type: string) => {
       white-space: nowrap;
 
       .highlight {
-        background-color: #007aff33;
+        background-color: rgba(212, 175, 55, 0.33);
       }
 
       .normal {
-        color: #000;
+        color: #F5F7FF;
       }
     }
 
@@ -123,20 +123,20 @@ const handleFileIconForShow = (type: string) => {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      color: #888;
+      color: #9BA3C4;
       font-size: 12px;
     }
   }
 
   &-bubble {
-    background-color: #f1f1f1;
+    background-color: #242E4C;
 
     .message-abstract-file-main {
       .message-abstract-file-main-name {
-        color: #1f2329;
+        color: #F5F7FF;
 
         .normal {
-          color: #1f2329;
+          color: #F5F7FF;
         }
       }
     }
@@ -145,7 +145,7 @@ const handleFileIconForShow = (type: string) => {
   &-file {
     margin: 8px 10px 5px;
     padding: 10px;
-    background-color: #f1f1f1;
+    background-color: #242E4C;
     height: 51px;
   }
 }
