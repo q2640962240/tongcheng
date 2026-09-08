@@ -419,7 +419,7 @@ onReachBottom(() => {
 .c-top { display: flex; align-items: center; gap: 10rpx; flex-wrap: wrap; }
 .c-name { font-size: 24rpx; color: $by-text-2; font-weight: 600; }
 .c-time { font-size: 20rpx; color: $by-text-3; }
-.c-del { font-size: 20rpx; color: $by-danger; margin-left: auto; padding: 4rpx 12rpx; border-radius: 8rpx; }
+.c-del { font-size: 20rpx; color: $by-error; margin-left: auto; padding: 4rpx 12rpx; border-radius: 8rpx; }
 .c-del:active { opacity: 0.6; }
 .c-text { font-size: 28rpx; color: $by-text-1; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 
