@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { Wallet, Transaction, Order, SignIn } = require('../models')
+const { Wallet, Transaction, Order, SignIn, Op } = require('../models')
 const { auth } = require('../middleware/auth')
 const { success, paginate, fail } = require('../utils/response')
 const wxpay = require('../utils/wxpay')
@@ -397,9 +397,14 @@ router.post('/withdraw', auth, async (req, res, next) => {
 /** 交易记录 */
 router.get('/transactions', auth, async (req, res, next) => {
   try {
-    const { type, page = 1, pageSize = 20 } = req.query
+    const { type, types, page = 1, pageSize = 20 } = req.query
     const where = { userId: req.userId }
-    if (type) where.type = type
+    if (types) {
+      const typeList = String(types).split(',').map(t => t.trim()).filter(Boolean)
+      if (typeList.length) where.type = { [Op.in]: typeList }
+    } else if (type) {
+      where.type = type
+    }
     const { rows, count } = await Transaction.findAndCountAll({
       where,
       order: [['createdAt', 'DESC']],

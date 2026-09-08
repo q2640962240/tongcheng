@@ -84,17 +84,32 @@ const paging = ref(null)
 const list = ref([])
 const type = ref('')
 
+// 四大分类：每个分类对应后端多个 type
 const typeMap = {
+  recharge: '充值',
+  withdraw: '提现',
+  expense: '支出',
+  income: '收益'
+}
+// 分类 -> 后端 type 列表
+const TYPE_GROUPS = {
+  recharge: ['recharge'],
+  withdraw: ['withdraw', 'gift_withdraw'],
+  expense: ['consume', 'gift_send', 'exchange', 'elite_pay', 'diamond_unlock_wechat', 'admin_adjustment'],
+  income: ['income', 'gift_income', 'reward', 'refund']
+}
+// 收入类（金额为正显示）
+const INCOME_TYPES = ['recharge', 'income', 'gift_income', 'refund', 'reward']
+
+// 后端 type -> 显示名称
+const TYPE_LABELS = {
   recharge: '充值', exchange: '兑换', consume: '消费',
-  income: '收入', withdraw: '提现', refund: '退款', reward: '奖励',
+  income: '收益', withdraw: '提现', refund: '退款', reward: '奖励',
   gift_send: '送礼', gift_income: '礼物收入',
   gift_withdraw: '礼物提现', elite_pay: '精英开通', diamond_unlock_wechat: '解锁微信',
   admin_adjustment: '管理员调整'
 }
-
-const INCOME_TYPES = ['recharge', 'income', 'gift_income', 'refund', 'reward']
-
-const getTypeLabel = (t) => toStr(typeMap[t], '其他交易')
+const getTypeLabel = (t) => toStr(TYPE_LABELS[t], '其他交易')
 
 const typeIcon = (t) => ({
   recharge: '💎', exchange: '⇄', consume: '🛒',
@@ -144,7 +159,11 @@ const queryList = async (pageNo, pageSize) => {
     return
   }
   try {
-    const res = await walletApi.transactions({ type: type.value, page: pageNo, pageSize })
+    const params = { page: pageNo, pageSize }
+    if (type.value && TYPE_GROUPS[type.value]) {
+      params.types = TYPE_GROUPS[type.value].join(',')
+    }
+    const res = await walletApi.transactions(params)
     const pageData = unwrapPage(res, { list: [], total: 0 })
     paging.value.completeByTotal(safeMap(pageData.list, normalizeTx), toNum(pageData.total, 0))
   } catch (_) {

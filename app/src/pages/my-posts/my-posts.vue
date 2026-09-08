@@ -206,18 +206,19 @@ onMounted(() => loadList(true))
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: $by-bg; display: flex; flex-direction: column; }
+.page { height: 100vh; background: $by-bg; display: flex; flex-direction: column; overflow: hidden; }
 
 .nav-bar {
+  flex-shrink: 0;
   display: flex; align-items: center; justify-content: space-between;
   padding: 20rpx 32rpx; background: $by-card-bg; border-bottom: 1rpx solid $by-border;
-  position: sticky; top: 0; z-index: 10;
+  position: relative; z-index: 20;
 }
 .nav-back { font-size: 48rpx; color: $by-text-1; width: 60rpx; }
 .nav-title { font-size: 32rpx; font-weight: 700; color: $by-text-1; }
-.nav-publish { font-size: 26rpx; color: $by-gold; font-weight: 600; }
+.nav-publish { font-size: 26rpx; color: $by-gold; font-weight: 600; padding: 8rpx 16rpx; }
 
-.scroll { flex: 1; height: 0; }
+.scroll { flex: 1; min-height: 0; }
 
 .state-wrap { padding: 80rpx 0; text-align: center; }
 .state-text { font-size: 28rpx; color: $by-text-3; }
