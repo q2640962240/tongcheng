@@ -34,12 +34,18 @@
               <el-tag :type="typeTag(row.type)" size="small">{{ typeMap[row.type] || row.type }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="金额" width="140">
+          <el-table-column label="金额" width="160">
             <template #default="{ row }">
-              {{ row.currency === 'fen' ? '¥' + formatNum(row.amount) : row.amount + ' 星币' }}
+              <div>{{ row.currency === 'fen' ? '¥' + formatNum(row.amount) : Math.abs(row.amount) + ' 钻石' }}</div>
+              <div class="muted" v-if="row.currency === 'fen'">≈ {{ Math.floor(Math.abs(row.amount) / 10) }} 钻石</div>
             </template>
           </el-table-column>
-          <el-table-column label="备注" min-width="180" show-overflow-tooltip>
+          <el-table-column label="订单号" width="180" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="mono">{{ row.orderId || row.extra?.outTradeNo || '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="消费去向/备注" min-width="200" show-overflow-tooltip>
             <template #default="{ row }">{{ row.remark || '-' }}</template>
           </el-table-column>
           <el-table-column label="时间" width="180">
@@ -300,6 +306,7 @@ onMounted(() => {
 .stat-value { font-size: 32px; font-weight: 700; color: var(--by-error); }
 .filter-bar { display: flex; gap: 12px; margin-bottom: 12px; }
 .muted { color: var(--by-text-3); font-size: 12px; }
+.mono { font-family: Menlo, Consolas, monospace; color: var(--by-text-2); }
 .amount-warn { color: var(--by-error); font-weight: 600; }
 .tab-badge { margin-left: 6px; }
 .audit-body { padding: 0 4px; }

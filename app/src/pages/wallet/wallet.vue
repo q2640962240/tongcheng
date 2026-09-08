@@ -15,8 +15,8 @@
         </view>
       </view>
       <view class="hero-income">
-        <text class="hero-income-label">礼物收入</text>
-        <text class="hero-income-num">¥{{ incomeYuan }}</text>
+        <text class="hero-income-label">礼物收入（1钻石=1角）</text>
+        <text class="hero-income-num">{{ incomeDiamond }} 💎</text>
       </view>
     </view>
 
@@ -57,7 +57,8 @@
           <view class="tx-icon" :class="t.type">{{ t.icon }}</view>
           <view class="tx-info">
             <text class="tx-title">{{ t.label }}</text>
-            <text class="tx-time">{{ t.time }}</text>
+            <text class="tx-remark" v-if="t.remark">{{ t.remark }}</text>
+            <text class="tx-time">{{ t.time }}<text v-if="t.orderNo" class="tx-order"> · 订单 {{ t.orderNo }}</text></text>
           </view>
           <text class="tx-amount" :class="t.inOut">{{ t.prefix }}{{ t.amountText }}</text>
         </view>
@@ -78,7 +79,8 @@ const wallet = computed(() => ({
   diamond: walletStore.diamond,
   starCoin: walletStore.starCoin
 }))
-const incomeYuan = computed(() => (Number(walletStore.giftIncome) / 100).toFixed(2))
+// 礼物收入统一以钻石显示：1元=100分=10钻石 → 10分=1钻石
+const incomeDiamond = computed(() => Math.floor(Number(walletStore.giftIncome) / 10))
 
 const txList = ref([])
 const txLoading = ref(false)
@@ -99,11 +101,17 @@ const iconMap = {
 }
 const INCOME_TYPES = ['recharge', 'income', 'gift_income', 'refund', 'reward', 'admin_adjustment']
 
+// 全局统一：所有交易以钻石为单位显示（1钻石=1角=10分）
 const formatCurrency = (t) => {
   const amt = toNum(getPath(t, 'amount'), 0)
-  const currency = toStr(getPath(t, 'currency'), 'starCoin')
-  if (currency === 'fen') return `¥${(Math.abs(amt) / 100).toFixed(2)}`
-  return `${Math.abs(amt)} ${currency === 'diamond' ? '钻石' : '星币'}`
+  const currency = toStr(getPath(t, 'currency'), 'diamond')
+  let diamondAmt
+  if (currency === 'fen') {
+    diamondAmt = Math.floor(Math.abs(amt) / 10) // 10分 = 1钻石
+  } else {
+    diamondAmt = Math.abs(amt) // diamond / starCoin 都按钻石计
+  }
+  return `${diamondAmt} 钻石`
 }
 
 const fetchTransactions = async () => {
@@ -116,11 +124,14 @@ const fetchTransactions = async () => {
     txList.value = safeMap(pageData.list, raw => {
       const type = toStr(getPath(raw, 'type'), 'consume')
       const isIn = INCOME_TYPES.includes(type)
+      const extra = getPath(raw, 'extra') || {}
       return {
         id: getPath(raw, 'id', toStr(Math.random())),
         type,
         icon: iconMap[type] || '💰',
         label: typeMap[type] || '其他交易',
+        remark: toStr(getPath(raw, 'remark'), ''),
+        orderNo: toStr(getPath(raw, 'orderId') || extra.outTradeNo || extra.orderNo || ''),
         amountText: formatCurrency(raw),
         prefix: isIn ? '+' : '-',
         inOut: isIn ? 'in' : 'out',
@@ -227,7 +238,9 @@ onShow(() => {
 }
 .tx-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4rpx; }
 .tx-title { font-size: 28rpx; font-weight: 600; color: $by-text-1; }
+.tx-remark { font-size: 22rpx; color: $by-text-3; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 360rpx; }
 .tx-time { font-size: 22rpx; color: $by-text-muted; }
+.tx-order { font-size: 20rpx; color: $by-text-3; font-family: Menlo, Consolas, monospace; }
 .tx-amount { font-size: 28rpx; font-weight: 700; flex-shrink: 0; }
 .tx-amount.in {
   background: $by-gradient-gold;

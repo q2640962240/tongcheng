@@ -52,10 +52,6 @@
             <text class="a-icon">💬</text>
             <text class="a-text">{{ post.commentCount }}</text>
           </view>
-          <view class="action" @tap="onShare">
-            <text class="a-icon">↗️</text>
-            <text class="a-text">分享</text>
-          </view>
           <view v-if="canDeletePost" class="action" @tap="onDeletePost">
             <text class="a-icon">🗑</text>
             <text class="a-text">删除</text>

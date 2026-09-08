@@ -129,7 +129,7 @@ const loading = ref(false)
 const list = ref([])
 const filters = reactive({ status: '', refType: '' })
 
-const typeMap = { bug: '功能异常', suggest: '功能建议', complaint: '投诉举报', other: '其他' }
+const typeMap = { bug: '功能异常', suggest: '功能建议', suggestion: '功能建议', complaint: '投诉举报', other: '其他' }
 const reportTypeMap = { report_post: '举报动态', report_group: '举报组局', report_user: '举报用户' }
 const statusMap = { pending: '待处理', processing: '处理中', resolved: '已解决', rejected: '已拒绝' }
 const statusType = (s) => ({ pending: 'warning', processing: '', resolved: 'success', rejected: 'danger' })[s] || 'info'

@@ -481,27 +481,27 @@ async function ensureBanners({ transaction }) {
 // 改名只影响展示，不会再插重复行（2026-09-07 线上曾因此 16→30，见 AGENTS.md 坑点 20）。
 const DEFAULT_GIFTS = [
   { code: 'dianzan',      name: '点赞',     imageUrl: '/static/gifts/dianzan.png',        price: 1,     sort: 1,  active: true, animationLevel: 1, effectImage: '/static/svga/dianzan.svga' },
-  { code: 'bianbian',     name: '便便',     imageUrl: '/static/gifts/bianbian.png',       price: 2,     sort: 2,  active: true, animationLevel: 1, effectImage: '/static/svga/bianbian.svga' },
-  { code: 'lvmaozi',      name: '绿帽子',   imageUrl: '/static/gifts/lvmaozi.png',        price: 5,     sort: 3,  active: true, animationLevel: 1, effectImage: '/static/svga/lvmaozi.svga' },
-  { code: 'jidan',        name: '扔鸡蛋',   imageUrl: '/static/gifts/jidan.png',          price: 8,     sort: 4,  active: true, animationLevel: 1, effectImage: '/static/svga/jidan.svga' },
-  { code: 'bixin',        name: '比心',     imageUrl: '/static/gifts/bixin.png',          price: 10,    sort: 5,  active: true, animationLevel: 1, effectImage: '/static/svga/bixin.svga' },
-  { code: 'xingji',       name: '星际少女', imageUrl: '/static/gifts/xingji.png',         price: 20,    sort: 6,  active: true, animationLevel: 1, effectImage: '/static/svga/xingji.svga' },
-  { code: 'meigui',       name: '玫瑰',     imageUrl: '/static/gifts/meigui.png',         price: 50,    sort: 7,  active: true, animationLevel: 2, effectImage: '/static/svga/meigui.svga' },
-  { code: 'xindong',      name: '心动',     imageUrl: '/static/gifts/xindong.png',        price: 80,    sort: 8,  active: true, animationLevel: 2, effectImage: '/static/svga/xindong.svga' },
-  { code: 'yijian',       name: '一剑穿心', imageUrl: '/static/gifts/yijian.png',         price: 100,   sort: 9,  active: true, animationLevel: 2, effectImage: '/static/svga/yijian.svga' },
-  { code: 'jiayou',       name: '加油',     imageUrl: '/static/gifts/jiayou.png',         price: 150,   sort: 10, active: true, animationLevel: 2, effectImage: '/static/svga/jiayou.svga' },
-  { code: 'zuanshi',      name: '钻石',     imageUrl: '/static/gifts/zuanshi.png',        price: 200,   sort: 11, active: true, animationLevel: 2, effectImage: '/static/svga/zuanshi.svga' },
-  { code: 'tianshi',      name: '天使',     imageUrl: '/static/gifts/tianshi.png',        price: 300,   sort: 12, active: true, animationLevel: 2, effectImage: '/static/svga/tianshi.svga' },
-  { code: 'huahao',       name: '花好月圆', imageUrl: '/static/gifts/huahao.png',         price: 500,   sort: 13, active: true, animationLevel: 2, effectImage: '/static/svga/huahao.svga' },
-  { code: 'fudai',        name: '福袋',     imageUrl: '/static/gifts/fudai.png',          price: 500,   sort: 14, active: true, animationLevel: 3, effectImage: '/static/svga/fudai.svga' },
-  { code: 'huangguan',    name: '皇冠',     imageUrl: '/static/gifts/huangguan.png',      price: 1000,  sort: 15, active: true, animationLevel: 3, effectImage: '/static/svga/huangguan.svga' },
-  { code: 'shuijingqiu',  name: '水晶球',   imageUrl: '/static/gifts/shuijingqiu.png',    price: 2000,  sort: 16, active: true, animationLevel: 3, effectImage: '/static/svga/shuijingqiu.svga' },
-  { code: 'dushou',       name: '独角兽',   imageUrl: '/static/gifts/dushou.png',         price: 5000,  sort: 17, active: true, animationLevel: 3, effectImage: '/static/svga/dushou.svga' },
-  { code: 'paoche',       name: '跑车',     imageUrl: '/static/gifts/paoche.png',         price: 10000, sort: 18, active: true, animationLevel: 3, effectImage: '/static/svga/paoche.svga' },
-  { code: 'xuanzhuanmuma', name: '旋转木马', imageUrl: '/static/gifts/xuanzhuanmuma.png',  price: 20000, sort: 19, active: true, animationLevel: 3, effectImage: '/static/svga/xuanzhuanmuma.svga' },
-  { code: 'luochui',      name: '一锤定音', imageUrl: '/static/gifts/luochui.png',        price: 30000, sort: 20, active: true, animationLevel: 3, effectImage: '/static/svga/luochui.svga' },
-  { code: 'liuxingyu',    name: '流星雨',   imageUrl: '/static/gifts/liuxingyu.png',      price: 50000, sort: 21, active: true, animationLevel: 3, effectImage: '/static/svga/liuxingyu.svga' },
-  { code: 'yuanding',     name: '缘定今生', imageUrl: '/static/gifts/yuanding.png',       price: 88888, sort: 22, active: true, animationLevel: 3, effectImage: '/static/svga/yuanding.svga' }
+  { code: 'bianbian',     name: '便便',     imageUrl: '/static/gifts/bianbian.png',       price: 1,     sort: 2,  active: true, animationLevel: 1, effectImage: '/static/svga/bianbian.svga' },
+  { code: 'lvmaozi',      name: '绿帽子',   imageUrl: '/static/gifts/lvmaozi.png',        price: 3,     sort: 3,  active: true, animationLevel: 1, effectImage: '/static/svga/lvmaozi.svga' },
+  { code: 'jidan',        name: '扔鸡蛋',   imageUrl: '/static/gifts/jidan.png',          price: 4,     sort: 4,  active: true, animationLevel: 1, effectImage: '/static/svga/jidan.svga' },
+  { code: 'bixin',        name: '比心',     imageUrl: '/static/gifts/bixin.png',          price: 5,     sort: 5,  active: true, animationLevel: 1, effectImage: '/static/svga/bixin.svga' },
+  { code: 'xingji',       name: '星际少女', imageUrl: '/static/gifts/xingji.png',         price: 10,    sort: 6,  active: true, animationLevel: 1, effectImage: '/static/svga/xingji.svga' },
+  { code: 'meigui',       name: '玫瑰',     imageUrl: '/static/gifts/meigui.png',         price: 25,    sort: 7,  active: true, animationLevel: 2, effectImage: '/static/svga/meigui.svga' },
+  { code: 'xindong',      name: '心动',     imageUrl: '/static/gifts/xindong.png',        price: 40,    sort: 8,  active: true, animationLevel: 2, effectImage: '/static/svga/xindong.svga' },
+  { code: 'yijian',       name: '一剑穿心', imageUrl: '/static/gifts/yijian.png',         price: 50,    sort: 9,  active: true, animationLevel: 2, effectImage: '/static/svga/yijian.svga' },
+  { code: 'jiayou',       name: '加油',     imageUrl: '/static/gifts/jiayou.png',         price: 75,    sort: 10, active: true, animationLevel: 2, effectImage: '/static/svga/jiayou.svga' },
+  { code: 'zuanshi',      name: '钻石',     imageUrl: '/static/gifts/zuanshi.png',        price: 100,   sort: 11, active: true, animationLevel: 2, effectImage: '/static/svga/zuanshi.svga' },
+  { code: 'tianshi',      name: '天使',     imageUrl: '/static/gifts/tianshi.png',        price: 150,   sort: 12, active: true, animationLevel: 2, effectImage: '/static/svga/tianshi.svga' },
+  { code: 'huahao',       name: '花好月圆', imageUrl: '/static/gifts/huahao.png',         price: 250,   sort: 13, active: true, animationLevel: 2, effectImage: '/static/svga/huahao.svga' },
+  { code: 'fudai',        name: '福袋',     imageUrl: '/static/gifts/fudai.png',          price: 250,   sort: 14, active: true, animationLevel: 3, effectImage: '/static/svga/fudai.svga' },
+  { code: 'huangguan',    name: '皇冠',     imageUrl: '/static/gifts/huangguan.png',      price: 500,   sort: 15, active: true, animationLevel: 3, effectImage: '/static/svga/huangguan.svga' },
+  { code: 'shuijingqiu',  name: '水晶球',   imageUrl: '/static/gifts/shuijingqiu.png',    price: 1000,  sort: 16, active: true, animationLevel: 3, effectImage: '/static/svga/shuijingqiu.svga' },
+  { code: 'dushou',       name: '独角兽',   imageUrl: '/static/gifts/dushou.png',         price: 2500,  sort: 17, active: true, animationLevel: 3, effectImage: '/static/svga/dushou.svga' },
+  { code: 'paoche',       name: '跑车',     imageUrl: '/static/gifts/paoche.png',         price: 5000,  sort: 18, active: true, animationLevel: 3, effectImage: '/static/svga/paoche.svga' },
+  { code: 'xuanzhuanmuma', name: '旋转木马', imageUrl: '/static/gifts/xuanzhuanmuma.png',  price: 10000, sort: 19, active: true, animationLevel: 3, effectImage: '/static/svga/xuanzhuanmuma.svga' },
+  { code: 'luochui',      name: '一锤定音', imageUrl: '/static/gifts/luochui.png',        price: 15000, sort: 20, active: true, animationLevel: 3, effectImage: '/static/svga/luochui.svga' },
+  { code: 'liuxingyu',    name: '流星雨',   imageUrl: '/static/gifts/liuxingyu.png',      price: 25000, sort: 21, active: true, animationLevel: 3, effectImage: '/static/svga/liuxingyu.svga' },
+  { code: 'yuanding',     name: '缘定今生', imageUrl: '/static/gifts/yuanding.png',       price: 52000, sort: 22, active: true, animationLevel: 3, effectImage: '/static/svga/yuanding.svga' }
 ]
 async function ensureGifts({ transaction }) {
   const existing = await Gift.findAll({ transaction })
@@ -521,6 +521,10 @@ async function ensureGifts({ transaction }) {
         }
         if (def.imageUrl !== g.imageUrl) {
           patch.imageUrl = def.imageUrl
+          needUpdate = true
+        }
+        if (def.price !== g.price) {
+          patch.price = def.price
           needUpdate = true
         }
         if (g.animationLevel == null || g.animationLevel === undefined) {

@@ -243,6 +243,26 @@ html, body, #app {
   box-shadow: none !important;
 }
 
+/* 全局按钮 hover 防白色光影：覆盖 element-plus 默认 hover 背景与伪元素遮罩 */
+.el-button {
+  --el-button-hover-bg-color: inherit !important;
+  --el-button-hover-border-color: inherit !important;
+}
+.el-button:hover {
+  background-color: inherit !important;
+}
+.el-button::after {
+  display: none !important;
+}
+/* 各类型按钮 hover 保持自身渐变背景，仅提亮 */
+.el-button--primary:hover,
+.el-button--success:hover,
+.el-button--warning:hover,
+.el-button--danger:hover,
+.el-button--info:hover {
+  background-color: transparent !important;
+}
+
 /* Badge / Tag — 按类型区分颜色，提升可识别度 */
 .el-tag {
   border-width: 1px !important;

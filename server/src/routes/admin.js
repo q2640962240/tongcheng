@@ -248,11 +248,13 @@ router.post('/users/:id/adjust-balance', async (req, res, next) => {
 /** 查询用户余额调整历史 */
 router.get('/users/:id/balance-history', async (req, res, next) => {
   try {
-    const { page = 1, pageSize = 20 } = req.query
+    const { type, page = 1, pageSize = 20 } = req.query
     const pg = Math.max(1, Number(page) || 1)
     const ps = Math.min(50, Math.max(1, Number(pageSize) || 20))
+    const where = { userId: req.params.id }
+    if (type) where.type = type
     const { count, rows } = await Transaction.findAndCountAll({
-      where: { userId: req.params.id, type: 'admin_adjustment' },
+      where,
       order: [['createdAt', 'DESC']],
       limit: ps,
       offset: (pg - 1) * ps

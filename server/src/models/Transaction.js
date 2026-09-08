@@ -22,7 +22,7 @@ const Transaction = sequelize.define('Transaction', {
     allowNull: true
   },
   orderId: {
-    type: DataTypes.BIGINT.UNSIGNED,
+    type: DataTypes.STRING(64),
     allowNull: true
   },
   remark: {

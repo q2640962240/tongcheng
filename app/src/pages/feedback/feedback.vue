@@ -130,22 +130,25 @@ loadTypes()
 </script>
 
 <style lang="scss" scoped>
-.page { min-height: 100vh; background: #fffbeb; padding: 32rpx; }
+.page { min-height: 100vh; background: $by-bg; padding: 32rpx; }
 .card {
-  background: #ffffff; border-radius: 32rpx; padding: 32rpx; margin-bottom: 24rpx;
+  background: $by-surface; border-radius: 32rpx; padding: 32rpx; margin-bottom: 24rpx;
+  border: 1rpx solid $by-border;
 }
-.card-title { display: block; font-size: 30rpx; font-weight: 600; margin-bottom: 24rpx; }
+.card-title { display: block; font-size: 30rpx; font-weight: 600; margin-bottom: 24rpx; color: $by-text-1; }
 .types { display: flex; flex-wrap: wrap; gap: 16rpx; }
 .type-chip {
-  padding: 12rpx 28rpx; border-radius: 9999rpx; background: #f5f5f5;
-  font-size: 26rpx; color: #525252;
-  &.active { background: #ffd60a; color: #171717; font-weight: 600; }
+  padding: 12rpx 28rpx; border-radius: 9999rpx; background: $by-surface-2;
+  font-size: 26rpx; color: $by-text-2;
+  border: 1rpx solid $by-border;
+  &.active { background: $by-gradient-gold; color: #0B0F1A; font-weight: 600; border-color: transparent; }
 }
 .textarea {
-  width: 100%; height: 240rpx; background: #f5f5f5; border-radius: 16rpx;
-  padding: 24rpx; font-size: 28rpx; box-sizing: border-box;
+  width: 100%; height: 240rpx; background: $by-surface-2; border-radius: 16rpx;
+  padding: 24rpx; font-size: 28rpx; box-sizing: border-box; color: $by-text-1;
+  border: 1rpx solid $by-border;
 }
-.counter { display: block; text-align: right; font-size: 22rpx; color: #a3a3a3; margin-top: 8rpx; }
+.counter { display: block; text-align: right; font-size: 22rpx; color: $by-text-3; margin-top: 8rpx; }
 .images { display: flex; gap: 16rpx; flex-wrap: wrap; }
 .img-item { position: relative; width: 160rpx; height: 160rpx; }
 .img { width: 100%; height: 100%; border-radius: 16rpx; }
@@ -155,25 +158,28 @@ loadTypes()
   display: flex; align-items: center; justify-content: center; font-size: 20rpx;
 }
 .upload {
-  width: 160rpx; height: 160rpx; background: #f5f5f5; border-radius: 16rpx;
-  display: flex; align-items: center; justify-content: center; font-size: 56rpx; color: #a3a3a3;
-  border: 4rpx dashed #d4d4d4;
+  width: 160rpx; height: 160rpx; background: $by-surface-2; border-radius: 16rpx;
+  display: flex; align-items: center; justify-content: center; font-size: 56rpx; color: $by-text-3;
+  border: 4rpx dashed $by-border-2;
 }
 .tip {
   display: flex; align-items: center; gap: 12rpx; padding: 24rpx;
-  background: #fff9c4; border-radius: 16rpx; margin-bottom: 32rpx;
+  background: rgba(212, 175, 55, 0.10); border-radius: 16rpx; margin-bottom: 32rpx;
+  border: 1rpx solid rgba(212, 175, 55, 0.22);
 }
 .tip-icon { font-size: 32rpx; }
-.tip-text { font-size: 26rpx; color: #b45309; }
+.tip-text { font-size: 26rpx; color: $by-gold-soft; }
 .target-input {
-  width: 100%; height: 88rpx; background: #f5f5f5; border-radius: 16rpx;
-  padding: 0 24rpx; font-size: 28rpx; box-sizing: border-box; color: #171717;
+  width: 100%; height: 88rpx; background: $by-surface-2; border-radius: 16rpx;
+  padding: 0 24rpx; font-size: 28rpx; box-sizing: border-box; color: $by-text-1;
+  border: 1rpx solid $by-border;
 }
 .submit-btn {
-  height: 96rpx; background: #ffd60a; color: #171717;
+  height: 96rpx; background: $by-gradient-gold; color: #0B0F1A;
   border-radius: 9999rpx; display: flex; align-items: center; justify-content: center;
   font-size: 32rpx; font-weight: 700;
-  &.disabled { background: #e5e5e5; color: #a3a3a3; }
+  box-shadow: 0 6rpx 20rpx rgba(212,175,55,.25);
+  &.disabled { background: $by-bg-soft; color: $by-text-3; box-shadow: none; }
   &:active { opacity: 0.9; }
 }
 </style>

@@ -159,7 +159,8 @@ router.post('/recharge', auth, async (req, res, next) => {
         amount: fenAmount,
         currency: 'fen',
         balanceAfter: 0,
-        remark: `微信充值 ${amount} 元（待支付）订单号 ${outTradeNo}`,
+        orderId: outTradeNo,
+        remark: `微信充值 ${amount} 元（待支付）`,
         extra: { outTradeNo, channel: 'wxpay', status: 'pending', diamondAmount, tradeType }
       })
       const resp = { payType: 'wxpay', outTradeNo }
@@ -189,7 +190,8 @@ router.post('/recharge', auth, async (req, res, next) => {
         amount: fenAmount,
         currency: 'fen',
         balanceAfter: 0,
-        remark: `支付宝充值 ${amount} 元（待支付）订单号 ${outTradeNo}`,
+        orderId: outTradeNo,
+        remark: `支付宝充值 ${amount} 元（待支付）`,
         extra: { outTradeNo, channel: 'alipay', status: 'pending', diamondAmount, tradeType: alipayTradeType }
       })
       const resp = { payType: 'alipay', outTradeNo }
@@ -220,9 +222,9 @@ router.post('/wx-notify', express.raw({ type: '*/*' }), async (req, res, next) =
     const transactionId = data.transaction_id
     const amountFen = data.amount?.total
 
-    // 幂等处理：找到对应 pending 的 Transaction
+    // 幂等处理：找到对应 pending 的 Transaction（orderId = outTradeNo）
     const tx = await Transaction.findOne({
-      where: { type: 'recharge', currency: 'fen', remark: { like: `%${outTradeNo}%` } }
+      where: { type: 'recharge', currency: 'fen', orderId: outTradeNo }
     })
     if (!tx) {
       // 订单不存在，仍返回成功避免微信重试轰炸
@@ -273,7 +275,7 @@ router.post('/alipay-notify', express.urlencoded({ extended: true }), async (req
     }
 
     const tx = await Transaction.findOne({
-      where: { type: 'recharge', currency: 'fen', remark: { like: `%${outTradeNo}%` } }
+      where: { type: 'recharge', currency: 'fen', orderId: outTradeNo }
     })
     if (!tx) return res.send('success')
     if (tx.extra && tx.extra.status === 'paid') return res.send('success')
@@ -362,12 +364,14 @@ router.post('/withdraw', auth, async (req, res, next) => {
       income: wallet.income - requestFen,
       totalWithdraw: wallet.totalWithdraw + requestFen
     })
+    const withdrawOrderNo = `WD${Date.now()}${Math.floor(Math.random() * 1000)}`
     await Transaction.create({
       userId: req.userId,
       type: 'withdraw',
       amount: requestFen,
       currency: 'fen',
       balanceAfter: wallet.income,
+      orderId: withdrawOrderNo,
       remark: `提现 ${(requestFen / 100).toFixed(2)} 元到${channel === 'wechat' ? '微信零钱' : (channel === 'alipay' ? '支付宝' : '银行卡')}（待审核）`,
       extra: {
         status: 'pending',

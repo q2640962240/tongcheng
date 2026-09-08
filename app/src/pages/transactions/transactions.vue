@@ -43,8 +43,11 @@
         <view class="tx-icon" :class="t.type">{{ typeIcon(t.type) }}</view>
         <view class="tx-info">
           <text class="tx-title">{{ getTypeLabel(t.type) }}</text>
-          <text class="tx-remark">{{ t.remark }}</text>
-          <text class="tx-time">{{ formatTime(t.createdAt) }}</text>
+          <text class="tx-remark" v-if="t.remark && t.remark !== '-'">{{ t.remark }}</text>
+          <text class="tx-time">
+            {{ formatTime(t.createdAt) }}
+            <text v-if="t.orderNo" class="tx-order"> · 订单 {{ t.orderNo }}</text>
+          </text>
         </view>
         <text class="tx-amount" :class="isIncome(t.type) ? 'in' : 'out'">
           {{ isIncome(t.type) ? '+' : '-' }}{{ formatCurrency(t) }}
@@ -104,25 +107,29 @@ const typeIcon = (t) => ({
 // 收入类（金额为正显示）
 const isIncome = (t) => INCOME_TYPES.includes(toStr(t, ''))
 
-// 自实现 formatCurrency：fen→¥x.xx，其他 + N 星币
+// 全局统一：所有交易以钻石为单位显示（1钻石=1角=10分）
 const formatCurrency = (t) => {
   const amt = toNum(getPath(t, 'amount'), 0)
-  const currency = toStr(getPath(t, 'currency'), 'starCoin')
+  const currency = toStr(getPath(t, 'currency'), 'diamond')
+  let diamondAmt
   if (currency === 'fen') {
-    const yuan = (amt / 100).toFixed(2)
-    return `¥${yuan}`
+    diamondAmt = Math.floor(Math.abs(amt) / 10) // 10分 = 1钻石
+  } else {
+    diamondAmt = Math.abs(amt) // diamond / starCoin 都按钻石计
   }
-  return `${amt} 星币`
+  return `${diamondAmt} 钻石`
 }
 
 const normalizeTx = (raw) => {
+  const extra = getPath(raw, 'extra') || {}
   return {
     id: getPath(raw, 'id', toStr(Math.random())),
     type: toStr(getPath(raw, 'type', getPath(raw, 'tx_type')), 'consume'),
-    remark: toStr(getPath(raw, 'remark'), '-'),
+    remark: toStr(getPath(raw, 'remark'), ''),
+    orderNo: toStr(getPath(raw, 'orderId') || extra.outTradeNo || extra.orderNo || ''),
     createdAt: getPath(raw, 'createdAt', getPath(raw, 'created_at')),
     amount: toNum(getPath(raw, 'amount'), 0),
-    currency: toStr(getPath(raw, 'currency'), 'starCoin')
+    currency: toStr(getPath(raw, 'currency'), 'diamond')
   }
 }
 
@@ -244,9 +251,13 @@ onShow(() => {
     background: color.adjust($by-success, $alpha: 0.16);
     border-color: color.adjust($by-success, $alpha: 0.3);
   }
-  &.consume {
+  &.consume, &.gift_send {
     background: color.adjust($by-aurora-a, $alpha: 0.16);
     border-color: color.adjust($by-aurora-a, $alpha: 0.3);
+  }
+  &.gift_income {
+    background: color.adjust($by-success, $alpha: 0.16);
+    border-color: color.adjust($by-success, $alpha: 0.3);
   }
   &.withdraw {
     background: color.adjust($by-info, $alpha: 0.16);
@@ -268,6 +279,7 @@ onShow(() => {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .tx-time { font-size: 22rpx; color: $by-text-muted; }
+.tx-order { font-size: 20rpx; color: $by-text-3; font-family: Menlo, Consolas, monospace; }
 .tx-amount { font-size: 30rpx; font-weight: 700; flex-shrink: 0; }
 .tx-amount.in {
   background: $by-gradient-gold;

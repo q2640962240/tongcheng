@@ -162,10 +162,6 @@
             <text class="a-icon">💬</text>
             <text class="a-text">{{ p.commentCount || 0 }}</text>
           </view>
-          <view class="action" @tap.stop="onShare(p)">
-            <text class="a-icon">↗️</text>
-            <text class="a-text">分享</text>
-          </view>
         </view>
       </view>
 

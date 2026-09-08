@@ -243,7 +243,13 @@ const loadAll = async () => {
 }
 
 // ---- 导航与守卫 ----
-const onNav = (url) => uni.navigateTo({ url })
+// discover 是 tabBar 页，navigateTo 无法跳转，必须用 switchTab
+const TAB_PAGES = ['/pages/discover/discover', '/pages/home/home', '/pages/message/message', '/pages/profile/profile']
+const onNav = (url) => {
+  const path = url.split('?')[0]
+  if (TAB_PAGES.includes(path)) return uni.switchTab({ url: path })
+  uni.navigateTo({ url })
+}
 
 const onNavWithLogin = (url) => {
   if (!requireLogin()) return

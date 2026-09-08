@@ -401,7 +401,7 @@ onMounted(() => tryAutoLocate())
 
 /* -------- 事件 -------- */
 const onSearch = () => uni.navigateTo({ url: '/pages/search/search' })
-const onNavDiscover = () => uni.navigateTo({ url: '/pages/discover/discover' })
+const onNavDiscover = () => uni.switchTab({ url: '/pages/discover/discover' })
 const onPickCity = () => uni.navigateTo({ url: '/pages/city/city' })
 const onMessage = () => uni.switchTab({ url: '/TUIKit/components/TUIConversation/index' })
 const onBannerTap = (b) => {
@@ -410,12 +410,15 @@ const onBannerTap = (b) => {
   uni.navigateTo({ url: b.link })
 }
 const onQuickTap = (q) => {
-  if (q.path) return uni.navigateTo({ url: q.path })
+  if (!q.path) return
+  const path = q.path.split('?')[0]
+  if (path === '/pages/discover/discover') return uni.switchTab({ url: path })
+  uni.navigateTo({ url: q.path })
 }
 const onGoVerify = () => uni.navigateTo({ url: '/pages/verification-hub/verification-hub' })
 const onUserTap = (u) => uni.navigateTo({ url: `/pages/user-profile/user-profile?id=${u.id}` })
 const onOnlineChat = (u) => uni.navigateTo({ url: `/pages/chat/chat?userId=${u.id}` })
-const onMorePosts = () => uni.navigateTo({ url: '/pages/discover/discover?tab=posts' })
+const onMorePosts = () => uni.switchTab({ url: '/pages/discover/discover' })
 const onPostTap = (p) => uni.navigateTo({ url: `/pages/post/detail?id=${p.id}` })
 </script>
 

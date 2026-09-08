@@ -72,14 +72,16 @@ router.post('/send', auth, async (req, res, next) => {
       { transaction: t }
     )
 
-    // b2. 创建交易记录（审计追踪）
+    // b2. 创建交易记录（审计追踪）— 同一笔送礼共用一个 orderId
+    const giftOrderNo = `GF${Date.now()}${Math.floor(Math.random() * 1000)}`
     await Transaction.create({
       userId: req.userId,
       type: 'gift_send',
       amount: -totalDiamond,
       currency: 'diamond',
       balanceAfter: senderBalanceAfter,
-      remark: `送出${qty}个${gift.name}`,
+      orderId: giftOrderNo,
+      remark: `送出${qty}个${gift.name}给${receiver.nickname || '用户' + receiverId}`,
       extra: { receiverId: Number(receiverId), giftId: gift.id, giftName: gift.name, quantity: qty, diamondAmount: totalDiamond }
     }, { transaction: t })
     await Transaction.create({
@@ -88,7 +90,8 @@ router.post('/send', auth, async (req, res, next) => {
       amount: receiverIncome,
       currency: 'fen',
       balanceAfter: receiverIncomeAfter,
-      remark: `收到${qty}个${gift.name}`,
+      orderId: giftOrderNo,
+      remark: `收到${qty}个${gift.name}（来自${sender && sender.nickname || '用户' + req.userId}）`,
       extra: { senderId: req.userId, giftId: gift.id, giftName: gift.name, quantity: qty, diamondAmount: totalDiamond, incomeFen: receiverIncome }
     }, { transaction: t })
 

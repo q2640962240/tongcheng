@@ -45,11 +45,13 @@
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="创建时间" width="170" />
-        <el-table-column label="操作" width="260" fixed="right">
+        <el-table-column label="操作" width="300" fixed="right">
           <template #default="{ row }">
-            <el-button v-if="row.auditStatus !== 'approved'" size="small" type="success" @click="onAudit(row, 'approved')">通过</el-button>
-            <el-button v-if="row.auditStatus === 'pending'" size="small" type="warning" @click="onAudit(row, 'rejected')">拒绝</el-button>
-            <el-button size="small" type="danger" @click="onRemove(row)">删除</el-button>
+            <div class="action-btns">
+              <el-button v-if="row.auditStatus !== 'approved'" size="small" type="success" @click="onAudit(row, 'approved')">通过</el-button>
+              <el-button v-if="row.auditStatus === 'pending'" size="small" type="warning" @click="onAudit(row, 'rejected')">拒绝</el-button>
+              <el-button size="small" type="danger" @click="onRemove(row)">删除</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -134,4 +136,5 @@ onMounted(load)
 .post-text { color: var(--by-text-2); }
 .post-imgs { margin-top: 4px; }
 .pill { display: inline-block; padding: 2px 8px; background: rgba(79,184,255,0.18); color: #7DD3FC; border-radius: 10px; font-size: 12px; }
+.action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
 </style>

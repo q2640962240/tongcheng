@@ -181,6 +181,40 @@
               </div>
             </div>
             <el-empty v-else description="暂无钱包数据" :image-size="80" />
+            <div class="wallet-actions">
+              <el-button size="small" type="primary" plain @click="loadUserTx(detail.id)">
+                查看交易明细
+              </el-button>
+            </div>
+            <div v-if="userTxVisible" class="tx-list-wrap">
+              <div class="tx-list-head">
+                <span>交易明细</span>
+                <el-button size="small" text @click="userTxVisible = false">收起</el-button>
+              </div>
+              <el-table :data="userTxList" size="small" border max-height="360">
+                <el-table-column label="类型" width="100">
+                  <template #default="{ row }">{{ txTypeMap[row.type] || row.type }}</template>
+                </el-table-column>
+                <el-table-column label="金额" width="120">
+                  <template #default="{ row }">
+                    <span :style="{ color: Number(row.amount) > 0 ? '#67c23a' : '#f56c6c' }">
+                      {{ Number(row.amount) > 0 ? '+' : '' }}{{ row.currency === 'fen' ? '¥' + (Math.abs(row.amount) / 100).toFixed(2) : Math.abs(row.amount) + '钻' }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="订单号" width="160" show-overflow-tooltip>
+                  <template #default="{ row }">
+                    <span style="font-family:monospace;font-size:12px">{{ row.orderId || row.extra?.outTradeNo || '-' }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="去向/备注" min-width="180" show-overflow-tooltip>
+                  <template #default="{ row }">{{ row.remark || '-' }}</template>
+                </el-table-column>
+                <el-table-column label="时间" width="160">
+                  <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+                </el-table-column>
+              </el-table>
+            </div>
           </div>
 
           <!-- 统计 -->
@@ -475,6 +509,27 @@ const formatTime = (ts) => {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 }
 const yuan = (fen) => (Number(fen) / 100).toFixed(2)
+
+// 交易明细
+const txTypeMap = {
+  recharge: '充值', exchange: '兑换', consume: '消费',
+  income: '收入', withdraw: '提现', refund: '退款', reward: '奖励',
+  gift_send: '送礼', gift_income: '礼物收入',
+  gift_withdraw: '礼物提现', elite_pay: '精英开通', diamond_unlock_wechat: '解锁微信',
+  admin_adjustment: '管理员调整'
+}
+const userTxList = ref([])
+const userTxVisible = ref(false)
+const loadUserTx = async (userId) => {
+  try {
+    const res = await getBalanceHistory(userId, { page: 1, pageSize: 50 })
+    userTxList.value = res.data?.list || []
+    userTxVisible.value = true
+  } catch (e) {
+    ElMessage.error('加载交易明细失败')
+  }
+}
+
 const maskSecret = (s) => {
   s = String(s || '')
   if (s.length <= 6) return s
@@ -569,7 +624,7 @@ const historyLoading = ref(false)
 const loadBalanceHistory = async (userId) => {
   historyLoading.value = true
   try {
-    const res = await getBalanceHistory(userId || detail.value.id)
+    const res = await getBalanceHistory(userId || detail.value.id, { type: 'admin_adjustment', page: 1, pageSize: 50 })
     balanceHistory.value = res.data?.list || []
   } catch (e) { balanceHistory.value = [] } finally {
     historyLoading.value = false
@@ -795,6 +850,24 @@ const submitForm = async () => {
   margin-top: 4px;
   font-size: 12px;
   color: var(--by-text-3);
+}
+.wallet-actions {
+  margin-top: 12px;
+}
+.tx-list-wrap {
+  margin-top: 12px;
+  border: 1px solid var(--by-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.tx-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--by-surface);
+  font-weight: 600;
+  color: var(--by-text-1);
 }
 .stat-card {
   background: var(--by-surface);
