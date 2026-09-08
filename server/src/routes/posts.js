@@ -49,9 +49,9 @@ router.get('/', optionalAuth, async (req, res, next) => {
       }
       where[Op.or] = ors
     }
-    // city 用宽松的 [Op.like] 先走一层（城市归一前后前缀匹配），再由 matchCity 兜底
+    // city 用宽松的 [Op.like] 先走一层（取归一后的城市名做前缀，兼容「蓉」→「成都市」这类别名），再由 matchCity 兜底
     if (cityRaw) {
-      const prefix = cityRaw.replace(/市$/, '').replace(/区$/, '').replace(/县$/, '')
+      const prefix = (cityNorm || cityRaw).replace(/市$/, '').replace(/区$/, '').replace(/县$/, '')
       where[Op.and] = (where[Op.and] || []).concat([{ city: { [Op.like]: `${prefix}%` } }])
     }
     // 城市走模糊匹配，SQL 仅做前缀初筛，需全量取出后内存过滤再分页
@@ -226,6 +226,21 @@ router.post('/:id/comments', auth, sensitiveFilter(['text']), async (req, res, n
       ...c.toJSON(),
       user: { id: user.id, nickname: user.nickname, avatar: user.avatar, isElite: user.isElite }
     }, '评论成功')
+  } catch (e) { next(e) }
+})
+
+/** 删除评论 —— 评论作者或帖主可删（Discourse 语义） */
+router.delete('/:id/comments/:commentId', auth, async (req, res, next) => {
+  try {
+    const c = await Comment.findByPk(req.params.commentId)
+    if (!c || String(c.postId) !== String(req.params.id)) return fail(res, '评论不存在', 404)
+    const post = await Post.findByPk(c.postId)
+    const isAuthor = String(c.userId) === String(req.userId)
+    const isPostOwner = !!post && String(post.userId) === String(req.userId)
+    if (!isAuthor && !isPostOwner) return fail(res, '无权删除该评论', 403)
+    await c.destroy()
+    if (post) await post.update({ commentCount: Math.max(0, (post.commentCount || 0) - 1) })
+    success(res, null, '已删除')
   } catch (e) { next(e) }
 })
 

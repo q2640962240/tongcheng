@@ -311,6 +311,18 @@ cd app && npm install && npm run dev:h5
     - **验证证据（本地生产模式构建产物，坑点 36 的验证手法）**：① 种入「结构合法但签名无效」的 access + refresh token（三段式 base64url，等价于密钥轮换后的失效存量）→ 载入 `?v=x#/pages/transactions/transactions` → `/api/auth/refresh` **恰好 1 次且 401**、`hash` 变 `#/pages/login/login`、三个键全部清空、`skeleton: 0`、登录页文案完整、console 只有 2 条浏览器层 401 网络日志**无 JS 异常**；② 回归对照：本地真实登录（`13800000023` + `888888`）后同页 `/api/wallet/transactions` **恰好 1 次 200**、`/api/auth/refresh` **0 次**、`.tx-item` 1 行渲染出签到奖励「+10 星币」、「没有更多了」footer 在位、`hOverflow = 0`、`.z-paging-content` 仍为 `fixed / top:44px / height:597.6px`。**产物指纹**：minified bundle 里 401 分支应为 `if(I?!1:await fB())`（`I`=`noRefreshRetry`，`fB`=`tryRefresh`），`noRefreshRetry` 全文出现 **2 次**（api 侧传参 + request 侧读取）。
     - **排查方法论**：`performance.getEntriesByType('resource')` 的 **`responseStatus`** 字段是看清「到底哪些请求 401 了」的关键（`list_network_requests` 不这么直观），且它带 `startTime`，能把「哪几次属于同一轮」分开。**遇到「永久 loading + console 零错误」的组合，第一步是量 promise 有没有 settle（用上面的三键指纹），不是先怀疑页面组件。**
 
+38. **★ JSON 测试驱动曾把所有嵌套 `Op` 条件当「恒真」放行 —— `for...in` 不枚举 Symbol 键（2026-09-08 已修，`store/index.js`）★** —— 这是**测试基建级**的缺陷，比任何单个业务 bug 都重要：它让一大批「看起来在验证 SQL 过滤」的断言实际只在验证内存兜底逻辑。
+    - **根因（已实证）**：`server/src/store/index.js:433-445` 的 `Op` 值是**真 Symbol**（`eq/ne/gt/gte/lt/lte/in/notIn/like/or/and/is` 全部 `Symbol.for(...)`），而 `matchWhere` 用 `for (const key in where)` 与 `for (const opKey in cond)` 遍历。**`for...in` 不枚举 Symbol 键** → `{ [Op.like]: '%x%' }` / `{ [Op.in]: [...] }` / `{ [Op.ne]: 'blocked' }` / `{ [Op.lt]: d }` / `{ [Op.gte]: d }` 这类嵌套操作符对象，内层循环**一次都不执行**，直接 fall through 到 `return true`。
+    - **两处死代码证明这是遗漏而不是设计**：`:381` 早已写了 `String(opKey).replace('Symbol(', '').replace(')', '')`（专为 Symbol 键准备的归一化），`:374` 早已写了 `key === Symbol.for('or')` 的比较（专为 Symbol 键准备的跳过）——两处都永远拿不到 Symbol。`matchOp`（`:394-427`）对 eq/ne/gt/gte/lt/lte/in/notin/like/is **实现完整**，只是不可达。
+    - **顶层 `Op.or`/`Op.and` 看起来「支持」，实际也是空转**：它们被 `where[Symbol.for('or')]` 显式捕获，但因为**子条件全是 no-op**，效果是 `where[Op.or] = [...]` **匹配所有行**、`where[Op.and] = [...]` **也匹配所有行**。发现它的现场：`admin.js` 的 A7 keyword 搜索，4 项断言的 `Received` 恒等于全库行数。
+    - **修法（2 行）**：两处 `for...in` → `for...of Reflect.ownKeys(...)`。**修完全量 154 项一次通过、零回归** —— 说明没有既有测试是靠 no-op 才通过的（但这个结论只在当前 154 项范围内成立）。
+    - **★ 修好之后，一批断言才第一次真的在验证 SQL 过滤 ★**：A2 的 `auditStatus != 'blocked'`、B1 关注流的 `where.userId = {[Op.in]: ids}`、B2 的 `activityAt: {[Op.lt]: now}`、B4 的 `id: {[Op.in]: gids}`。在此之前，**关注流在测试里会返回全站所有动态而测试照样绿**。
+    - **由此推翻的旧认知**：任何「✅ 已核实某 Op 已模拟」的结论都要重验。纯值条件（string/number/boolean）一直是正常工作的（`for...in` 能枚举 string 键、走 `looseEq`），**只有嵌套操作符对象是空转的**——这正是变异测试能生效的原因（被退回的 `where.city = cityNorm` 是纯字符串值）。
+    - **另外三条能力边界（实测补全，写代码时必须绕开）**：① **`decrement` 完全没有模拟**（`increment` 有三种形态都模拟了）→ 计数减 1 要用读改写 `Math.max(0, (x||0) - 1)`；② **`include` 不被解析** → 凡是用了 `include` 的端点（如 `admin.js` 的评论列表 `as:'post'`），列名写错**永远测不出来**，必须人工在本地 MySQL 或生产点一遍；③ **`attributes` 白名单被忽略，且 `wrap().toJSON = () => ({ ...record })` 返回完整 record（含 `password`/`phone`）** → 任何 `xxx.toJSON()` 直接进响应体的端点在 JSON 驱动下都会泄漏敏感字段，**必须显式挑字段**（`user.js` 的 `public-profile` 与 `fetchFollowList` 已按此改，并在 `social.test.js` 里用 `not.toHaveProperty('phone'/'password')` 钉住）。
+    - **⚠️ 仍未解决：JSON 驱动与 MySQL 在 NULL 上语义相反** —— `matchOp` 的 `lt` 是 `return a < b`，字段为 NULL 时 `null < Date` 把 null 强转成 `0` → **恒真**；MySQL 里 `NULL < '2026-01-01'` 结果是 NULL，即**不匹配**。所以「`activityAt` 为空 = 不限期组局」在两个驱动下给出**相反答案**。B2 的三条约束：① 条件 UPDATE 前先做内存真值判断（`if (g.activityAt && ...)`），**不要为了「让 SQL 兜住一切」删掉它**；② 列表过滤必须显式写 `Op.or: [{activityAt: null}, {activityAt: {[Op.gte]: now}}]`，不能只写 `gte`；③ jest 必须有一条「`activityAt` 为 null 的 open 局在列表里可见、join 不被拦」的用例，否则这个分歧只会在生产暴露。
+    - **⚠️ 另有一个已知的日期比较缺陷（尚未修，B2 会撞上）**：`matchOp` 的 gt/gte/lt/lte 用 `/^-?\d/.test(val)` 判断是否转 Number，而 ISO 日期串 `'2026-01-01T...'` **也匹配这个正则**（以 `2` 开头）→ `Number('2026-01-01T...')` = **NaN** → 比较恒 false。要修就把正则收窄成 `/^-?\d+(\.\d+)?$/`，并在任一侧是 Date 时把两侧都转成时间戳。
+    - **纪律（本项目已两次靠它避免误判）**：新写的断言必须做**变异测试**——临时把修复退回去，确认对应用例变红，否则无法区分「修好了」和「断言是空的」。同理，**带反向对照**（如「查广州不应召回深圳」「不带 city 返回全部」）才能区分「修好了」和「筛选被放宽成全都返回」。
+
 ## 服务器信息
 
 > ⚠️ **本表刻意不含任何口令。** 生产凭证（MySQL / Redis / 管理后台账号密码 / SSH 私钥路径 /
@@ -428,12 +440,19 @@ cd app && npm install && npm run dev:h5
     - **候选修法**：`min-height: 100vh` → `min-height: 100%`（父级 `uni-page-wrapper` 有确定高度，百分比可解析）。**但它影响全部 33 个页面，必须单独一轮逐页验证**（尤其要复查各页 `100vh` / `100dvh` 混用与 fixed 底部栏的安全区），不要在别的任务里顺手改。归 D12 或单开一轮。
     - **验证方法**（不需要截图）：`documentElement.scrollHeight - documentElement.clientHeight` 应为 0；再量 `uni-page-wrapper` / `uni-page-body` 的 `getBoundingClientRect()` 看 top 与 height 是否吻合。
 
+20. **★ 进行中的大工程：组局体系 + 关注/粉丝/动态体系完善（2026-09-08 起，A 组服务端已完成但未提交未部署）★** — **交接说明见 `docs/HANDOFF-2026-09-08-social-groups.md`（必读，含逐项文件:行号与验证判据）**，权威规格书是用户已批准的 `C:\Users\chen\.qoder-cn\plans\soft-trail-snipe.md`。
+    - **进度**：G1（A 组服务端，任务 #162）**代码全部落地、154 项测试全绿、6 个文件未 commit**；G2（A12 `posts.tags`，**本方案唯一 DDL，执行前必须单独贴 SQL 给用户确认**）、G3（A 组前端，一行未动）、G4（第一批验证+部署+生产实测）、G5/G6/G7（B 组：关注流 / 组局状态机与惰性过期 / 发起人审批 UI / 我的组局页）**全部待做**。用户明确要求**分两批**：A 组上线并生产实测确认无回归后才做 B 组。
+    - **范围决定（用户已批准，不要重新问）**：只借鉴开源项目的**设计与算法**、代码全部自研、**零新增 npm 依赖**（核实过 NodeBB/Misskey/Mastodon/Discourse/Flarum，授权不是障碍但**技术栈全不匹配** Express+Sequelize+MySQL+uni-app，移植等于两边重写）；范围 = A 组 16 项 bug + B 组核心四项。
+    - **三条最容易踩的**：① 本轮查出并修掉了**测试基建级**缺陷（坑点 38：JSON 驱动的嵌套 `Op` 条件曾是恒真 no-op），它推翻了计划里「已核实 Op.* 均已模拟」的前提，**B1/B2/B4 的所有 `Op.in`/`Op.lt` 过滤在此修复前根本没被测到**；② 计划里的 **F6 是误报**（`posts.js` 用 `LIKE 'prefix%'` 天生对称，不是 `groups.js` 那种精确 `Op.in`），真正的同型 bug 在 `user.js` 的 discover 城市精确等值，**已修**；③ A13 的计数**不能用 `Post.decrement`**（JSON 驱动没模拟 `decrement`），已改读改写 + floor 0。
+    - **F4（后台评论管理页生产 500）是唯一无法自动化验证的项** —— `include` 不被 JSON 驱动解析，**必须人工在本地 MySQL 或生产点一遍该页**确认 200。前端半边**已查证无需改动**（`Comments.vue:21` 只读 `row.post?.id`，不消费 `content`）。
+
 ## 文档索引
 
 | 文件 | 说明 |
 |---|---|
 | `CONTEXT.md` | **领域模型术语表 (必读)** — 项目概念定义，零实现细节 |
 | `docs/HANDOVER.md` | **完整交接文档 (必读)** |
+| `docs/HANDOFF-2026-09-08-social-groups.md` | **★ 当前进行中工作的交接说明 (接手必读)** — 组局体系 + 关注/粉丝/动态体系完善：已完成什么、剩什么、每项的文件:行号与验证判据 |
 | `docs/PROJECT.md` | 详细项目文档 |
 | `docs/BRAND-REFERENCE.md` | 品牌规范 |
 | `docs/adr/` | **架构决策记录** — 重大技术决策的背景、方案、后果 |

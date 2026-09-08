@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { User, Service, ServiceCategory, Order, Wallet, Feedback, Admin, Transaction, Invite, Message, Post, Group, Banner, EliteOrder, Gift, GiftRecord, Comment, Review, SignIn, DailyTask, Follow, Greeting, Op } = require('../models')
+const { User, Service, ServiceCategory, Order, Wallet, Feedback, Admin, Transaction, Invite, Message, Post, Group, GroupJoin, Banner, EliteOrder, Gift, GiftRecord, Comment, Review, SignIn, DailyTask, Follow, Greeting, Op } = require('../models')
 const { adminAuth, signAdminToken, adminSecretMissing } = require('../middleware/adminAuth')
 const { success, paginate, fail } = require('../utils/response')
 
@@ -1445,30 +1445,33 @@ router.get('/groups', async (req, res, next) => {
     const { page = 1, pageSize = 20, status, kw } = req.query
     const where = {}
     if (status) where.status = status
+    if (kw) {
+      const kwStr = String(kw).trim()
+      const ors = [{ title: { [Op.like]: `%${kwStr}%` } }]
+      if (/^\d+$/.test(kwStr)) ors.push({ id: Number(kwStr) })
+      // 发起人昵称不在 Group 表里，用一次有界查询换成 userId 集合，避免为后台搜索引入 JOIN
+      const matched = await User.findAll({
+        where: { nickname: { [Op.like]: `%${kwStr}%` } },
+        attributes: ['id'],
+        limit: 200
+      })
+      if (matched.length) ors.push({ userId: { [Op.in]: matched.map(u => u.id) } })
+      where[Op.or] = ors
+    }
     const { rows, count } = await Group.findAndCountAll({
       where,
       order: [['createdAt', 'DESC']],
       offset: (page - 1) * pageSize,
       limit: Number(pageSize)
     })
-    let list = await Promise.all(rows.map(async g => {
+    const list = await Promise.all(rows.map(async g => {
       const u = await User.findByPk(g.userId)
-      const joins = (g.memberCount !== undefined) ? g.memberCount : 0
       return {
         ...g.toJSON(),
-        userName: u ? (u.nickname || ('U' + u.id)) : '',
-        joinCount: joins
+        userName: u ? (u.nickname || ('U' + u.id)) : ''
       }
     }))
-    if (kw) {
-      const kwStr = String(kw).toLowerCase()
-      list = list.filter(o =>
-        (o.title || '').toLowerCase().includes(kwStr) ||
-        (o.userName || '').toLowerCase().includes(kwStr) ||
-        String(o.userId).includes(kwStr)
-      )
-    }
-    paginate(res, list, kw ? list.length : count, page, pageSize)
+    paginate(res, list, count, page, pageSize)
   } catch (err) { next(err) }
 })
 
@@ -1477,8 +1480,9 @@ router.delete('/groups/:id', async (req, res, next) => {
   try {
     const g = await Group.findByPk(req.params.id)
     if (!g) return fail(res, '组局不存在', 404)
+    const joinsRemoved = await GroupJoin.destroy({ where: { groupId: g.id } })
     await g.destroy()
-    success(res, null, '已删除')
+    success(res, { id: g.id, joinsRemoved }, '已删除')
   } catch (err) { next(err) }
 })
 
@@ -2016,7 +2020,7 @@ router.get('/comments', async (req, res, next) => {
       offset: (Number(page) - 1) * Number(pageSize),
       include: [
         { model: User, as: 'author', attributes: ['id', 'nickname', 'avatar'] },
-        { model: Post, as: 'post', attributes: ['id', 'content'] }
+        { model: Post, as: 'post', attributes: ['id', 'text'] }
       ]
     })
     paginate(res, rows, count, Number(page), Number(pageSize))
@@ -2028,7 +2032,12 @@ router.delete('/comments/:id', async (req, res, next) => {
   try {
     const comment = await Comment.findByPk(req.params.id)
     if (!comment) return fail(res, '评论不存在', 404)
+    const postId = comment.postId
     await comment.destroy()
+    if (postId) {
+      const p = await Post.findByPk(postId)
+      if (p) await p.update({ commentCount: Math.max(0, (p.commentCount || 0) - 1) })
+    }
     success(res, null, '评论已删除')
   } catch (err) { next(err) }
 })

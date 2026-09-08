@@ -3,7 +3,7 @@ const router = express.Router()
 const path = require('path')
 const fs = require('fs')
 const multer = require('multer')
-const { User, Wallet, Invite, Service, Review, Order, Follow, Greeting, Op } = require('../models')
+const { User, Wallet, Invite, Service, Review, Order, Follow, Greeting, Post, Op } = require('../models')
 const { auth, optionalAuth } = require('../middleware/auth')
 const { success, fail, paginate } = require('../utils/response')
 const oss = require('../utils/oss')
@@ -29,11 +29,26 @@ const avatarUpload = multer({
   }
 })
 
+/**
+ * 关注/粉丝/动态三项计数。
+ * 用 count 而非 include —— JSON 测试驱动不解析 include（见 AGENTS.md 坑点 F4 同源问题）。
+ * postsCount 排除 blocked，与 GET /posts 列表的可见性口径一致。
+ */
+async function socialCounts(userId) {
+  const [followingCount, followersCount, postsCount] = await Promise.all([
+    Follow.count({ where: { followerId: userId } }),
+    Follow.count({ where: { followingId: userId } }),
+    Post.count({ where: { userId, auditStatus: { [Op.ne]: 'blocked' } } })
+  ])
+  return { followingCount, followersCount, postsCount }
+}
+
 /** 获取个人信息 */
 router.get('/profile', auth, async (req, res, next) => {
   try {
     const user = await User.findByPk(req.userId)
     if (!user) return fail(res, '用户不存在', 404)
+    const counts = await socialCounts(user.id)
     success(res, {
       id: user.id,
       phone: user.phone,
@@ -48,7 +63,8 @@ router.get('/profile', auth, async (req, res, next) => {
       identityStatus: user.identityStatus,
       inviteCode: user.inviteCode,
       inviterId: user.inviterId,
-      charmValue: user.charmValue || 0
+      charmValue: user.charmValue || 0,
+      ...counts
     })
   } catch (err) { next(err) }
 })
@@ -78,9 +94,19 @@ router.get('/discover', optionalAuth, async (req, res, next) => {
     const cityRaw = String(city || '').trim()
     const cityNorm = cityRaw ? normalizeCityName(cityRaw) : ''
     const cityVariants = new Set()
-    if (cityRaw) {
-      cityVariants.add(cityRaw)
-      if (cityNorm && cityNorm !== cityRaw) cityVariants.add(cityNorm)
+    // 存量数据里同一城市既存短名（'深圳'）也存规范名（'深圳市'），只按其中一个查 SQL 就会漏掉另一半，
+    // 而下面的内存 matchCity 永远收不到没进 SQL 的行，所以两种形态都要进 IN（与 groups.js 同款对称展开）。
+    // 只补 '市' 后缀：'州'/'盟'/'地区' 剥完只剩单字（'广州'→'广'），matchCity 的双向 startsWith
+    // 拿它去比会误命中 '广安市' 这类同前缀城市。
+    for (const c of [cityRaw, cityNorm]) {
+      if (!c) continue
+      cityVariants.add(c)
+      if (c.endsWith('市')) {
+        const short = c.slice(0, -1)
+        if (short.length >= 2) cityVariants.add(short)
+      } else {
+        cityVariants.add(`${c}市`)
+      }
     }
     const matchCity = rowCity => {
       if (!cityVariants.size) return true
@@ -91,7 +117,7 @@ router.get('/discover', optionalAuth, async (req, res, next) => {
     const keywordRaw = String(keyword || '').trim()
     const ignored = !!keywordRaw && keywordRaw.length < 2
     const where = { status: 1 }
-    if (cityNorm) where.city = cityNorm
+    if (cityVariants.size) where.city = { [Op.in]: Array.from(cityVariants) }
     if (isElite !== undefined && isElite !== '') where.isElite = isElite === 'true'
     if (gender !== undefined && gender !== '') where.gender = Number(gender)
     const serviceTitleByUser = new Map()
@@ -286,14 +312,33 @@ router.get('/kefu', async (req, res, next) => {
 // ========== 社交功能端点 ==========
 
 /** 获取用户公开主页 */
-router.get('/:id/public-profile', async (req, res, next) => {
+router.get('/:id/public-profile', optionalAuth, async (req, res, next) => {
   try {
     const userId = Number(req.params.id)
     const user = await User.findByPk(userId, {
       attributes: ['id', 'nickname', 'avatar', 'gender', 'city', 'bio', 'isElite', 'realPersonStatus', 'createdAt', 'charmValue']
     })
     if (!user) return fail(res, '用户不存在', 404)
-    success(res, user)
+    const counts = await socialCounts(userId)
+    let isFollowing = false
+    let mutual = false
+    if (req.userId && Number(req.userId) !== userId) {
+      const [mine, back] = await Promise.all([
+        Follow.findOne({ where: { followerId: req.userId, followingId: userId } }),
+        Follow.findOne({ where: { followerId: userId, followingId: req.userId } })
+      ])
+      isFollowing = !!mine
+      mutual = !!mine && !!back
+    }
+    // 显式挑字段而不是 user.toJSON()：JSON 测试驱动忽略 attributes 白名单，
+    // toJSON() 会把 password/phone 一起带出来，两个驱动的行为必须一致。
+    success(res, {
+      id: user.id, nickname: user.nickname, avatar: user.avatar, gender: user.gender,
+      city: user.city, bio: user.bio, isElite: user.isElite,
+      realPersonStatus: user.realPersonStatus, createdAt: user.createdAt,
+      charmValue: user.charmValue || 0,
+      ...counts, isFollowing, mutual
+    })
   } catch (err) { next(err) }
 })
 
@@ -329,46 +374,72 @@ router.delete('/:id/follow', auth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-/** 粉丝列表（分页） */
-router.get('/:id/followers', async (req, res, next) => {
-  try {
-    const userId = Number(req.params.id)
-    const { page = 1, pageSize = 20 } = req.query
-    const { rows, count } = await Follow.findAndCountAll({
-      where: { followingId: userId },
-      order: [['createdAt', 'DESC']],
-      offset: (page - 1) * pageSize,
-      limit: Number(pageSize)
+/**
+ * 粉丝/关注列表的共用实现。查询次数固定 4 次，与页大小无关（原先是逐行 findByPk 的串行 N+1）。
+ * 不用 include —— JSON 测试驱动不解析 include。
+ * @param {'followers'|'following'} direction
+ */
+async function fetchFollowList(targetId, direction, viewerId, page, pageSize) {
+  const isFollowers = direction === 'followers'
+  const where = isFollowers ? { followingId: targetId } : { followerId: targetId }
+  const { rows, count } = await Follow.findAndCountAll({
+    where,
+    // 用 id 而不是 createdAt：同毫秒批量关注会让 createdAt 相同，排序不确定会导致翻页出现重复行
+    order: [['id', 'DESC']],
+    offset: (page - 1) * pageSize,
+    limit: Number(pageSize)
+  })
+  if (!rows.length) return { list: [], count }
+
+  const userIds = rows.map(r => (isFollowers ? r.followerId : r.followingId))
+  const users = await User.findAll({ where: { id: { [Op.in]: userIds } } })
+  const uMap = new Map(users.map(u => [String(u.id), u]))
+
+  // viewerId 存在时才查这两个集合：未登录时 isFollowed/mutual 恒 false，列表照样可读
+  let followedSet = new Set()
+  let backSet = new Set()
+  if (viewerId) {
+    const [mine, back] = await Promise.all([
+      Follow.findAll({ where: { followerId: viewerId, followingId: { [Op.in]: userIds } } }),
+      Follow.findAll({ where: { followingId: viewerId, followerId: { [Op.in]: userIds } } })
+    ])
+    followedSet = new Set(mine.map(f => String(f.followingId)))
+    backSet = new Set(back.map(f => String(f.followerId)))
+  }
+
+  const list = []
+  for (const uid of userIds) {
+    const u = uMap.get(String(uid))
+    if (!u) continue
+    const key = String(uid)
+    const isFollowed = followedSet.has(key)
+    list.push({
+      id: u.id,
+      nickname: u.nickname,
+      avatar: u.avatar,
+      bio: u.bio,
+      isElite: u.isElite,
+      isFollowed,
+      mutual: isFollowed && backSet.has(key)
     })
-    const list = []
-    for (const f of rows) {
-      const u = await User.findByPk(f.followerId, {
-        attributes: ['id', 'nickname', 'avatar', 'bio', 'isElite']
-      })
-      if (u) list.push(u)
-    }
+  }
+  return { list, count }
+}
+
+/** 粉丝列表（分页） */
+router.get('/:id/followers', optionalAuth, async (req, res, next) => {
+  try {
+    const { page = 1, pageSize = 20 } = req.query
+    const { list, count } = await fetchFollowList(Number(req.params.id), 'followers', req.userId, page, pageSize)
     paginate(res, list, count, page, pageSize)
   } catch (err) { next(err) }
 })
 
 /** 关注列表（分页） */
-router.get('/:id/following', async (req, res, next) => {
+router.get('/:id/following', optionalAuth, async (req, res, next) => {
   try {
-    const userId = Number(req.params.id)
     const { page = 1, pageSize = 20 } = req.query
-    const { rows, count } = await Follow.findAndCountAll({
-      where: { followerId: userId },
-      order: [['createdAt', 'DESC']],
-      offset: (page - 1) * pageSize,
-      limit: Number(pageSize)
-    })
-    const list = []
-    for (const f of rows) {
-      const u = await User.findByPk(f.followingId, {
-        attributes: ['id', 'nickname', 'avatar', 'bio', 'isElite']
-      })
-      if (u) list.push(u)
-    }
+    const { list, count } = await fetchFollowList(Number(req.params.id), 'following', req.userId, page, pageSize)
     paginate(res, list, count, page, pageSize)
   } catch (err) { next(err) }
 })

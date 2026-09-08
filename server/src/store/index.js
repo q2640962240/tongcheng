@@ -370,13 +370,15 @@ function matchWhere(record, where) {
     if (!Array.isArray(ands)) return false
     if (!ands.every(sub => matchWhere(record, sub))) return false
   }
-  for (const key in where) {
+  // 必须用 Reflect.ownKeys：for...in 不枚举 Symbol 键，而本驱动的 Op 值就是 Symbol.for(...)，
+  // 用它会让 { [Op.like]: ... } / { [Op.in]: ... } 这类嵌套条件全部被跳过、恒真放行。
+  for (const key of Reflect.ownKeys(where)) {
     if (key === 'or' || key === 'and' || key === Symbol.for('or') || key === Symbol.for('and')) continue
     const cond = where[key]
     const val = record[key]
     if (cond && typeof cond === 'object' && !Array.isArray(cond) && !(cond instanceof Date)) {
       // Sequelize 操作符对象：{ [Op.like]: '%xx%', [Op.gt]: 5, [Op.in]: [...] }
-      for (const opKey in cond) {
+      for (const opKey of Reflect.ownKeys(cond)) {
         const opVal = cond[opKey]
         const op = String(opKey).replace('Symbol(', '').replace(')', '')
         if (!matchOp(op, val, opVal)) return false
