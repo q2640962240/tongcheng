@@ -90,7 +90,9 @@ function _attachOutgoingSync() {
 
 /**
  * 确保 TUILogin 已完成登录
- * @returns {Promise<{ok:boolean, reason?:string}>}
+ * @returns {Promise<{ok:boolean, reason?:string, eliteRequired?:boolean, cached?:boolean}>}
+ *   - ok=false & eliteRequired=true：用户未开通精英，/im/login 被服务端 403 拦截；
+ *     精英认证弹窗已由 request 拦截器统一弹出，调用方一般无需再弹。
  */
 export async function ensureTUILogin() {
   // #ifdef H5 || APP-PLUS || APP
@@ -122,11 +124,17 @@ export async function ensureTUILogin() {
       if (!getToken()) return { ok: false, reason: '未登录' }
 
       // 2. 获取 userSig
+      // 后端 /im/login 挂了 requireElite：非精英用户会被服务端 403 拦截，
+      // request 拦截器已统一弹窗引导去开通精英；这里把 eliteRequired 透传出去，
+      // 让调用方（如聊天页）可以据此判断是否回退自建 WebSocket 或静默处理。
       let loginRes
       try {
         loginRes = await request({ url: '/im/login', method: 'POST' })
       } catch (e) {
         console.warn('[TUILogin] /login fail', e && e.message)
+        if (e && e.eliteRequired) {
+          return { ok: false, reason: '需要精英认证', eliteRequired: true }
+        }
         return { ok: false, reason: '获取 userSig 失败：' + (e && e.message) }
       }
 
@@ -177,7 +185,11 @@ export async function ensureTUILogin() {
     } catch (e) {
       imConnectionStatus = 'disconnected'
       console.warn('[TUILogin] login fail', e)
-      return { ok: false, reason: (e && e.message) || String(e) }
+      return {
+        ok: false,
+        reason: (e && e.message) || String(e),
+        eliteRequired: !!(e && e.eliteRequired)
+      }
     } finally {
       _loginPromise = null
     }

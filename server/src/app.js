@@ -200,6 +200,7 @@ async function startApp() {
 
   // JWT 鉴权
   const jwt = require('jsonwebtoken')
+  const { User } = require('./models')
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.query?.token
     if (!token) return next(new Error('未提供 token'))
@@ -219,10 +220,17 @@ async function startApp() {
     // 更新最后活跃时间（用于在线状态判断）；与鉴权中间件共用同一个节流写入点
     require('./utils/presence').touch(socket.userId)
 
-    // 发送消息
+    // 发送消息（精英认证校验：未开通精英的用户禁止发送任何消息）
     socket.on('message', async (data, ack) => {
       try {
-        const { Message, User } = require('./models')
+        // 精英认证校验：非精英用户禁止发消息
+        const sender = await User.findByPk(socket.userId, { attributes: ['id', 'isElite'] })
+        if (!sender || !sender.isElite) {
+          if (ack) ack({ ok: false, code: 403, message: '需要精英认证' })
+          socket.emit('elite_required', { message: '开通精英会员后可无限聊天' })
+          return
+        }
+        const { Message } = require('./models')
         const { receiverId, type = 'text', content, duration } = data
         if (!receiverId || !content) {
           if (ack) ack({ ok: false, message: '参数不完整' })
