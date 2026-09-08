@@ -3,6 +3,7 @@ const express = require('express')
 const router = express.Router()
 const { Service, ServiceCategory, User, Review } = require('../models')
 const { optionalAuth, auth } = require('../middleware/auth')
+const requireElite = require('../middleware/requireElite')
 const { success, paginate, fail } = require('../utils/response')
 const { expandAlias } = require('../utils/searchAlias')
 const { normalizeCityName } = require('../utils/geo')
@@ -246,7 +247,7 @@ router.get('/:id/reviews', async (req, res, next) => {
 })
 
 /** 上下架服务 */
-router.put('/:id/status', auth, async (req, res, next) => {
+router.put('/:id/status', auth, requireElite, async (req, res, next) => {
   try {
     const { status } = req.body
     if (!['online', 'offline'].includes(status)) return fail(res, '状态参数不正确')
@@ -261,7 +262,7 @@ router.put('/:id/status', auth, async (req, res, next) => {
 })
 
 /** 更新服务 */
-router.put('/:id', auth, async (req, res, next) => {
+router.put('/:id', auth, requireElite, async (req, res, next) => {
   try {
     const service = await Service.findByPk(req.params.id)
     if (!service) return fail(res, '服务不存在', 404)
@@ -274,7 +275,7 @@ router.put('/:id', auth, async (req, res, next) => {
 })
 
 /** 发布服务 */
-router.post('/', auth, async (req, res, next) => {
+router.post('/', auth, requireElite, async (req, res, next) => {
   try {
     const body = req.body || {}
     const { title, description, category, subCategory, coverImage, price, priceUnit, duration, tags } = body

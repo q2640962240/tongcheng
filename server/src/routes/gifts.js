@@ -3,6 +3,7 @@ const router = express.Router()
 const { Op } = require('sequelize')
 const { Gift, GiftRecord, User, Wallet, Transaction, Message, sequelize } = require('../models')
 const { auth } = require('../middleware/auth')
+const requireElite = require('../middleware/requireElite')
 const { success, fail } = require('../utils/response')
 const { get, getModuleConfig } = require('../utils/config')
 
@@ -19,7 +20,7 @@ router.get('/', async (req, res, next) => {
 })
 
 /** 发送礼物（需鉴权）— 服务端权威：扣钻 + 加收入 + 建消息 + WS推送 + IM转发 */
-router.post('/send', auth, async (req, res, next) => {
+router.post('/send', auth, requireElite, async (req, res, next) => {
   const t = await sequelize.transaction()
   try {
     const { receiverId, giftId, viaIM, quantity = 1 } = req.body

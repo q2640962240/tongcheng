@@ -220,7 +220,7 @@ import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { userApi, postApi, bannerApi, locationApi } from '../../api'
 import { useUserStore } from '../../store/user'
 import {
-  toList, toStr, toNum, pickCity, getPath, guard, unwrap, resolveCityViaPipeline
+  toList, toStr, toNum, pickCity, getPath, guard, unwrap, resolveCityViaPipeline, requireElite
 } from '../../utils/fallback'
 import { getCurrentBaseURL, openServerUrlModal } from '../../utils/request'
 
@@ -417,7 +417,10 @@ const onQuickTap = (q) => {
 }
 const onGoVerify = () => uni.navigateTo({ url: '/pages/verification-hub/verification-hub' })
 const onUserTap = (u) => uni.navigateTo({ url: `/pages/user-profile/user-profile?id=${u.id}` })
-const onOnlineChat = (u) => uni.navigateTo({ url: `/pages/chat/chat?userId=${u.id}` })
+const onOnlineChat = (u) => {
+  if (!requireElite()) return
+  uni.navigateTo({ url: `/pages/chat/chat?userId=${u.id}` })
+}
 const onMorePosts = () => uni.switchTab({ url: '/pages/discover/discover' })
 const onPostTap = (p) => uni.navigateTo({ url: `/pages/post/detail?id=${p.id}` })
 </script>

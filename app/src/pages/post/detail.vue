@@ -120,7 +120,7 @@ import { useUserStore } from '@/store/user.js'
 import {
   toList, toStr, toNum, toObj, toBool, getPath, unwrap, unwrapPage,
   guard, truncate, formatTime as ft, avatarUrl, coverUrl, pickCity,
-  requireLogin, safeMap
+  requireLogin, requireElite, safeMap
 } from '@/utils/fallback'
 
 const userStore = useUserStore()
@@ -233,7 +233,7 @@ const loadComments = async (reset = false) => {
 /* 点赞：先本地翻转，接口失败再回滚，避免用户等一个来回才看到反馈 */
 const onLike = async () => {
   if (liking.value) return
-  if (!requireLogin()) return
+  if (!requireElite()) return
   liking.value = true
   const prevLiked = post.liked
   const prevCount = toNum(post.likeCount, 0)
@@ -256,7 +256,7 @@ const submitComment = async () => {
   const text = toStr(draft.value, '').trim()
   if (!text) return
   if (sending.value) return
-  if (!requireLogin()) return
+  if (!requireElite()) return
   sending.value = true
   try {
     const resp = await postApi.comment(postId.value, { text })

@@ -113,6 +113,7 @@
 import { ref, computed } from 'vue';
 import { groupApi } from '@/api/index.js';
 import { useUserStore } from '@/store/user.js';
+import { requireElite } from '@/utils/fallback.js';
 
 const userStore = useUserStore();
 
@@ -160,11 +161,7 @@ function parseTags(raw) {
 }
 
 async function onSubmit() {
-  if (!userStore.isLoggedIn) {
-    uni.showToast({ title: '请先登录', icon: 'none' });
-    setTimeout(() => uni.navigateTo({ url: '/pages/login/login' }), 600);
-    return;
-  }
+  if (!requireElite()) return;
   if (title.value.trim().length < 2) {
     uni.showToast({ title: '请填写组局标题', icon: 'none' });
     return;

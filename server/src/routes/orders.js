@@ -3,6 +3,7 @@ const express = require('express')
 const router = express.Router()
 const { Order, Service, User, Wallet, Invite, Transaction, Review } = require('../models')
 const { auth } = require('../middleware/auth')
+const requireElite = require('../middleware/requireElite')
 const { success, paginate, fail } = require('../utils/response')
 const push = require('../utils/push')
 
@@ -31,7 +32,7 @@ const genOrderNo = () => {
 const sessionId = (a, b) => [a, b].sort().join('-')
 
 /** 创建订单 */
-router.post('/', auth, async (req, res, next) => {
+router.post('/', auth, requireElite, async (req, res, next) => {
   try {
     const { serviceId, quantity = 1, remark, price, priceUnit } = req.body
     if (!serviceId) return fail(res, '请选择服务')
@@ -60,7 +61,7 @@ router.post('/', auth, async (req, res, next) => {
 })
 
 /** 支付订单（星币） */
-router.post('/:id/pay', auth, async (req, res, next) => {
+router.post('/:id/pay', auth, requireElite, async (req, res, next) => {
   try {
     const order = await Order.findByPk(req.params.id)
     if (!order) return fail(res, '订单不存在', 404)
@@ -158,7 +159,7 @@ router.get('/:id', auth, async (req, res, next) => {
 })
 
 /** 取消订单 */
-router.put('/:id/cancel', auth, async (req, res, next) => {
+router.put('/:id/cancel', auth, requireElite, async (req, res, next) => {
   try {
     const { cancelReason } = req.body
     const order = await Order.findByPk(req.params.id)
@@ -205,7 +206,7 @@ router.put('/:id/cancel', auth, async (req, res, next) => {
 })
 
 /** 用户申请退款 */
-router.post('/:id/refund', auth, async (req, res, next) => {
+router.post('/:id/refund', auth, requireElite, async (req, res, next) => {
   try {
     const order = await Order.findByPk(req.params.id)
     if (!order) return fail(res, '订单不存在', 404)
@@ -227,7 +228,7 @@ router.post('/:id/refund', auth, async (req, res, next) => {
 })
 
 /** 服务者确认开始服务 */
-router.put('/:id/start', auth, async (req, res, next) => {
+router.put('/:id/start', auth, requireElite, async (req, res, next) => {
   try {
     const order = await Order.findByPk(req.params.id)
     if (!order) return fail(res, '订单不存在', 404)
@@ -250,7 +251,7 @@ router.put('/:id/start', auth, async (req, res, next) => {
 })
 
 /** 服务者确认完成 */
-router.put('/:id/confirm', auth, async (req, res, next) => {
+router.put('/:id/confirm', auth, requireElite, async (req, res, next) => {
   try {
     const order = await Order.findByPk(req.params.id)
     if (!order) return fail(res, '订单不存在', 404)
@@ -335,7 +336,7 @@ router.put('/:id/confirm', auth, async (req, res, next) => {
 })
 
 /** 提交评价（买家，订单完成后） */
-router.post('/:id/review', auth, async (req, res, next) => {
+router.post('/:id/review', auth, requireElite, async (req, res, next) => {
   try {
     const { rating, content, images, isAnonymous } = req.body
     if (!rating || rating < 1 || rating > 5) return fail(res, '评分需在 1-5 星之间')

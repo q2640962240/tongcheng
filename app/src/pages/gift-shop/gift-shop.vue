@@ -102,6 +102,7 @@ import { ref, computed } from 'vue'
 import { onShow, onLoad } from '@dcloudio/uni-app'
 import { giftApi } from '@/api'
 import { useWalletStore } from '@/store/wallet'
+import { requireElite } from '@/utils/fallback'
 
 const walletStore = useWalletStore()
 
@@ -177,6 +178,7 @@ const isEmoji = (str) => {
 
 /** 跳转聊天 */
 const goChat = () => {
+  if (!requireElite()) return
   showDetail.value = false
   if (receiverId.value) {
     uni.navigateTo({ url: `/pages/chat/chat?userId=${receiverId.value}` })

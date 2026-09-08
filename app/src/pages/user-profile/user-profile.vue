@@ -172,7 +172,7 @@ import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { userApi, postApi } from '@/api'
 import { useUserStore } from '@/store/user'
-import { toStr, toNum, toObj, toList, toBool, guard, unwrap, avatarUrl, formatTime } from '@/utils/fallback'
+import { toStr, toNum, toObj, toList, toBool, guard, unwrap, avatarUrl, formatTime, requireElite } from '@/utils/fallback'
 
 const userStore = useUserStore()
 
@@ -256,6 +256,7 @@ const onBack = () => uni.navigateBack()
 
 const onGreet = async () => {
   if (actionLoading.value) return
+  if (!requireElite()) return
   actionLoading.value = true
   try {
     await userApi.sendGreeting(userId.value, { message: '你好！' })
@@ -269,6 +270,7 @@ const onGreet = async () => {
 
 const onToggleFollow = async () => {
   if (actionLoading.value) return
+  if (!requireElite()) return
   actionLoading.value = true
   try {
     if (isFollowing.value) {
@@ -288,6 +290,7 @@ const onToggleFollow = async () => {
 }
 
 const onChat = () => {
+  if (!requireElite()) return
   uni.navigateTo({
     url: `/pages/chat/chat?userId=${userId.value}`
   })

@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const { Group, GroupJoin, User, Op } = require('../models')
 const { auth, optionalAuth } = require('../middleware/auth')
+const requireElite = require('../middleware/requireElite')
 const { sensitiveFilter } = require('../middleware/sensitive')
 const { success, paginate, fail } = require('../utils/response')
 const { normalizeCityName } = require('../utils/geo')
@@ -89,7 +90,7 @@ router.get('/', optionalAuth, async (req, res, next) => {
 })
 
 /** 发起组局 */
-router.post('/', auth, sensitiveFilter(['title', 'description', 'tags']), async (req, res, next) => {
+router.post('/', auth, requireElite, sensitiveFilter(['title', 'description', 'tags']), async (req, res, next) => {
   try {
     const { title, description, tags = [], category = 'movie', city,
       expectMin = 2, expectMax = 8, activityAt, cover = '', icon = '', location = {} } = req.body
@@ -131,7 +132,7 @@ router.get('/:id', async (req, res, next) => {
 })
 
 /** 修改（发起人） */
-router.put('/:id', auth, sensitiveFilter(['title', 'description', 'tags']), async (req, res, next) => {
+router.put('/:id', auth, requireElite, sensitiveFilter(['title', 'description', 'tags']), async (req, res, next) => {
   try {
     const g = await Group.findByPk(req.params.id)
     if (!g) return fail(res, '组局不存在', 404)
@@ -146,7 +147,7 @@ router.put('/:id', auth, sensitiveFilter(['title', 'description', 'tags']), asyn
 })
 
 /** 删除 / 关闭（发起人） */
-router.delete('/:id', auth, async (req, res, next) => {
+router.delete('/:id', auth, requireElite, async (req, res, next) => {
   try {
     const g = await Group.findByPk(req.params.id)
     if (!g) return fail(res, '组局不存在', 404)
@@ -157,7 +158,7 @@ router.delete('/:id', auth, async (req, res, next) => {
 })
 
 /** 报名进群 */
-router.post('/:id/join', auth, async (req, res, next) => {
+router.post('/:id/join', auth, requireElite, async (req, res, next) => {
   try {
     const g = await Group.findByPk(req.params.id)
     if (!g) return fail(res, '组局不存在', 404)
@@ -196,7 +197,7 @@ router.get('/:id/joins', auth, async (req, res, next) => {
 })
 
 /** 通过/拒绝报名（发起人） */
-router.put('/:id/joins/:joinId', auth, async (req, res, next) => {
+router.put('/:id/joins/:joinId', auth, requireElite, async (req, res, next) => {
   try {
     const g = await Group.findByPk(req.params.id)
     if (!g) return fail(res, '组局不存在', 404)

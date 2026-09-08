@@ -346,6 +346,32 @@ export const request = (options) => {
     const { status, data, err } = lastResult
     if (status >= 400) {
       const msg = (data && data.message) || `请求失败 (${status})`
+
+      // 403 精英认证拦截：未精英用户操作时统一跳转精英认证页
+      if (status === 403 && /精英/.test(msg)) {
+        try {
+          uni.showModal({
+            title: '需要精英认证',
+            content: '该功能仅限精英会员使用，是否前往开通？',
+            confirmText: '去开通',
+            cancelText: '稍后',
+            success: (r) => {
+              if (r.confirm) {
+                uni.navigateTo({ url: '/pages/elite-pay/elite-pay' }).catch(() => {
+                  uni.switchTab({ url: '/pages/profile/profile' })
+                })
+              }
+            }
+          })
+        } catch (_) {}
+        const e = new Error(msg)
+        e.status = status
+        e.data = data
+        e.eliteRequired = true
+        reject(e)
+        return
+      }
+
       const fullMsg = (status >= 500) ? `${msg} (${status})` : msg
       if (!silent) {
         uni.showToast({

@@ -50,6 +50,7 @@
 import { ref, computed } from 'vue';
 import { postApi, uploadApi } from '@/api/index.js';
 import { useUserStore } from '@/store/user.js';
+import { requireElite } from '@/utils/fallback.js';
 const userStore = useUserStore();
 
 const text = ref('');
@@ -70,11 +71,7 @@ function chooseImage() {
 function removeImage(i) { images.value.splice(i, 1); }
 async function onSubmit() {
   if (submitting.value) return;
-  if (!userStore.isLoggedIn) {
-    uni.showToast({ title: '请先登录', icon: 'none' });
-    setTimeout(() => uni.navigateTo({ url: '/pages/login/login' }), 600);
-    return;
-  }
+  if (!requireElite()) return;
   submitting.value = true;
   uni.showLoading({ title: '发布中' });
   try {

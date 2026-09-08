@@ -84,6 +84,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { groupApi } from '@/api/index.js';
 import { useUserStore } from '@/store/user.js';
+import { requireElite } from '@/utils/fallback.js';
 const userStore = useUserStore();
 
 const COLORS = [
@@ -217,6 +218,7 @@ onMounted(async () => {
 });
 
 function contactHost() {
+  if (!requireElite()) return;
   if (!group.userId) {
     uni.showToast({ title: '发起人信息缺失', icon: 'none' });
     return;
@@ -229,11 +231,7 @@ async function onJoin() {
     uni.showToast({ title: '组局已关闭/已满', icon: 'none' });
     return;
   }
-  if (!userStore.isLoggedIn) {
-    uni.showToast({ title: '请先登录', icon: 'none' });
-    setTimeout(() => uni.navigateTo({ url: '/pages/login/login' }), 600);
-    return;
-  }
+  if (!requireElite()) return;
   uni.showModal({
     title: '报名确认',
     content: '报名后发起人将看到你的资料，确认参加本次组局？',

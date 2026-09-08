@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const { Message, User, Op } = require('../models')
 const { auth } = require('../middleware/auth')
+const requireElite = require('../middleware/requireElite')
 const { success, paginate, fail } = require('../utils/response')
 
 // ============================================================
@@ -487,7 +488,7 @@ async function tryAiAutoReply({ app, senderId, aiUser, lastContent }) {
  *   - 对方是 AI 用户时触发自动回复（回复经 IM REST 代发）
  * 注意：消息已经由 TIM 投递给接收方，这里不再 forwardToIM。
  */
-router.post('/im-sync', auth, async (req, res, next) => {
+router.post('/im-sync', auth, requireElite, async (req, res, next) => {
   try {
     const body = req.body || {}
     const receiverId = Number(body.to) || null
@@ -540,7 +541,7 @@ router.post('/im-sync', auth, async (req, res, next) => {
 })
 
 /** 发送消息（HTTP 备用通道；实时消息走 WebSocket） */
-router.post('/', auth, async (req, res, next) => {
+router.post('/', auth, requireElite, async (req, res, next) => {
   try {
     const body = req.body || {}
     // 兼容两个命名：receiverId（后端原生）& to（前端 IM 常用写法，避免用户端聊天页提示"参数不完整"）

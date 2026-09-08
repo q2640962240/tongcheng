@@ -5,6 +5,7 @@ const fs = require('fs')
 const multer = require('multer')
 const { User, Wallet, Invite, Service, Review, Order, Follow, Greeting, Post, Op } = require('../models')
 const { auth, optionalAuth } = require('../middleware/auth')
+const requireElite = require('../middleware/requireElite')
 const { success, fail, paginate } = require('../utils/response')
 const oss = require('../utils/oss')
 const { normalizeCityName } = require('../utils/geo')
@@ -347,8 +348,8 @@ router.get('/:id/public-profile', optionalAuth, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-/** 关注用户（需鉴权） */
-router.post('/:id/follow', auth, async (req, res, next) => {
+/** 关注用户（需鉴权 + 精英认证） */
+router.post('/:id/follow', auth, requireElite, async (req, res, next) => {
   try {
     const targetId = Number(req.params.id)
     if (targetId === req.userId) return fail(res, '不能关注自己')
@@ -367,7 +368,7 @@ router.post('/:id/follow', auth, async (req, res, next) => {
 })
 
 /** 取消关注（需鉴权） */
-router.delete('/:id/follow', auth, async (req, res, next) => {
+router.delete('/:id/follow', auth, requireElite, async (req, res, next) => {
   try {
     const targetId = Number(req.params.id)
     const record = await Follow.findOne({
@@ -450,7 +451,7 @@ router.get('/:id/following', optionalAuth, async (req, res, next) => {
 })
 
 /** 打招呼（需鉴权） */
-router.post('/:id/greet', auth, async (req, res, next) => {
+router.post('/:id/greet', auth, requireElite, async (req, res, next) => {
   try {
     const receiverId = Number(req.params.id)
     if (receiverId === req.userId) return fail(res, '不能给自己打招呼')

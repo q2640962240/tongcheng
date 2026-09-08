@@ -52,6 +52,7 @@ import { onShow, onUnload } from '@dcloudio/uni-app'
 import request, { getCurrentBaseURL } from '@/utils/request'
 import chatSocket from '@/utils/chatSocket'
 import { useUserStore } from '@/store/user'
+import { requireElite } from '@/utils/fallback'
 
 const userStore = useUserStore()
 const isLoggedIn = ref(userStore.isLoggedIn)
@@ -133,6 +134,7 @@ async function loadSessions() {
 }
 
 function openSession(s) {
+  if (!requireElite()) return
   const pid = peerIdOf(s)
   const name = s.otherUser ? encodeURIComponent(s.otherUser.nickname || '') : ''
   uni.navigateTo({ url: `/pages/chat/chat?userId=${pid}&name=${name}` })

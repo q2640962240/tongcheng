@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const { Post, Comment, User, Op } = require('../models')
 const { auth, optionalAuth } = require('../middleware/auth')
+const requireElite = require('../middleware/requireElite')
 const { sensitiveFilter } = require('../middleware/sensitive')
 const { success, paginate, fail } = require('../utils/response')
 const { normalizeCityName } = require('../utils/geo')
@@ -101,7 +102,7 @@ router.get('/', optionalAuth, async (req, res, next) => {
  *  兼容字段：text / content 都可作为内容；城市可来自顶层 city 或 location.city（前端 publish.vue 用 location.city）
  */
 // text / content 双兼容（publish.vue 用 text，其他客户端可能用 content）；location/city 可能含城市名，也过一下
-router.post('/', auth, sensitiveFilter(['text', 'content', 'tags', 'remark']), async (req, res, next) => {
+router.post('/', auth, requireElite, sensitiveFilter(['text', 'content', 'tags', 'remark']), async (req, res, next) => {
   try {
     const body = req.body || {}
     const textRaw = body.text ?? body.content ?? ''
@@ -164,7 +165,7 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
 })
 
 /** 删除（作者或管理员） */
-router.delete('/:id', auth, async (req, res, next) => {
+router.delete('/:id', auth, requireElite, async (req, res, next) => {
   try {
     const post = await Post.findByPk(req.params.id)
     if (!post) return fail(res, '动态不存在', 404)
@@ -176,7 +177,7 @@ router.delete('/:id', auth, async (req, res, next) => {
 })
 
 /** 点赞 / 取消点赞 toggle */
-router.post('/:id/like', auth, async (req, res, next) => {
+router.post('/:id/like', auth, requireElite, async (req, res, next) => {
   try {
     const post = await Post.findByPk(req.params.id)
     if (!post) return fail(res, '动态不存在', 404)
@@ -209,7 +210,7 @@ router.get('/:id/comments', async (req, res, next) => {
 })
 
 /** 发表评论 */
-router.post('/:id/comments', auth, sensitiveFilter(['text']), async (req, res, next) => {
+router.post('/:id/comments', auth, requireElite, sensitiveFilter(['text']), async (req, res, next) => {
   try {
     const { text, replyToUserId } = req.body
     if (!text || String(text).trim().length === 0) return fail(res, '评论内容不能为空')
@@ -232,7 +233,7 @@ router.post('/:id/comments', auth, sensitiveFilter(['text']), async (req, res, n
 })
 
 /** 删除评论 —— 评论作者或帖主可删（Discourse 语义） */
-router.delete('/:id/comments/:commentId', auth, async (req, res, next) => {
+router.delete('/:id/comments/:commentId', auth, requireElite, async (req, res, next) => {
   try {
     const c = await Comment.findByPk(req.params.commentId)
     if (!c || String(c.postId) !== String(req.params.id)) return fail(res, '评论不存在', 404)
