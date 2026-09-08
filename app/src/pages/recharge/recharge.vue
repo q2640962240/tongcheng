@@ -93,6 +93,12 @@ import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useWalletStore } from '../../store/wallet'
 import { walletApi } from '../../api'
+import { diamondRechargeEnabled } from '../../config/features'
+
+// App Store 合规：iOS 端隐藏钻石充值，直接访问时跳回首页
+if (!diamondRechargeEnabled) {
+  uni.switchTab({ url: '/pages/home/home' })
+}
 
 const walletStore = useWalletStore()
 const wallet = computed(() => ({

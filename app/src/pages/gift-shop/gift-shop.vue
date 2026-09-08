@@ -103,6 +103,7 @@ import { onShow, onLoad } from '@dcloudio/uni-app'
 import { giftApi } from '@/api'
 import { useWalletStore } from '@/store/wallet'
 import { requireElite } from '@/utils/fallback'
+import { giftEnabled } from '@/config/features'
 
 const walletStore = useWalletStore()
 
@@ -115,6 +116,11 @@ const selectedGift = ref({})
 const receiverId = ref('')
 
 onLoad((options) => {
+  // App Store 合规：iOS 端屏蔽礼物板块，直接访问时跳回首页
+  if (!giftEnabled) {
+    uni.switchTab({ url: '/pages/home/home' })
+    return
+  }
   if (options?.receiverId) {
     receiverId.value = options.receiverId
   }

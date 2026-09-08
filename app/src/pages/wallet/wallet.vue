@@ -15,14 +15,14 @@
         </view>
       </view>
       <view class="hero-income">
-        <text class="hero-income-label">礼物收入（1钻石=1角）</text>
+        <text class="hero-income-label">服务收入（1钻石=1角）</text>
         <text class="hero-income-num">{{ incomeDiamond }} 💎</text>
       </view>
     </view>
 
     <!-- 快捷操作 -->
     <view class="actions">
-      <view class="action-btn primary" @tap="goRecharge">
+      <view class="action-btn primary" v-if="diamondRechargeEnabled" @tap="goRecharge">
         <text class="action-icon">💎</text>
         <text class="action-text">充值</text>
       </view>
@@ -73,6 +73,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { useWalletStore } from '../../store/wallet'
 import { walletApi } from '../../api'
 import { guard, unwrapPage, safeMap, getPath, toStr, toNum, formatTime } from '../../utils/fallback'
+import { diamondRechargeEnabled } from '../../config/features'
 
 const walletStore = useWalletStore()
 const wallet = computed(() => ({

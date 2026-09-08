@@ -375,6 +375,109 @@ function maskWechat(raw) {
   return s[0] + '****' + s[s.length - 1]
 }
 
+/**
+ * Apple IAP 票据校验（POST /api/elite/iap/verify）
+ *
+ * iOS 端精英会员走 App Store 内购，前端拿到 receipt 后提交到此接口。
+ * 服务端调用 Apple verifyReceipt API 校验，通过后开通精英。
+ *
+ * body: { receipt: string, transactionId?: string }
+ */
+router.post('/iap/verify', auth, async (req, res, next) => {
+  try {
+    const { receipt, transactionId = '' } = req.body || {}
+    if (!receipt) return fail(res, 'receipt 不能为空', 400)
+
+    const user = await User.findByPk(req.userId)
+    if (!user) return fail(res, '用户不存在', 404)
+
+    // 已精英：直接返回
+    if (user.isElite) {
+      return success(res, { isElite: true, alreadyElite: true }, '您已是精英会员')
+    }
+
+    const axios = require('axios')
+    const PROD_URL = 'https://buy.itunes.apple.com/verifyReceipt'
+    const SANDBOX_URL = 'https://sandbox.itunes.apple.com/verifyReceipt'
+
+    // 1. 先请求生产环境校验
+    let verifyRes
+    let verifyUrl = PROD_URL
+    try {
+      verifyRes = await axios.post(verifyUrl,
+        { 'receipt-data': receipt },
+        { timeout: 15000 }
+      )
+    } catch (e) {
+      return fail(res, 'Apple 校验服务不可用，请稍后重试', 502)
+    }
+
+    const body = verifyRes.data || {}
+    // status 21007 表示该票据是沙盒票据，需要到沙盒环境重校
+    if (body.status === 21007) {
+      verifyUrl = SANDBOX_URL
+      try {
+        verifyRes = await axios.post(verifyUrl,
+          { 'receipt-data': receipt },
+          { timeout: 15000 }
+        )
+      } catch (e) {
+        return fail(res, 'Apple 沙盒校验服务不可用', 502)
+      }
+    }
+
+    const result = verifyRes.data || {}
+    // status 0 = 校验通过
+    if (result.status !== 0) {
+      return fail(res, `票据校验失败 (status=${result.status})`, 400)
+    }
+
+    // 2. 校验通过，写入 EliteOrder 并开通精英
+    const priceFen = await getLifetimePriceFen()
+    const outTradeNo = `${genOutTradeNo(req.userId)}IAP`
+    const txId = transactionId || (result.receipt && result.receipt.transaction_id) || ''
+
+    await EliteOrder.create({
+      userId: req.userId,
+      amount: priceFen,
+      channel: 'apple_iap',
+      outTradeNo,
+      status: 'paid',
+      plan: 'lifetime',
+      paidAt: new Date().toISOString(),
+      transactionId: txId,
+      snapshot: {
+        priceFen,
+        currency: 'CNY',
+        rights: ELITE_RIGHTS,
+        appleIAP: true,
+        verifyUrl
+      }
+    })
+    await User.update({ isElite: true }, { where: { id: req.userId } })
+    try {
+      await Transaction.create({
+        userId: req.userId,
+        type: 'elite_pay',
+        amount: priceFen,
+        currency: 'fen',
+        balanceAfter: priceFen,
+        remark: `精英终身开通 · Apple IAP · 订单 ${outTradeNo}`
+      })
+    } catch (_) {}
+
+    return success(res, {
+      outTradeNo,
+      amount: priceFen,
+      plan: 'lifetime',
+      channel: 'apple_iap',
+      isElite: true,
+      status: 'paid',
+      transactionId: txId
+    }, '精英开通成功')
+  } catch (e) { next(e) }
+})
+
 module.exports = router
 module.exports.markPaidAndUnlock = markPaidAndUnlock
 module.exports.getDefaultPriceFen = () => DEFAULT_PRICE_FEN

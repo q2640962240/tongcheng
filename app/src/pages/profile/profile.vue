@@ -78,12 +78,12 @@
           <view class="wallet-item">
             <text class="wallet-num">{{ safeDiamond }}</text>
             <text class="wallet-label">💎 钻石</text>
-            <view class="wallet-action recharge-btn" @tap="onRecharge">充值</view>
+            <view class="wallet-action recharge-btn" v-if="diamondRechargeEnabled" @tap="onRecharge">充值</view>
           </view>
           <view class="wallet-divider"></view>
           <view class="wallet-item">
             <text class="wallet-num income">{{ incomeYuan }}</text>
-            <text class="wallet-label">¥ 礼物收入</text>
+            <text class="wallet-label">¥ 服务收入</text>
             <view class="wallet-action withdraw-btn" @tap="onIncome">提现</view>
           </view>
         </view>
@@ -103,7 +103,7 @@
           <view class="m-icon-wrap"><text class="m-icon">📝</text></view>
           <text class="m-label">我的动态</text>
         </view>
-        <view class="module-item" @tap="onNav('/pages/gift-shop/gift-shop')">
+        <view class="module-item" v-if="giftEnabled" @tap="onNav('/pages/gift-shop/gift-shop')">
           <view class="m-icon-wrap"><text class="m-icon">🛍️</text></view>
           <text class="m-label">礼物商城</text>
         </view>
@@ -115,7 +115,7 @@
           <view class="m-icon-wrap aurora"><text class="m-icon">👑</text></view>
           <text class="m-label">精英特权</text>
         </view>
-        <view class="module-item" @tap="onNav('/pages/gift-rank/gift-rank')">
+        <view class="module-item" v-if="giftEnabled" @tap="onNav('/pages/gift-rank/gift-rank')">
           <view class="m-icon-wrap"><text class="m-icon">🏆</text></view>
           <text class="m-label">礼物排行</text>
         </view>
@@ -154,6 +154,7 @@ import {
   requireLogin, requireElite, avatarUrl
 } from '../../utils/fallback'
 import DailyTaskPanel from '../../components/DailyTaskPanel.vue'
+import { giftEnabled, diamondRechargeEnabled } from '../../config/features'
 
 const userStore = useUserStore()
 const walletStore = useWalletStore()

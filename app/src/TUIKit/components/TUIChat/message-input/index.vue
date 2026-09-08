@@ -31,7 +31,7 @@
         @insertAt="insertAt"
         @onAtListOpen="onAtListOpen"
       />
-      <view class="gift-entry" v-if="!isGroup" @click.stop="toggleGiftPanel">
+      <view class="gift-entry" v-if="giftEnabled && !isGroup" @click.stop="toggleGiftPanel">
         <text class="gift-entry-icon">🎁</text>
       </view>
       <Icon
@@ -58,7 +58,7 @@
       />
     </div>
     <!-- 礼物面板 -->
-    <view v-if="showGiftPanel" class="gift-panel-wrapper">
+    <view v-if="giftEnabled && showGiftPanel" class="gift-panel-wrapper">
       <view class="gift-mask" @click.stop="showGiftPanel = false"></view>
       <MessageInputGift
         :receiverId="peerUserId"
@@ -106,6 +106,12 @@ import { sendTyping } from '../utils/sendMessage';
 import { ToolbarDisplayType, InputDisplayType } from '../../../interface';
 import TUIChatConfig from '../config';
 import { sendImageMessage } from '../message-input-toolbar/uploadToolkit/utils';
+// #ifdef APP-PLUS
+import { giftEnabled } from '../../../../config/features';
+// #endif
+// #ifndef APP-PLUS
+const giftEnabled = true;
+// #endif
 
 interface IProps {
   placeholder: string;

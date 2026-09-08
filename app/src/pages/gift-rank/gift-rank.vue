@@ -93,6 +93,12 @@
 import { ref, watch, onMounted } from 'vue'
 import { giftApi } from '../../api'
 import { avatarUrl } from '../../utils/fallback'
+import { giftEnabled } from '../../config/features'
+
+// App Store 合规：iOS 端屏蔽礼物板块，直接访问时跳回首页
+if (!giftEnabled) {
+  uni.switchTab({ url: '/pages/home/home' })
+}
 
 const side = ref('received')
 const period = ref('all')

@@ -157,6 +157,8 @@ export const eliteApi = {
   notify: (channel, body) => post(`/elite/pay/notify/${channel}`, body),
   unlockWechat: (userId) => post('/elite/user/unlock-wechat', { userId }),
   contactQuota: (userId) => post('/elite/user/contact', { userId }),
+  // Apple IAP 票据校验（iOS 端精英付费走此接口）
+  iapVerify: (receipt, transactionId) => post('/elite/iap/verify', { receipt, transactionId }),
 }
 
 // ==================== 行政区划 / 定位 (白夜 v2 企业级) ====================

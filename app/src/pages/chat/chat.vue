@@ -71,7 +71,7 @@
       <view class="btn-plus" @tap="showMoreMenu = !showMoreMenu">
         <text class="plus-icon">＋</text>
       </view>
-      <view class="btn-gift" @tap="showGiftPanel = true">
+      <view class="btn-gift" v-if="giftEnabled" @tap="showGiftPanel = true">
         <view v-if="giftSentToast" class="gift-sent-toast">
           <text class="gift-sent-toast-text">{{ giftSentToast }}</text>
         </view>
@@ -142,7 +142,7 @@
 
     <!-- 礼物面板 -->
     <GiftPanel
-      v-if="showGiftPanel"
+      v-if="giftEnabled && showGiftPanel"
       :receiverId="peerId"
       :visible="showGiftPanel"
       @close="showGiftPanel = false"
@@ -150,7 +150,7 @@
     />
 
     <!-- 礼物动画 -->
-    <GiftAnimation ref="giftAnimRef" />
+    <GiftAnimation v-if="giftEnabled" ref="giftAnimRef" />
   </view>
 </template>
 
@@ -166,6 +166,8 @@ import GiftPanel from '@/components/GiftPanel.vue'
 import GiftAnimation from '@/components/GiftAnimation.vue'
 import { isGiftPlayed, markGiftPlayed } from '@/utils/giftAnimPlayed'
 import { getUserId } from '@/utils/auth'
+import { requireElite } from '@/utils/fallback'
+import { giftEnabled } from '@/config/features'
 
 const userStore = useUserStore()
 
@@ -372,6 +374,9 @@ function updateLocalMessage(id, patch) {
 
 /** 发送消息：优先走实时通道（带 ack），未连接时走 HTTP 备用通道 */
 async function doSend(type, content, extra = {}) {
+  // 精英认证前置校验：未开通精英禁止发送任何消息
+  if (!requireElite()) return
+
   const localId = `local_${Date.now()}_${seq++}`
   const localMsg = {
     id: localId,
@@ -399,6 +404,11 @@ async function doSend(type, content, extra = {}) {
       duration: extra.duration || undefined
     }, (ack) => {
       if (ack && ack.ok) applyAck(ack.data)
+      else if (ack && ack.code === 403) {
+        // WebSocket 通道返回需要精英认证
+        updateLocalMessage(localId, { status: 'failed' })
+        requireElite()
+      }
       else sendViaHttp(type, content, extra, localId, applyAck)
     })
   } else {
@@ -411,16 +421,25 @@ async function sendViaHttp(type, content, extra, localId, applyAck) {
     const r = await request({
       url: '/chat',
       method: 'POST',
-      data: { receiverId: Number(peerId.value), type, content, duration: extra.duration || undefined }
+      data: { receiverId: Number(peerId.value), type, content, duration: extra.duration || undefined },
+      silent: true
     })
     if (r && r.code === 0) applyAck(r.data)
     else {
       updateLocalMessage(localId, { status: 'failed' })
-      uni.showToast({ title: (r && r.message) || '发送失败', icon: 'none' })
+      if (r && r.code === 403) {
+        requireElite()
+      } else {
+        uni.showToast({ title: (r && r.message) || '发送失败', icon: 'none' })
+      }
     }
   } catch (e) {
     updateLocalMessage(localId, { status: 'failed' })
-    uni.showToast({ title: '网络异常，发送失败', icon: 'none' })
+    if (e && e.eliteRequired) {
+      // 403 精英认证拦截由 request.js 统一弹窗
+    } else {
+      uni.showToast({ title: '网络异常，发送失败', icon: 'none' })
+    }
   }
 }
 

@@ -66,6 +66,8 @@
 import { ref, onMounted } from 'vue';
 import { eliteApi } from '@/api/index.js';
 import { useUserStore } from '@/store/user.js';
+import { appleIAPEnabled } from '@/config/features';
+import { purchaseElite } from '@/utils/iap';
 const userStore = useUserStore();
 
 const price = ref(30);
@@ -110,10 +112,18 @@ async function onPay() {
   paying.value = true;
   uni.showLoading({ title: '支付处理中' });
   try {
-    try {
-      await eliteApi.devPay();
-    } catch (devErr) {
-      await eliteApi.order('dev');
+    // iOS 端走 Apple IAP（App Store 合规要求）
+    if (appleIAPEnabled) {
+      const { receipt, transactionId } = await purchaseElite();
+      // 提交后端校验 Apple 票据
+      await eliteApi.iapVerify(receipt, transactionId);
+    } else {
+      // 非 iOS 端保持原有微信/支付宝/devPay 逻辑
+      try {
+        await eliteApi.devPay();
+      } catch (devErr) {
+        await eliteApi.order('dev');
+      }
     }
     try { if (typeof userStore.fetchProfile === 'function') await userStore.fetchProfile(); } catch {}
     uni.hideLoading();
@@ -125,6 +135,8 @@ async function onPay() {
   } catch (e) {
     uni.hideLoading();
     paying.value = false;
+    // 用户主动取消 IAP 不弹错误
+    if (e && e.message === 'USER_CANCEL') return;
     const msg = (e && e.data && e.data.message) || (e && e.message) || '支付失败，请稍后重试';
     uni.showToast({ title: msg.length > 14 ? msg.slice(0, 14) + '...' : msg, icon: 'none' });
   }
