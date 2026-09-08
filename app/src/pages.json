@@ -142,6 +142,13 @@
     },
 
     {
+      "path": "pages/my-posts/my-posts",
+      "style": {
+        "navigationBarTitleText": "我的动态",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/discover/discover",
       "style": {
         "navigationBarTitleText": "发现",

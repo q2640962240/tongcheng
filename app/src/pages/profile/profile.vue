@@ -99,7 +99,7 @@
 
       <!-- 5. 功能入口 8 宫格 (2行×4列) -->
       <view class="modules">
-        <view class="module-item" @tap="onNav('/pages/discover/discover?tab=posts')">
+        <view class="module-item" @tap="onNav('/pages/my-posts/my-posts')">
           <view class="m-icon-wrap"><text class="m-icon">📝</text></view>
           <text class="m-label">我的动态</text>
         </view>
