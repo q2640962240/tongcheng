@@ -160,7 +160,7 @@ loadTypes()
 .upload {
   width: 160rpx; height: 160rpx; background: $by-surface-2; border-radius: 16rpx;
   display: flex; align-items: center; justify-content: center; font-size: 56rpx; color: $by-text-3;
-  border: 4rpx dashed $by-border-2;
+  border: 4rpx dashed $by-border;
 }
 .tip {
   display: flex; align-items: center; gap: 12rpx; padding: 24rpx;
