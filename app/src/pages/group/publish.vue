@@ -23,6 +23,13 @@
           @click="catIdx = i"
         >{{ c.icon }} {{ c.label }}</view>
       </view>
+      <input
+        v-if="catIdx === cats.length - 1"
+        class="custom-cat-input"
+        v-model="customCat"
+        placeholder="请输入自定义类型，如：徒步、桌游"
+        maxlength="10"
+      />
     </view>
 
     <view class="form-block">
@@ -117,8 +124,10 @@ const cats = [
   { label: '饭局', icon: '🍲', code: 'dinner' },
   { label: '夜骑', icon: '🚴', code: 'ride' },
   { label: '旅行', icon: '🧳', code: 'travel' },
+  { label: '自定义', icon: '✏️', code: 'custom' },
 ];
 const catIdx = ref(0);
+const customCat = ref('');
 
 const cityList = ['深圳', '北京', '上海', '广州', '成都', '杭州', '武汉', '重庆'];
 const city = ref('深圳');
@@ -168,7 +177,7 @@ async function onSubmit() {
       title: title.value.trim(),
       description: description.value.trim(),
       tags: parseTags(tagsText.value),
-      category: cats[catIdx.value].code,
+      category: catIdx.value === cats.length - 1 ? (customCat.value.trim() || 'custom') : cats[catIdx.value].code,
       city: city.value,
       expectMin: expectMin.value,
       expectMax: expectMax.value,
@@ -204,6 +213,10 @@ async function onSubmit() {
   padding: 16rpx 0; text-align: center; font-size: 24rpx; color: $by-text-3;
   background: $by-bg; border-radius: 12rpx; border: 2rpx solid transparent;
   &.active { color: $by-gold; border-color: rgba(212,160,23,.6); background: rgba(212,160,23,.08); }
+}
+.custom-cat-input {
+  margin-top: 20rpx; padding: 20rpx 24rpx; background: $by-bg; border-radius: 12rpx;
+  font-size: 28rpx; color: $by-text-1; border: 2rpx solid rgba(212,160,23,.4);
 }
 .by-textarea { width: 100%; min-height: 180rpx; font-size: 30rpx; line-height: 1.6; color: $by-text-1; }
 .row { display: flex; gap: 24rpx; margin-bottom: 24rpx; &:last-child { margin-bottom: 0; } }

@@ -763,7 +763,7 @@ router.get('/certifications', async (req, res, next) => {
       userId: u.id,
       user: { id: u.id, nickname: u.nickname, phone: u.phone, avatar: u.avatar },
       realName: (u.meta && u.meta.realName) || u.nickname,
-      idCard: (u.meta && u.meta.idCard) ? u.meta.idCard.replace(/^(.{4})(.+)(.{4})$/, '$1****$3') : '',
+      idCard: (u.meta && u.meta.idCard) || '',
       photo: (u.meta && u.meta.photo) || u.avatar,
       type: 'identity',
       status: u.identityStatus === 'passed' || u.realPersonStatus === 'passed' ? 'passed'
@@ -898,6 +898,18 @@ const MODULE_META = {
       provider: [
         { label: '本地 local (uploads/ 目录)', value: 'local' },
         { label: '阿里云 OSS', value: 'aliyun' }
+      ]
+    }
+  },
+  realname: {
+    label: '实名认证',
+    icon: 'User',
+    color: '#10B981',
+    description: '用户实名认证核验方式。manual=管理员在认证管理页人工审核；aliyun=提交后自动调用阿里云实名认证 API 核验，通过则自动标记已认证。',
+    options: {
+      provider: [
+        { label: '人工审核 (manual)', value: 'manual' },
+        { label: '阿里云实名认证 (aliyun)', value: 'aliyun' }
       ]
     }
   },
@@ -1063,6 +1075,13 @@ function collectTemplate() {
       { key: 'accessKeySecret', type: 'secret', description: 'AccessKey Secret' },
       { key: 'endpoint',        type: 'string', description: '自定义 Endpoint（ECS 内网可填，加速回源）' },
       { key: 'cdnDomain',       type: 'string', description: 'CDN 加速域名（可选）' }
+    ],
+    realname: [
+      { key: 'provider',        type: 'select',  description: 'manual=人工审核(默认) | aliyun=阿里云实名认证自动核验' },
+      { key: 'accessKeyId',     type: 'secret',  description: '阿里云 AccessKey Id（provider=aliyun 时必填）' },
+      { key: 'accessKeySecret', type: 'secret',  description: '阿里云 AccessKey Secret（provider=aliyun 时必填）' },
+      { key: 'endpoint',        type: 'string',  description: '阿里云实名认证 Endpoint，例 eid.cn-shanghai.aliyuncs.com' },
+      { key: 'bizType',         type: 'string',  description: '认证业务场景标识，在阿里云实名认证控制台创建' }
     ],
     im: [
       { key: 'enabled',         type: 'boolean', description: '是否启用腾讯云 IM：true=前端优先走 TIM SDK 真实通道，false=回退自建 WebSocket 聊天' },

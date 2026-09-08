@@ -83,6 +83,14 @@ const ENV_DEFAULTS = {
     endpoint: process.env.OSS_ENDPOINT || '',
     cdnDomain: process.env.OSS_CDN_DOMAIN || ''
   },
+  realname: {
+    // manual = 人工审核(默认)；aliyun = 阿里云实名认证自动核验
+    provider: process.env.REALNAME_PROVIDER || 'manual',
+    accessKeyId: process.env.REALNAME_ACCESS_KEY_ID || '',
+    accessKeySecret: process.env.REALNAME_ACCESS_KEY_SECRET || '',
+    endpoint: process.env.REALNAME_ENDPOINT || '',
+    bizType: process.env.REALNAME_BIZ_TYPE || ''
+  },
   push: {
     enabled: process.env.PUSH_ENABLED === 'true',
     // 可选: jpush / getui，留空或 none 表示未启用

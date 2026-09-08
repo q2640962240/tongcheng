@@ -40,13 +40,6 @@
           <switch :checked="groupNotify" color="#D4AF37" @change="e => onToggleNotify('group', e.detail.value)" />
         </view>
       </view>
-      <view class="item" @tap="onServerUrl">
-        <text class="item-label">服务器地址（调试）</text>
-        <view class="item-right">
-          <text class="item-value mono" :style="{'max-width':'420rpx','word-break':'break-all','text-align':'right'}">{{ currentBaseURLShort }}</text>
-          <text class="arrow">›</text>
-        </view>
-      </view>
       <view class="item" @tap="onAbout">
         <text class="item-label">关于我们</text>
         <view class="item-right">

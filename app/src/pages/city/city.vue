@@ -735,9 +735,9 @@ _onMounted(async () => {
 .current-city {
   display: inline-flex; align-items: center; gap: 10rpx;
   padding: 18rpx 26rpx; border-radius: 16rpx;
-  background: color.adjust($by-gold, $alpha: 0.1);
-  color: $by-gold; font-weight: 700; font-size: 30rpx;
-  border: 1rpx solid color.adjust($by-gold, $alpha: 0.3);
+  background: $by-gold;
+  color: #0B0F1A; font-weight: 700; font-size: 30rpx;
+  border: 1rpx solid $by-gold;
 }
 .city-name { letter-spacing: 1px; }
 .locating-dot {
@@ -766,7 +766,7 @@ _onMounted(async () => {
   font-size: 28rpx;
   border: 1rpx solid $by-border;
   transition: all .15s;
-  &:active, &.active { transform: scale(0.97); background: color.adjust($by-gold, $alpha: 0.12); color: $by-gold; border-color: color.adjust($by-gold, $alpha: 0.3); }
+  &:active, &.active { transform: scale(0.97); background: $by-gold; color: #0B0F1A; border-color: $by-gold; }
 }
 
 .letter-bar { display: flex; flex-wrap: wrap; gap: 12rpx; }
@@ -826,9 +826,9 @@ _onMounted(async () => {
   margin-bottom: 8rpx;
   .action-btn {
     padding: 8rpx 18rpx; border-radius: 9999rpx;
-    background: color.adjust($by-gold, $alpha: 0.1);
-    color: $by-gold; font-size: 22rpx; font-weight: 600;
-    border: 1rpx solid color.adjust($by-gold, $alpha: 0.25);
+    background: rgba(212,175,55,0.12);
+    color: #F5D583; font-size: 22rpx; font-weight: 600;
+    border: 1rpx solid rgba(212,175,55,0.3);
     &:active { transform: scale(0.97); }
   }
   .mode-sub {

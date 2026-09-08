@@ -233,10 +233,15 @@ router.post('/elite/apply', auth, avatarUpload.single('photo'), async (req, res,
       }
     }
     const user = await User.findByPk(req.userId)
+    const meta = user.meta && typeof user.meta === 'object' ? { ...user.meta } : {}
+    meta.realName = realName
+    meta.idCard = idCard
+    if (photoUrl) meta.photo = photoUrl
     await user.update({
       city: city || user.city,
       identityStatus: 'pending',
-      realPersonStatus: 'pending'
+      realPersonStatus: 'pending',
+      meta
     })
     success(res, { photo: photoUrl }, '认证申请已提交')
   } catch (err) { next(err) }

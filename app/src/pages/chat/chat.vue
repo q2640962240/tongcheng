@@ -203,19 +203,36 @@ function closeSearch() {
 async function doSearch() {
   const kw = searchKeyword.value.trim()
   if (!kw) return
+  if (!peerId.value) {
+    uni.showToast({ title: '会话信息缺失，请重新进入', icon: 'none' })
+    return
+  }
   searching.value = true
   searchDone.value = false
   searchResults.value = []
   try {
     const r = await request({
       url: `/chat/search/${peerId.value}?keyword=${encodeURIComponent(kw)}&pageSize=50`,
-      method: 'GET'
+      method: 'GET',
+      silent: true
     })
     const d = r && r.data
-    searchResults.value = (d && d.list) || []
+    const list = (d && d.list) || []
+    // 兼容 content 可能是 JSON 字符串的情况
+    searchResults.value = list.map(m => {
+      let text = m.content
+      if (typeof text === 'string') {
+        try {
+          const parsed = JSON.parse(text)
+          if (parsed && typeof parsed.text === 'string') text = parsed.text
+        } catch (_) { /* 不是 JSON，保持原值 */ }
+      }
+      return { ...m, content: String(text || '') }
+    })
     searchDone.value = true
-  } catch (_) {
+  } catch (e) {
     searchDone.value = true
+    uni.showToast({ title: '搜索失败，请重试', icon: 'none' })
   } finally {
     searching.value = false
   }

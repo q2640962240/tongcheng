@@ -208,9 +208,9 @@ onShow(() => {
   background: $by-soft-card; border-radius: $by-radius-pill; font-size: 26rpx; color: $by-text-2;
   border: 1rpx solid $by-border; transition: all 0.2s ease;
   &.on {
-    background: color.adjust($by-gold, $alpha: 0.25);
-    color: $by-gold; font-weight: 600;
-    border-color: color.adjust($by-gold, $alpha: 0.4);
+    background: rgba(212,175,55,0.2);
+    color: #F5D583; font-weight: 600;
+    border-color: rgba(212,175,55,0.4);
   }
 }
 

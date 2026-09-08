@@ -248,8 +248,26 @@ function classifyNetworkError(err) {
   return { kind: 'unknown', message: '网络异常' }
 }
 
+/** 延迟函数 */
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
+/** 执行单次 uni.request，统一返回 { ok, status, data, err } */
+function doRequest({ method, finalURL, data, header, timeout }) {
+  return new Promise((resolve) => {
+    uni.request({
+      url: finalURL,
+      method,
+      data,
+      header,
+      timeout,
+      success: (res) => resolve({ ok: res.statusCode < 400, status: res.statusCode, data: res.data, err: null }),
+      fail: (err) => resolve({ ok: false, status: 0, data: null, err })
+    })
+  })
+}
+
 export const request = (options) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const token = getToken()
     const header = {
       'Content-Type': 'application/json',
@@ -260,7 +278,8 @@ export const request = (options) => {
     }
 
     const method = options.method || 'GET'
-    const timeout = Number(options.timeout) || 15000 // 真机上默认 15s，避免等太久看上去像黑屏
+    // App 端适当延长超时，iOS 冷启动时网络栈初始化可能较慢
+    const timeout = Number(options.timeout) || (IS_H5 ? 15000 : 25000)
     const silent = !!options.silent // 静默模式：失败时不弹 toast，由调用方自行处理
     // 刷新端点自身必须置真：它的 401 若再进 tryRefresh()，会拿到尚未释放的 refreshLock
     // （正是当前在等它的那个 promise）→ 循环 await → 永久不 settle
@@ -276,120 +295,99 @@ export const request = (options) => {
       }
     } catch (e) { /* ignore */ }
 
-    uni.request({
-      url: finalURL,
-      method,
-      data: options.data,
-      header,
-      timeout,
-      success: async (res) => {
-        if (res.statusCode === 401) {
-          // 先尝试用 refreshToken 自动续期；成功则静默重试一次原请求
-          // noRefreshRetry 的请求（即 /auth/refresh 自己）必须跳过，否则递归撞锁永久挂起
-          const refreshed = noRefreshRetry ? false : await tryRefresh()
-          if (refreshed) {
-            try {
-              const newToken = getToken()
-              const retryHeader = { ...header }
-              if (newToken) retryHeader['Authorization'] = `Bearer ${newToken}`
-              uni.request({
-                url: finalURL,
-                method,
-                data: options.data,
-                header: retryHeader,
-                timeout,
-                success: (r2) => {
-                  if (r2.statusCode === 401) {
-                    // 二次 401：refresh 也失效 → 真正过期 → 全局防抖跳登录（12s 内只跳 1 次）
-                    kickToLogin('登录已过期')
-                    reject(new Error('登录已过期'))
-                    return
-                  }
-                  if (r2.statusCode >= 400) {
-                    const msg2 = (r2.data && r2.data.message) || `请求失败 (${r2.statusCode})`
-                    if (!silent) {
-                      uni.showToast({
-                        title: msg2.length > 48 ? msg2.slice(0, 48) : msg2,
-                        icon: 'none',
-                        duration: 3000
-                      })
-                    }
-                    const e2 = new Error(msg2)
-                    e2.status = r2.statusCode
-                    e2.data = r2.data
-                    reject(e2)
-                    return
-                  }
-                  resolve(r2.data)
-                },
-                fail: (e2) => {
-                  const c2 = classifyNetworkError(e2)
-                  if (!silent) {
-                    uni.showToast({ title: c2.message, icon: 'none', duration: 3000 })
-                  }
-                  reject(c2)
-                }
-              })
-            } catch (_) {
-              kickToLogin('登录已过期')
-              reject(new Error('登录已过期'))
-            }
+    // === 网络错误自动重试 ===
+    // iOS App 冷启动时网络栈可能尚未就绪，首次请求会 fail，重试 1 次通常能恢复
+    const maxRetries = options.maxRetries !== undefined ? options.maxRetries : 1
+    const retryDelay = options.retryDelay || 1200
+    let lastResult
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      if (attempt > 0) {
+        await sleep(retryDelay * attempt) // 递增等待
+      }
+      lastResult = await doRequest({ method, finalURL, data: options.data, header, timeout })
+
+      // 成功（< 400）直接 resolve
+      if (lastResult.ok) {
+        resolve(lastResult.data)
+        return
+      }
+
+      // 401 特殊处理：尝试 refreshToken 续期
+      if (lastResult.status === 401) {
+        const refreshed = noRefreshRetry ? false : await tryRefresh()
+        if (refreshed) {
+          const newToken = getToken()
+          const retryHeader = { ...header }
+          if (newToken) retryHeader['Authorization'] = `Bearer ${newToken}`
+          const r2 = await doRequest({ method, finalURL, data: options.data, header: retryHeader, timeout })
+          if (r2.ok) { resolve(r2.data); return }
+          if (r2.status === 401) {
+            kickToLogin('登录已过期')
+            reject(new Error('登录已过期'))
             return
           }
-          // 首次 401 且无 refreshToken 可续 / 续期接口自身失败 → 走全局 12s 防抖，避免并发请求清掉真会话造成死循环
-          kickToLogin('登录已过期')
-          reject(new Error('登录已过期'))
-          return
+          lastResult = r2
+          break
         }
-        if (res.statusCode >= 400) {
-          const msg = (res.data && res.data.message) || `请求失败 (${res.statusCode})`
-          const fullMsg = (res.statusCode >= 500)
-            ? `${msg} (${res.statusCode})`
-            : msg
-          if (!silent) {
-            uni.showToast({
-              title: fullMsg.length > 48 ? fullMsg.slice(0, 48) : fullMsg,
-              icon: 'none',
-              duration: 3000
-            })
-          }
-          console.error('[Request Error]', method, options.url,
-            '\n  url:', finalURL,
-            '\n  status:', res.statusCode,
-            '\n  body:', JSON.stringify(res.data).slice(0, 300))
-          const err = new Error(fullMsg)
-          err.status = res.statusCode
-          err.data = res.data
-          reject(err)
-          return
-        }
-        resolve(res.data)
-      },
-      fail: (err) => {
-        const classified = classifyNetworkError(err)
-        const hint = IS_H5 && !/^https?:/i.test(base)
-          ? `（请确认 Vite 代理 /api 已转发；base=${base}）`
-          : `（服务器地址=${base}）`
-        const fullMsg = classified.message + hint
-        if (!silent) {
-          uni.showToast({
-            title: fullMsg.length > 48 ? fullMsg.slice(0, 48) : fullMsg,
-            icon: 'none',
-            duration: 4500
-          })
-        }
-        console.error('[Request Fail]', method, finalURL,
-          '\n  kind:', classified.kind,
-          '\n  raw:', err && (err.errMsg || err.message),
-          '\n  platform:', detectPlatform(),
-          '\n  base:', base)
-        const wrapped = new Error(fullMsg)
-        wrapped.kind = classified.kind
-        wrapped.raw = err
-        wrapped.baseURL = base
-        reject(wrapped)
+        kickToLogin('登录已过期')
+        reject(new Error('登录已过期'))
+        return
       }
-    })
+
+      // 4xx 业务错误不重试
+      if (lastResult.status >= 400 && lastResult.status < 500) {
+        break
+      }
+      // 网络错误(status=0) 或 5xx 才进入下一轮重试
+    }
+
+    // === 统一错误处理 ===
+    const { status, data, err } = lastResult
+    if (status >= 400) {
+      const msg = (data && data.message) || `请求失败 (${status})`
+      const fullMsg = (status >= 500) ? `${msg} (${status})` : msg
+      if (!silent) {
+        uni.showToast({
+          title: fullMsg.length > 48 ? fullMsg.slice(0, 48) : fullMsg,
+          icon: 'none',
+          duration: 3000
+        })
+      }
+      console.error('[Request Error]', method, options.url,
+        '\n  url:', finalURL,
+        '\n  status:', status,
+        '\n  body:', JSON.stringify(data).slice(0, 300))
+      const e = new Error(fullMsg)
+      e.status = status
+      e.data = data
+      reject(e)
+      return
+    }
+
+    // 网络错误（status === 0）
+    const classified = classifyNetworkError(err)
+    const hint = IS_H5 && !/^https?:/i.test(base)
+      ? `（请确认 Vite 代理 /api 已转发；base=${base}）`
+      : `（服务器地址=${base}）`
+    const fullMsg = classified.message + hint
+    if (!silent) {
+      uni.showToast({
+        title: fullMsg.length > 48 ? fullMsg.slice(0, 48) : fullMsg,
+        icon: 'none',
+        duration: 4500
+      })
+    }
+    console.error('[Request Fail]', method, finalURL,
+      '\n  kind:', classified.kind,
+      '\n  raw:', err && (err.errMsg || err.message),
+      '\n  platform:', detectPlatform(),
+      '\n  base:', base)
+    const wrapped = new Error(fullMsg)
+    wrapped.kind = classified.kind
+    wrapped.raw = err
+    wrapped.baseURL = base
+    reject(wrapped)
   })
 }
 

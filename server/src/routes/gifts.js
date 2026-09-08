@@ -219,16 +219,17 @@ router.get('/rank', async (req, res, next) => {
       whereClause.createdAt = { [Op.gte]: new Date(Date.now() - 7 * 86400000) }
     }
 
-    const groupField = side === 'sent' ? 'senderId' : 'receiverId'
+    const groupField = side === 'sent' ? 'sender_id' : 'receiver_id'
+    const groupCol = sequelize.col(groupField)
 
     const results = await GiftRecord.findAll({
       where: whereClause,
       attributes: [
-        [groupField, 'userId'],
-        [sequelize.fn('SUM', sequelize.col('diamondAmount')), 'totalDiamond'],
+        [groupCol, 'userId'],
+        [sequelize.fn('SUM', sequelize.col('diamond_amount')), 'totalDiamond'],
         [sequelize.fn('COUNT', sequelize.col('id')), 'totalCount']
       ],
-      group: [groupField],
+      group: [groupCol],
       order: [[sequelize.literal('totalDiamond'), 'DESC']],
       limit: lim,
       raw: true

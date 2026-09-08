@@ -64,7 +64,7 @@
       </view>
 
       <view class="filter-row">
-        <view class="filter-chip" @tap="showGender = !showGender">{{ genderText }} ▾</view>
+        <view class="filter-chip" @tap="onGenderFilter">{{ genderText }} ▾</view>
         <view class="filter-chip" @tap="onAgeFilter">{{ ageText }} ▾</view>
         <view class="filter-chip" @tap="onZodiacFilter">{{ zodiacText }} ▾</view>
         <view class="filter-chip filter-chip--ghost" @tap="goPublishFilter">🎯 发布需求</view>
@@ -343,8 +343,13 @@ const groupsPage = ref(1)
 const groupsLoading = ref(false)
 const groupsList = ref([])
 
-const showGender = ref(true)
-const genderText = computed(() => showGender.value ? toStr('全部性别') : toStr('小姐姐'))
+const genderIdx = ref(0)
+const genderOptions = ['全部性别', '男生', '女生']
+const genderText = computed(() => genderOptions[genderIdx.value])
+const onGenderFilter = () => {
+  genderIdx.value = (genderIdx.value + 1) % genderOptions.length
+  loadFinder()
+}
 const finderLoading = ref(false)
 const finderList = ref([])
 
@@ -473,7 +478,8 @@ const loadFinder = async (silent = false) => {
       pageSize: 15,
       city: toStr(cityText.value) === '全国' ? '' : toStr(cityText.value)
     }
-    if (toStr(genderText.value) === '小姐姐') params.gender = 2
+    if (genderIdx.value === 1) params.gender = 1
+    else if (genderIdx.value === 2) params.gender = 2
     const pageResp = await guard(userApi.discover(params, silent ? { silent: true } : null).then((r) => unwrapPage(r, { list: [], total: 0 })), null)
     if (pageResp === null || pageResp === undefined) throw new Error('empty response')
     const pr = toObj(pageResp, { list: [], total: 0 })
