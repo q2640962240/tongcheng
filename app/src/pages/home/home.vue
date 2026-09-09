@@ -233,6 +233,7 @@ const tryLocateRef = ref(0)
 const banners = ref([])
 const msgBadge = ref(true)
 const refreshing = ref(false)
+const bootRetried = ref(false)
 
 /* ---- 服务器连接异常追踪 ---- */
 const bannerLoadFailed = ref(false)
@@ -387,6 +388,16 @@ onShow(() => {
   loadRecommendUsers(true)
   loadLatestPosts(true)
   if (userStore.token) msgBadge.value = true
+
+  // 首次冷启动兜底：若全部加载失败，2 秒后自动重试一次
+  if (!bootRetried) {
+    bootRetried = true
+    setTimeout(async () => {
+      if (anyLoadFailed.value && banners.value.length === 0 && recommendUsers.value.length === 0 && latestPosts.value.length === 0) {
+        await Promise.all([loadBanners(), loadRecommendUsers(), loadLatestPosts()])
+      }
+    }, 2000)
+  }
 })
 onPullDownRefresh(async () => {
   try {

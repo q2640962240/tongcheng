@@ -287,12 +287,12 @@ page {
   font-weight: 500;
   border: 1rpx solid transparent;
 }
-.tag-pink   { background: color.adjust($by-aurora-b, $alpha: .18); color: $by-aurora-b; border-color: color.adjust($by-aurora-b, $alpha: .3); }
+.tag-pink   { background: color.adjust($by-aurora-b, $alpha: .18); color: #fff; border-color: color.adjust($by-aurora-b, $alpha: .3); }
 .tag-purple { background: color.adjust($by-aurora-a, $alpha: .18); color: color.adjust($by-aurora-a, $lightness: 10%); border-color: color.adjust($by-aurora-a, $alpha: .3); }
-.tag-blue   { background: color.adjust($by-info, $alpha: .18);    color: $by-info; border-color: color.adjust($by-info, $alpha: .3); }
+.tag-blue   { background: color.adjust($by-info, $alpha: .18);    color: #fff; border-color: color.adjust($by-info, $alpha: .3); }
 .tag-yellow { background: color.adjust($by-gold, $alpha: .18);    color: $by-gold-soft; border-color: color.adjust($by-gold, $alpha: .35); }
-.tag-success{ background: color.adjust($by-success, $alpha: .18); color: $by-success; }
-.tag-error  { background: color.adjust($by-error, $alpha: .18);   color: $by-error; }
+.tag-success{ background: color.adjust($by-success, $alpha: .18); color: #fff; }
+.tag-error  { background: color.adjust($by-error, $alpha: .18);   color: #fff; }
 
 /* 安全区 */
 .safe-bottom {

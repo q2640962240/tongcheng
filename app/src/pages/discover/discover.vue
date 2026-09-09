@@ -357,6 +357,7 @@ const finderList = ref([])
 const postsFailed = ref(false)
 const groupsFailed = ref(false)
 const finderFailed = ref(false)
+const bootRetried = ref(false)
 const currentBaseURL = computed(() => getCurrentBaseURL())
 const onFixServerUrl = () => openServerUrlModal({
   title: '设置服务器地址',
@@ -550,6 +551,14 @@ onShow(async () => {
     if (idx >= 0) groupCityIdx.value = idx
     // 变了就由上面的 debounce watcher 负责重载，这里只补「没变 / 匹配不到」的情况
     if (!changed) await loadGroups(true)
+  }
+
+  // 首次冷启动兜底：若当前 tab 加载失败且无数据，2 秒后自动重试一次
+  if (!bootRetried) {
+    bootRetried = true
+    setTimeout(() => {
+      if (showNetTrouble.value) onReloadAll()
+    }, 2000)
   }
 })
 

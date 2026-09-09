@@ -296,9 +296,10 @@ export const request = (options) => {
     } catch (e) { /* ignore */ }
 
     // === 网络错误自动重试 ===
-    // iOS App 冷启动时网络栈可能尚未就绪，首次请求会 fail，重试 1 次通常能恢复
-    const maxRetries = options.maxRetries !== undefined ? options.maxRetries : 1
-    const retryDelay = options.retryDelay || 1200
+    // iOS App 冷启动时网络栈可能尚未就绪，首次请求会 fail，重试 2 次通常能恢复
+    // 3 次尝试：t=0 → t=1500ms → t=3000ms，覆盖冷启动窗口
+    const maxRetries = options.maxRetries !== undefined ? options.maxRetries : 2
+    const retryDelay = options.retryDelay || 1500
     let lastResult
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
